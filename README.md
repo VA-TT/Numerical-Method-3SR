@@ -2,16 +2,21 @@
 
 Created for learning purpose at:
 
-**T2 - Master Course at Laboratory 3SR**
-
+**T2 - Numerical Methods for Non-Linear Mechanics**
 **Professor : Stefano Dal Pont**
+**Master Course at Laboratory 3SR**
+**University Grenoble Alpes**
 
 Including:
-* Library: Including all the needed lbrary (self-made and from this free guided C++ [website](https://www.learncpp.com/)). No third-party libraries was used.
-* Main code:numerical solution in C++ for
+
+* Library: Including all the needed mathematics library thanks to this free guided [C++ website](https://www.learncpp.com/). The following algorithms was copied from there with citations in each header file: _"Approximation.h"_ & _"Random.h"_ & _"Clock.h"_. Others are self-made, no third-party library was used.
+
+* Main code: Numerical solution using C++ for
   * 3D Truss problem: small deformation
   * 2D Console
   * FEM 1D
   * FEM 2D
-* Python: The translation to Python version of the problems above 
-* Report: Report in Latex
+
+* Python: The translation to Python version of the problems above.
+
+* Report: Report in Latex for the Console and Truss problem.
