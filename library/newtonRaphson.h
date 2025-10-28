@@ -1,4 +1,5 @@
-
+#ifndef MY_NEWTON_RAPHSON
+#define MY_NEWTON_RAPHSON
 
 #include <cmath>
 
@@ -31,3 +32,5 @@ inline double newtonRaphson(double x0, double epsilon, int max_iter = 1000) {
   }
   return x_n; // trả x gần đúng sau max_iter
 }
+
+#endif
