@@ -51,7 +51,7 @@ double A1{b1 * h1}, A2{b2 * h2};
 double alpha1{E * A1}, alpha2{E * A2};
 
 // tolerance for Newton's method
-double epsilon{1e-6};
+double epsilon{1e-8};
 int max_iteration{100};
 } // namespace modelParameters
 

@@ -11,5 +11,4 @@ Including:
   * FEM 1D
   * FEM 2D
 * Python: The translation to Python version of the problems above 
-* Report: Report in Lat
-
+* Report: Report in Latex

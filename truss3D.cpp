@@ -37,24 +37,28 @@ Vector<double> i2{0.0, 1.0, 0.0};
 Vector<double> i3{0.0, 0.0, 1.0};
 
 // Geometry of the truss
-constexpr Index nNodes{6}; // number of nodes
-constexpr Index nBars{8};  // number of bars
+constexpr Index nNodes{8}; // number of nodes
+constexpr Index nBars{10}; // number of bars
 
 Vector<Vector<double>> nodes{
-    {0.0, 0.0, 0.0},   // Node 0
-    {10.0, 0.0, 0.0},  // Node 1
-    {0.0, 0.0, 10.0},  // Node 2
-    {10.0, 0.0, 10.0}, // Node 3
-    {0.0, 0.0, 20.0},  // Node 4
-    {10.0, 0.0, 20.0}  // Node 5
+    {0.0, 0.0, 0.0},     // Node 0
+    {10.0, 0.0, 0.0},    // Node 1
+    {0.0, 0.0, 10.0},    // Node 2
+    {10.0, 0.0, 10.0},   // Node 3
+    {0.0, -10.0, 0.0},   // Node 4
+    {10.0, -10.0, 0.0},  // Node 5
+    {0.0, -10.0, 10.0},  // Node 6
+    {10.0, -10.0, 10.0}, // Node 7
+
 };
 // Bar connectivity: store node indices for each bar's origin and end
-Vector<Index> barOrigin{0, 2, 1, 2, 2, 3, 3, 4};
-Vector<Index> barEnd{2, 1, 3, 3, 4, 4, 5, 5};
+Vector<Index> barOrigin{0, 2, 3, 2, 3, 4, 6, 7, 3, 2};
+Vector<Index> barEnd{2, 3, 1, 6, 7, 6, 7, 5, 6, 7};
 Vector<Vector<double>> vectorBars(nBars), unitVectorBars(nBars);
 Vector<double> lengthBars(nBars);
-Vector<Index> nodeImposed{0, 1};
-Vector<Vector<double>> displacementImposed{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+Vector<Index> nodeImposed{0, 1, 4, 5};
+Vector<Vector<double>> displacementImposed{
+    {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
 Vector<Index> nodeFree(nNodes - nodeImposed.size());
 
 // Section dimension
@@ -65,30 +69,38 @@ double alpha{youngModulus * A};
 
 //  External loads at nodes - Direct 3D force vectors
 Vector<Vector<double>> externalForce{
-    {0.0, 0.0, 0.0},   // Node 0: no force
-    {0.0, 0.0, 0.0},   // Node 1: no force
-    {0.0, 0.0, -15.0}, // Node 2: 15N downward (z-direction)
-    {0.0, 0.0, -15.0}, // Node 3: 15N downward
-    {0.0, 0.0, -15.0}, // Node 4: 15N downward
-    {0.0, 0.0, -15.0}  // Node 5: 15N downward
+    {0.0, 0.0, 0.0},      // Node 0: no force
+    {0.0, 0.0, 0.0},      // Node 1: no force
+    {0.0, 0.0, -15000.0}, // Node 2: 15kN downward (z-direction)
+    {0.0, 0.0, -15000.0}, // Node 3: 15kN downward
+    {0.0, 0.0, 0.0},      // Node 4: no force
+    {0.0, 0.0, 0.0},      // Node 5: no force
+    {0.0, 0.0, -15000.0}, // Node 6: 15kN downward
+    {0.0, 0.0, -15000.0}  // Node 7: 15kN downward
 };
 
+template <typename T>
+inline auto constitutiveLaw(double alpha, T l, double l0) {
+  return (alpha * (l - l0) / l0);
+  // return (alpha * (l * l - l0 * l0) / (2 * l0 * l0));
+  // return (alpha * std::log(l / l0));
+}
+
+// tolerance for Newton's method
+double epsilon{1e-8};
+int max_iteration{100};
 } // namespace modelParameters
 
 int main() {
   Timer t;
   using namespace modelParameters;
+  // auto func1 = [](auto x1) { return constitutiveLaw(alpha1, x1, l01); };
+  // auto func2 = [](auto x2) { return constitutiveLaw(alpha2, x2, l02); };
+
   // Checking the input
   assert(nodes.size() == nNodes && "numbers of nodes must be consistent!");
   assert(barOrigin.size() == nBars && barEnd.size() == nBars &&
          "numbers of bars must be consistent!");
-  for (Index b{0}; b < nBars; ++b) {
-    // compute bar vector from node coordinates
-    vectorBars[b] = nodes[barEnd[b]] - nodes[barOrigin[b]];
-    lengthBars[b] = magnitude(vectorBars[b]);
-    unitVectorBars[b] = vectorBars[b] / lengthBars[b];
-  }
-  std::cout << "Unit vectors for each bar:\n" << unitVectorBars << std::endl;
 
   // Verify external forces
   assert(externalForce.size() == nNodes &&
@@ -97,10 +109,9 @@ int main() {
     assert(externalForce[i].size() == d &&
            "Each force vector must have d components");
   }
-  std::cout << "External forces at nodes:\n" << externalForce << std::endl;
 
   // Setting up
-  int iteration{0};
+
   Vector<double> U(nNodes * d), UImposed(nNodes * d), UFree(nNodes * d);
 
   // Identify free nodes
@@ -123,105 +134,130 @@ int main() {
 
   assert(nf == nodeFree.size() && "Mismatch in free node count");
 
-  // Rigidity in small deformation configuration: N = k e (u2 - u1)
-  Vector<double> k(nBars);
-  for (Index b{0}; b < nBars; ++b) {
-    k[b] = youngModulus * A / lengthBars[b];
-  }
+  int iteration{0};
 
-  std::cout << k;
-  Vector<Matrix<double, d, d>> elementaryApplicationK(nBars);
-  for (Index b{0}; b < nBars; ++b) {
-    elementaryApplicationK[b] =
-        k[b] * tensorProduct<d, d>(unitVectorBars[b], unitVectorBars[b]);
-  }
-  std::cout << elementaryApplicationK;
+  std::vector<int> iteration_array;
+  std::vector<Vector<double>> deltaU_array;
+  iteration_array.reserve(max_iteration);
+  deltaU_array.reserve(max_iteration);
+  Vector<double> totalDispalcement(nNodes * d);
 
-  // Matrix<double, 2, 2> connectivityMatrix{1.0, -1.0, -1.0, 1.0};
-  // Vector<Matrix<double, d * 2, d * 2>> elementaryK(nBars);
-  // for (Index b{0}; b < nBars; ++b) {
-  //   elementaryK[b] =
-  //       tensorProduct(connectivityMatrix, elementaryApplicationK[b]);
-  // }
-  // std::cout << elementaryK;
+  std::cout << "=== Newton-Raphson Iteration ===" << std::endl;
 
-  // Connectivity Matrix
-  Vector<Matrix<double, d, d * nNodes>> C(nNodes);
+  while (iteration < max_iteration) {
 
-  const auto Id = Matrix<double, d, d>::identity();
-  Matrix<double, d, d * nNodes> Ci{};
-  for (Index n{0}; n < nNodes; ++n) {
-    Ci = Matrix<double, d, d * nNodes>{};
-    for (Index i = 0; i < d; ++i) {
-      for (Index j = 0; j < d; ++j) {
-        Ci(i, n * d + j) = Id(i, j);
+    for (Index b{0}; b < nBars; ++b) {
+      // compute original bar's vectors from node coordinates
+      vectorBars[b] = nodes[barEnd[b]] - nodes[barOrigin[b]];
+      lengthBars[b] = magnitude(vectorBars[b]);
+      unitVectorBars[b] = vectorBars[b] / lengthBars[b];
+    }
+    // Rigidity in small deformation configuration: N = k e (u2 - u1)
+    Vector<double> k(nBars);
+    for (Index b{0}; b < nBars; ++b) {
+      k[b] = youngModulus * A / lengthBars[b];
+    }
+
+    Vector<Matrix<double, d, d>> elementaryApplicationK(nBars);
+    for (Index b{0}; b < nBars; ++b) {
+      elementaryApplicationK[b] =
+          k[b] * tensorProduct<d, d>(unitVectorBars[b], unitVectorBars[b]);
+    }
+    //   std::cout << elementaryApplicationK;
+
+    // Matrix<double, 2, 2> connectivityMatrix{1.0, -1.0, -1.0, 1.0};
+    // Vector<Matrix<double, d * 2, d * 2>> elementaryK(nBars);
+    // for (Index b{0}; b < nBars; ++b) {
+    //   elementaryK[b] =
+    //       tensorProduct(connectivityMatrix, elementaryApplicationK[b]);
+    // }
+    // std::cout << elementaryK;
+
+    // Connectivity Matrix
+    Vector<Matrix<double, d, d * nNodes>> C(nNodes);
+
+    const auto Id = Matrix<double, d, d>::identity();
+    Matrix<double, d, d * nNodes> Ci{};
+    for (Index n{0}; n < nNodes; ++n) {
+      Ci = Matrix<double, d, d * nNodes>{};
+      for (Index i = 0; i < d; ++i) {
+        for (Index j = 0; j < d; ++j) {
+          Ci(i, n * d + j) = Id(i, j);
+        }
+      }
+      C[n] = Ci;
+    }
+
+    Matrix<double, d * nNodes, d * nNodes> assemblyStiffnessK{};
+
+    for (Index b{0}; b < nBars; ++b) {
+      assemblyStiffnessK += (C[barEnd[b]] - C[barOrigin[b]]).transpose() *
+                            elementaryApplicationK[b] *
+                            (C[barEnd[b]] - C[barOrigin[b]]);
+    }
+    // Check the singularity of stiffness matrix K
+    std::cout << std::boolalpha << (det(assemblyStiffnessK) == 0) << std::endl;
+
+    // Penalization method (encastree)
+    // Stifness matrix and force adjustment: K' and F'
+    assert(nodeImposed.size() == displacementImposed.size() &&
+           "Size of imposed nodes must be consistent!");
+
+    double penalty{1.0 / 1e-8}; // 1/epsilon
+    int diagonalIndex{};
+
+    // Apply penalization for each imposed node.
+    // displacementImposed is aligned with nodeImposed by position, so use
+    // the index into nodeImposed (idx) to access displacementImposed[idx].
+    for (Index idx = 0; idx < nodeImposed.size(); ++idx) {
+      Index n = nodeImposed[idx];
+      for (int k = 0; k < d; ++k) // Encastre tous d directions
+      {
+        diagonalIndex = d * n + k;
+        assemblyStiffnessK(diagonalIndex, diagonalIndex) += penalty;
+        // write into the externalForce for node n (not d*n)
+        externalForce[n][k] = penalty * displacementImposed[idx][k];
       }
     }
-    C[n] = Ci;
-    // std::cout << C[n].getCols() << "  and  " << C[n].getRows() << std::endl;
-  }
 
-  Matrix<double, d * nNodes, d * nNodes> assemblyStiffnessK{};
-
-  for (Index b{0}; b < nBars; ++b) {
-    assemblyStiffnessK += (C[barEnd[b]] - C[barOrigin[b]]).transpose() *
-                          elementaryApplicationK[b] *
-                          (C[barEnd[b]] - C[barOrigin[b]]);
-  }
-  // Check the singularity of stiffness matrix K
-  std::cout << std::boolalpha << (det(assemblyStiffnessK) == 0) << std::endl;
-
-  // Penalization method (encastree)
-  // Stifness matrix and force adjustment: K' and F'
-  assert(nodeImposed.size() == displacementImposed.size() &&
-         "Size of imposed nodes must be consistent!");
-  double penalty{1.0 / 1e-8}; // 1/epsilon
-  std::cout << penalty << std::endl;
-  int i{};
-  for (auto n : nodeImposed) {
-    for (int k = 0; k < d; ++k) // Encastre tous 3 directions
-    {
-      i = d * n + k;
-      assemblyStiffnessK(i, i) += penalty;
-      externalForce[d * n][k] = penalty * displacementImposed[n][k];
+    // Flatting vector F
+    Vector<double> forceF(nNodes * d);
+    for (Index i{0}; i < forceF.size(); ++i) {
+      forceF[i] = externalForce[i / d][i % d];
     }
+
+    // Solve the linear system to find displacement
+    Vector<double> deltaU{solveLinearSystem(assemblyStiffnessK, forceF)};
+
+    std::cout << "Increment of displacement vector U: " << deltaU << std::endl;
+    totalDispalcement += deltaU;
+
+    // Saving the output
+    iteration_array.push_back(iteration);
+    deltaU_array.push_back(deltaU);
+
+    // Calculate the reaction
+    Vector<Vector<double>> reactionR(nNodes);
+    for (Index ii = 0; ii < nNodes; ++ii) {
+      reactionR[ii] = Vector<double>(d);
+    }
+    for (Index idx = 0; idx < nodeImposed.size(); ++idx) {
+      Index n = nodeImposed[idx];
+      for (Index k = 0; k < d; ++k) // Encastre tous d directions
+      {
+        diagonalIndex = d * n + k;
+        // use displacementImposed[idx][k] (the prescribed displacement), not
+        // nodeImposed
+        reactionR[n][k] = penalty * (totalDispalcement[diagonalIndex] -
+                                     displacementImposed[idx][k]);
+      }
+    }
+
+    // Update the position
+    // Update the force
+
+    iteration++;
   }
-
-  std::cout << assemblyStiffnessK << std::endl;
-
-  std::cout << std::boolalpha << (det(assemblyStiffnessK) == 0) << std::endl;
-
-  // Flatting vector F
-  Vector<double> forceF(nNodes * d);
-  for (Index i{0}; i < forceF.size(); ++i) {
-    forceF[i] = externalForce[i / d][i % d];
-  }
-
-  // Solve the linear system K'U' = F':
-  Vector<double> increment_displacement{
-      solveLinearSystem(assemblyStiffnessK, forceF)};
-
-  // // Update the position
-  // Vector<double> totalDispalcementU;
-  // totalDispalcementU += increment_displacement;
-
-  // // Saving the output
-  // iteration_array.push_back(iteration);
-  // deltaX_array.push_back(deltaX);
-
-  // Calculate the reaction at the end of the loop
-  // Index i{0};
-  // Vector<double> reactionR{nodeImposed};
-  // for (auto n : nodeImposed) {
-  //   for (int k = 0; k < 3; k++) // Encastre tous 3 directions
-  //   {
-  //     i = 3 * n + k;
-  //     reactionR[n][k] =
-  //         penalty * (totalDispalcementU[i] - nodeImposed[n][k]);
-  //   }
-  // }
-
-  // iteration++;
   std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
   return 0;
 }
