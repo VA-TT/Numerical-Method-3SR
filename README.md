@@ -1,6 +1,9 @@
 # Numerical-Method-3SR
 
+Created for learning purpose at:
+
 **T2 - Master Course at Laboratory 3SR**
+
 **Professor : Stefano Dal Pont**
 
 Including:

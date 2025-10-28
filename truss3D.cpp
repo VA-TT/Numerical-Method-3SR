@@ -68,6 +68,7 @@ double A{b * h};
 double alpha{youngModulus * A};
 
 //  External loads at nodes - Direct 3D force vectors
+// Chuyen ve Matrix
 Vector<Vector<double>> externalForce{
     {0.0, 0.0, 0.0},      // Node 0: no force
     {0.0, 0.0, 0.0},      // Node 1: no force
@@ -154,6 +155,8 @@ int main() {
     }
     // Rigidity in small deformation configuration: N = k e (u2 - u1)
     Vector<double> k(nBars);
+
+    // Fix the constitutive law
     for (Index b{0}; b < nBars; ++b) {
       k[b] = youngModulus * A / lengthBars[b];
     }
