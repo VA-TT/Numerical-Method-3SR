@@ -29,6 +29,8 @@ constexpr double h{1.0};
 constexpr Index nNodes{3};    // Divied elements
 constexpr Index nElements{2}; // Divied elements
 
+Vector<Vector<double>> element(nElements);
+
 } // namespace modelParameters
 
 int main() {
@@ -38,6 +40,10 @@ int main() {
   for (Index i{0}; i < nNodes; ++i) {
     x_i.push_back((b - a) / (nNodes - 1) * i + a);
   }
-  std::cout << x_i << std::endl;
+  for (Index e{0}; e < nElements; ++e) {
+    element[e][e] = x_i[e];
+    element[e][e + 1] = x_i[e + 1];
+  }
+  std::cout << element << std::endl;
   return 0;
 }
