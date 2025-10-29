@@ -1,5 +1,5 @@
-#ifndef MY_NEWTON_RAPHSON
-#define MY_NEWTON_RAPHSON
+#ifndef MY_NEWTON_RAPHSON_ROOT
+#define MY_NEWTON_RAPHSON_ROOT
 
 #include <cmath>
 

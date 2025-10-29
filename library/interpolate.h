@@ -31,6 +31,12 @@ double interpolatePolynomial(const Vector<double> &data_x,
   return y;
 }
 
+// Chebyshev nodes: Coordinate of node k from n nodes in range [a,b]
+double chebyShevNode(int k, int n, double a, double b) {
+  double x_k = std::cos(std::numbers::pi * (2.0 * k - 1.0) / (2.0 * n));
+  return 0.5 * (a + b) + 0.5 * (b - a) * x_k;
+}
+
 #endif
 
 // int main() {

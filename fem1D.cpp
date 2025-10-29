@@ -13,17 +13,31 @@
 #include <stdexcept>   //throw exception
 #include <type_traits> // precision
 
-// U_xx + x = 0, 0 < x < 1
-// u(0) = g : Dirichlet's Boundary Condition
-// u_x(0) = 1 : Neuman's Boundary Condition
+// 1D problem
+//  U_xx + x = 0, 0 < x < 1 (a < x < b)
+//  u(0) = g : Dirichlet's Boundary Condition
+//  u_x(0) = h : Neuman's Boundary Condition
 
 // Exact solution
 double solution(double x) { return (std::pow(x, 3) + 9 * x + 6) / 6; }
 namespace modelParameters {
+// Problem's domain (a,b)
+double a{0.0};
+double b{1.0};
 constexpr double g{1.0};
+constexpr double h{1.0};
 constexpr Index nNodes{3};    // Divied elements
 constexpr Index nElements{2}; // Divied elements
 
 } // namespace modelParameters
 
-int main() { return 0; }
+int main() {
+  // Equally divied
+  using namespace modelParameters;
+  Vector<double> x_i;
+  for (Index i{0}; i < nNodes; ++i) {
+    x_i.push_back((b - a) / (nNodes - 1) * i + a);
+  }
+  std::cout << x_i << std::endl;
+  return 0;
+}

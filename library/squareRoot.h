@@ -1,5 +1,5 @@
-#ifndef MY_SQUARE_ROOT
-#define MY_SQUARE_ROOT
+#ifndef MY_CONSTEXPR_SQUARE_ROOT
+#define MY_CONSTEXPR_SQUARE_ROOT
 
 #include <cmath>
 #include <iomanip>
