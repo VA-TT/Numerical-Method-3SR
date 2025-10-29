@@ -33,7 +33,7 @@ public:
   // // Constructor with length n of elements which are value
   // Vector(std::size_t n, const T& value) : m_elements(n, value) {}
 
-  // Constructor với initializer_list
+  // Constructor with initializer_list
   Vector(std::initializer_list<T> list) : m_elements(list) {}
 
   // // Constructor 3D (x, y, z)

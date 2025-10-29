@@ -20,3 +20,5 @@ Including:
 * Python: The translation to Python version of the problems above.
 
 * Report: Report in Latex for the Console and Truss problem.
+
+_**NOTE**_: The code is written in C++20 standard

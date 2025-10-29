@@ -1,9 +1,9 @@
+#include "library/DualDiffrentiation.h"
 #include "library/Matrix.h" //Approximative Comparsion
 #include "library/Vector.h"
 #include "library/clock.h" // time-measuring
-#include "library/dualDiffrentiation.h"
-#include <fstream> //working with files
-#include <iomanip> //tab
+#include <fstream>         //working with files
+#include <iomanip>         //tab
 #include <iostream>
 #include <numbers>     // for std::numbers::pi
 #include <stdexcept>   //throw exception
@@ -144,7 +144,6 @@ int main() {
 
   std::cout << "\nFinal displacement: " << deltaX << std::endl;
   std::cout << "Final position: " << x0 + deltaX << "\n";
-  std::cout << "Total iterations: " << iteration << std::endl;
   std::cout << "Total iterations: " << iteration << std::endl;
   std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
 
