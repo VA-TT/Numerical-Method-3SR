@@ -3,7 +3,7 @@
 #include <cmath>
 #include <iomanip>
 
-// Hàm tính đa thức cơ sở Lagrange l_i(x)
+// Lagrange basis l_i(x)
 template <std::size_t N>
 double basisPolynomial(std::size_t i,
                        const std::array<double, N>& data_x,

@@ -1,3 +1,6 @@
+#ifndef MY_DUAL_CLASS
+#define MY_DUAL_CLASS
+
 #include <cmath>
 #include <fstream>
 #include <functional>
@@ -98,6 +101,8 @@ T automaticDiff(std::function<Dual(Dual)> func, T x0) {
   Dual result{func(d)};
   return result.getDer();
 }
+
+#endif
 // int main()
 // {
 //     double x0{std::numbers::pi * 0.5};
