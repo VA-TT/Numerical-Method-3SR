@@ -12,7 +12,7 @@ private:
 
 public:
   Dual(double val, double der) : m_val{val}, m_der{der} {}
-  Dual(double val) : m_val{val}, m_der{1} {}
+  Dual(double val) : m_val{val}, m_der{0.0} {}
   Dual() = default;
   Dual(const Dual &) = default;
   Dual(Dual &&) = default;
