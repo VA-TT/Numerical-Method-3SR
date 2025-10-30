@@ -72,10 +72,10 @@ int main() {
     K(e + 1, e) -= 1 / length[e];
     K(e + 1, e + 1) += 1 / length[e];
     // Element force vector adding to the global force vector
-    auto shape_i = [=](auto x) { return (x2 - x) / h * rhsFuction(x); };
-    auto shape_j = [=](auto x) { return (x - x1) / h * rhsFuction(x); };
-    F[e] += integrationGauss1D(a, b, shape_i);
-    F[e + 1] += integrationGauss1D(a, b, shape_j);
+    auto integrand1 = [=](auto x) { return (x2 - x) / h * rhsFuction(x); };
+    auto integrand2 = [=](auto x) { return (x - x1) / h * rhsFuction(x); };
+    F[e] += integrationGauss1D(x1, x2, integrand1);
+    F[e + 1] += integrationGauss1D(x1, x2, integrand2);
   }
 
   //   // Shape function
