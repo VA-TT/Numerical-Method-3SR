@@ -1,7 +1,7 @@
+#include "library/DualDiffrentiation.h"
 #include "library/Matrix.h" //Approximative Comparsion
 #include "library/Vector.h"
 #include "library/clock.h"
-#include "library/dualDiffrentiation.h"
 #include "vector"
 #include <cassert> // for assert
 #include <fstream> //working with files

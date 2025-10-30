@@ -1,13 +1,9 @@
-#ifndef MY_DUAL_CLASS
-#define MY_DUAL_CLASS
+#ifndef DUAL_CLASS_DIFFERENTIATION
+#define DUAL_CLASS_DIFFERENTIATION
 
 #include <cmath>
-#include <fstream>
 #include <functional>
-#include <iomanip>
 #include <iostream>
-#include <numbers>
-#include <vector>
 
 class Dual {
 private:
@@ -83,7 +79,7 @@ inline Dual operator-(const Dual &d, double b) {
 inline Dual operator-(double a, const Dual &d) {
   return Dual{a - d.getVal(), -d.getDer()};
 }
-inline Dual operator/(double a, const Dual &d) { // ít dùng nhưng đầy đủ
+inline Dual operator/(double a, const Dual &d) {
   return Dual{a / d.getVal(), -a * d.getDer() / (d.getVal() * d.getVal())};
 }
 

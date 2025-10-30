@@ -11,22 +11,28 @@
 // Note : To interpolate a polynomal of degree n, we need n+1 points!
 
 // Lagrange basis at x : l_i(x)
-double basisLagrange(Index i, const Vector<double> &data_x, double x) {
-  double l_i{1.0};
+// N_i(x) = l_i(x) = Product((x - x_i) / (x_i - x_j))
+template <typename T>
+T basisLagrange(Index i, const Vector<double> &data_x, T x) {
+  T l_i{1.0};
   for (Index j{0}; j < data_x.size(); ++j) {
     if (j != i)
-      l_i *= (x - data_x[j]) / (data_x[i] - data_x[j]);
+      l_i = l_i * ((x - data_x[j]) / (data_x[i] - data_x[j]));
   }
   return l_i;
 }
 
-double interpolatePolynomial(const Vector<double> &data_x,
-                             const Vector<double> &data_y, double x) {
+// y(x) = l_i(x) y_i
+// Make interpolation templated in evaluation type T so it works with Dual
+// numbers produced by automatic differentiation.
+template <typename T>
+T interpolatePolynomial(const Vector<double> &data_x,
+                        const Vector<double> &data_y, T x) {
   assert(data_x.size() == data_y.size() &&
          "Size of data x and y must matched!");
-  double y{0.0};
+  T y{0.0};
   for (Index i{0}; i < data_y.size(); ++i) {
-    y += data_y[i] * basisLagrange(i, data_x, x);
+    y += data_y[i] * basisLagrange<T>(i, data_x, x);
   }
   return y;
 }

@@ -422,6 +422,35 @@ public:
     return false;
   }
 
+  void reflect() // turn the upper trinagular matrix into symmetric matrix
+  {
+    // Ensure square matrix
+    if (!this->isSquare())
+      throw std::invalid_argument("reflect() requires a square matrix");
+
+    // If matrix is upper triangular, copy upper -> lower to make symmetric
+    if (this->isUpperTriangular()) {
+      for (Index i = 0; i < nRows; ++i) {
+        for (Index j = 0; j < i; ++j) {
+          // set lower (i,j) = upper (j,i)
+          (*this)(i, j) = (*this)(j, i);
+        }
+      }
+      return;
+    }
+    // If matrix is lower triangular, copy lower -> upper
+    if (this->isLowerTriangular()) {
+      for (Index i = 0; i < nRows; ++i) {
+        for (Index j = 0; j < i; ++j) {
+          // set upper (j,i) = lower (i,j)
+          (*this)(j, i) = (*this)(i, j);
+        }
+      }
+      return;
+    }
+    return;
+  }
+
   // Convert a Matrix type to a Vector type
   Matrix(const Vector<T> &vec) {
     static_assert(nCols == 1, "Can only construct column matrix from Vector");
