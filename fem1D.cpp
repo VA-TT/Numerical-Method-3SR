@@ -48,6 +48,8 @@ int main() {
   Vector<double> N(nNodes), N_x(nNodes);
 
   Matrix<double, nNodes, nNodes> K{};
+  Matrix<double, nNodes, 1> U{};
+  Matrix<double, nNodes, 1> F{};
 
   for (Index i{0}; i < nNodes; ++i)
     for (Index j{i}; j < nNodes; ++j) {
@@ -60,8 +62,30 @@ int main() {
       K(i, j) = integrationGauss1D(a, b, integrand, 2);
     }
   K.reflect();
-  Matrix<double, 3, 3> K_a = {2, -2, 0, -2, 4, -2, 0, -2, 2};
+  static_assert(
+      std::is_same_v<decltype(automaticDiff(
+                         std::declval<decltype([](auto) { return 0.0; })>(),
+                         0.0)),
+                     double>,
+      "automaticDiff must return double for double-valued integrand");
 
+  Matrix<double, 3, 3> K_a = {2.0, -2.0, 0.0, -2.0, 4.0, -2.0, 0.0, -2.0, 2.0};
   std::cout << K << std::endl;
+
+  // Handle Dirichlet's condition
+  if (g == 0) {
+    //
+  } else { ///
+  }
+
+  for (Index j{0}; j < nNodes; ++j) {
+    auto shape_j = [=](auto x) { return basisLagrange(j, nodes, x) * x; };
+    auto integrand = [&](double x) { return x * shape_j(x); };
+    F[j] = shape_j(0.0) + integrationGauss1D(a, b, integrand, 2);
+  }
+  std::cout << F << std::endl;
+
+  U = solveLinearSystem(K, F);
+  std::cout << U << std::endl;
   return 0;
 }
