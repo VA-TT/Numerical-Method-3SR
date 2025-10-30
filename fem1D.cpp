@@ -36,13 +36,21 @@ Vector<Vector<double>> element(nElements);
 int main() {
   // Equally divied
   using namespace modelParameters;
-  Vector<double> x_i;
+  Vector<double> nodes;
   for (Index i{0}; i < nNodes; ++i) {
-    x_i.push_back((b - a) / (nNodes - 1) * i + a);
+    nodes.push_back((b - a) / (nNodes - 1) * i + a);
   }
-  for (Index e{0}; e < nElements; ++e) {
-    element[e][e] = x_i[e];
-    element[e][e + 1] = x_i[e + 1];
+  Vector<Index> eleOrigin{0, 1};
+  Vector<Index> eleEnd{1, 2};
+
+  Vector<Vector<double>> vectorElement(nElements), unitvectorElement(nElements);
+  Vector<double> lengthElement(nElements);
+
+  for (Index b{0}; b < nElements; ++b) {
+    // compute original bar's vectors from node coordinates
+    vectorElement[b] = nodes[eleEnd[b]] - nodes[eleOrigin[b]];
+    lengthElement[b] = magnitude(vectorElement[b]);
+    unitvectorElement[b] = vectorElement[b] / lengthElement[b];
   }
   std::cout << element << std::endl;
   return 0;
