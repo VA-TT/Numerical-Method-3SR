@@ -14,33 +14,45 @@
 #include <type_traits> // precision
 
 // 1D problem
-//  U_xx + x = 0, 0 < x < 1 (a < x < b)
-//  u(0) = g = 1 : Dirichlet's Boundary Condition (Must at least 1 condition to
+//  U_xx + 6x = 0, 0 < x < 1 (a < x < b)
+//  u(0) = g1 = 1 : Dirichlet's Boundary Condition (Must at least 1 condition to
+//  u(1) = g2 = 0 : Dirichlet's Boundary Condition (Must at least 1 condition to
 //  find unique solution!)
 //  u_x(1) = h = 1: Neuman's Boundary Condition
 
 // Exact solution
-double solution(double x) { return (-std::pow(x, 3) + 9 * x + 6) / 6; }
-// Input parameters
+double solution(double x) { return (-std::pow(x, 3) + x); }
+
 namespace modelParameters {
+////////////////////////////////////////////////////////////
+///////////////////// Input parameters /////////////////////
+////////////////////////////////////////////////////////////
 // Problem's domain (a,b)
 double a{0.0};
 double b{1.0};
-constexpr double g{1.0};
-constexpr double h{1.0};
-constexpr Index nNodes{6};
-constexpr Index nElements{nNodes - 1};
+constexpr double g1{0.0}; // Dirichlet
+constexpr double g2{0.0};
+constexpr double h{0.0};               // Neuman
+constexpr Index nNodes{6};             // Numbers of nodes
+constexpr Index nElements{nNodes - 1}; // Numbers of elements
+// Start and end of elements, could be generate automatically
 Vector<Index> eleOrigin{0, 1, 2, 3, 4};
 Vector<Index> eleEnd{1, 2, 3, 4, 5};
 constexpr double EA = 1.0;
 
-auto rhsFunction = [](auto x) { return x; };
+// Right hand side function
+auto rhsFunction = [](auto x) { return 6.0 * x; };
 
+////////////////////////////////////////////////////////////
+//////////////////////////// END ///////////////////////////
+////////////////////////////////////////////////////////////
+
+// Initiate needed containers
 Vector<Vector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
 Matrix<double, nNodes, nNodes> K{};
 Matrix<double, nNodes, 1> U{};
 Matrix<double, nNodes, 1> F{};
-
+Vector<double> nodes{};
 Vector<Vector<double>> element(nElements);
 Vector<double> k(nElements);
 Vector<double> length(nElements);
@@ -55,22 +67,12 @@ Vector<double> generateMesh(double a, double b, Index n) {
   return nodes;
 }
 
-// Cluster code
-void assemble() {}
-void applyBC() {}
-
-int main() {
+// calculating shape function
+void shapeFunction() {
   // Equally divied
   using namespace modelParameters;
-
-  Vector<double> nodes{generateMesh(a, b, nNodes)};
-  std::cout << nodes << "'\n";
-
-  // Local indices within the element (0 or 1)
   int local_i = 0;
   int local_j = 1;
-
-  // Elements, shape functions on elements
   for (Index e{0}; e < nElements; ++e) {
     int i = eleOrigin[e];
     int j = eleEnd[e];
@@ -90,21 +92,25 @@ int main() {
       return basisLagrange(local_j, element[e], x);
     };
     auto dShape_j = [=](double x) { return automaticDiff(shapefunction_j, x); };
-    for (Index k{0}; k < nNodes; ++k) {
-      if (k == i) {
-        N[k].push_back(shapefunction_i);
-        N_x[k].push_back(dShape_i);
-      } else if (k == j) {
-        N[k].push_back(shapefunction_j);
-        N_x[k].push_back(dShape_j);
+    for (Index kk{0}; kk < nNodes; ++kk) {
+      if (kk == i) {
+        N[kk].push_back(shapefunction_i);
+        N_x[kk].push_back(dShape_i);
+      } else if (kk == j) {
+        N[kk].push_back(shapefunction_j);
+        N_x[kk].push_back(dShape_j);
       } else {
-        N[k].push_back([](double x) { return 0.0; });
-        N_x[k].push_back([](double x) { return 0.0; });
+        N[kk].push_back([](double x) { return 0.0; });
+        N_x[kk].push_back([](double x) { return 0.0; });
       }
     }
   }
-
+}
+void assembleKF(double h) {
   // Rigidity Matrix K: assemble element-wise contributions
+  using namespace modelParameters;
+  int local_i = 0;
+  int local_j = 1;
   for (Index i = 0; i < nNodes; ++i) {
     for (Index j = i; j < nNodes; ++j) {
       // sum contributions from each element
@@ -134,45 +140,61 @@ int main() {
   }
   // Neuman's condition; N3(x=1) = 1 (activate at the last node)
   F[nNodes - 1] += h * 1.0;
-
-  // Force Vector
-  std::cout << K << std::endl;
-
-  //   Handle Dirichlet's condition
-  F[0] = g;
-  for (Index i = 1; i < nNodes; ++i) {
-    F[i] -= g * K(i, 0);
+}
+void applyBC(Index node, double g) { //   Handle Dirichlet's condition
+  using namespace modelParameters;
+  // Set prescribed DOF value, then remove its contribution from RHS for all
+  // other DOFs: F[i] -= g * K(i,node) for i != node
+  F[node] = g;
+  for (Index i = 0; i < nNodes; ++i) {
+    if (i == node)
+      continue;
+    F[i] -= g * K(i, node);
   }
   for (Index i = 0; i < nNodes; ++i) {
-    K(i, 0) = 0.0;
+    K(i, node) = 0.0;
   }
   for (Index j = 0; j < nNodes; ++j) {
-    K(0, j) = 0.0;
+    K(node, j) = 0.0;
   }
-  K(0, 0) = 1.0;
+  K(node, node) = 1.0;
+}
 
+int main() {
+  // Equally divied
+  using namespace modelParameters;
+
+  nodes = generateMesh(a, b, nNodes);
+  std::cout << nodes << "'\n";
+  shapeFunction();
+  assembleKF(h);
+
+  assert(approximatelyEqualAbsRel(det(K), 0.0));
+  applyBC(0, g1);          // Apply u = g1 at first node
+  applyBC(nNodes - 1, g2); // Apply u = g2 at last node
+
+  std::cout << K << std::endl;
   std::cout << F << std::endl;
-
-  // Solve the linear system to obtain deplacement vector U
   U = solveLinearSystem(K, F);
   std::cout << U << std::endl;
-  // // ------------------ Error check against exact solution ------------------
-  // // Compute per-node absolute error, max error and RMS error
-  // double max_err = 0.0;
-  // double sum_sq = 0.0;
-  // for (Index i = 0; i < nNodes; ++i) {
-  //   double x = nodes[i];
-  //   double u_num = U[i];
-  //   double u_ex = solution(x);
-  //   double err = std::fabs(u_num - u_ex);
-  //   if (err > max_err) max_err = err;
-  //   sum_sq += err * err;
-  //   std::cout << "x=" << x << "  U_num=" << u_num << "  U_ex=" << u_ex
-  //             << "  err=" << err << "\n";
-  // }
-  // double rms = std::sqrt(sum_sq / static_cast<double>(nNodes));
-  // std::cout << "max error = " << max_err << "  RMS error = " << rms <<
-  // std::endl;
+  // ------------------ Error check against exact solution ------------------
+  // Compute per-node absolute error, max error and RMS error
+  double max_err = 0.0;
+  double sum_sq = 0.0;
+  for (Index i = 0; i < nNodes; ++i) {
+    double x = nodes[i];
+    double u_num = U[i];
+    double u_ex = solution(x);
+    double err = std::fabs(u_num - u_ex);
+    if (err > max_err)
+      max_err = err;
+    sum_sq += err * err;
+    std::cout << "x=" << x << "  U_num=" << u_num << "  U_ex=" << u_ex
+              << "  err=" << err << "\n";
+  }
+  double rms = std::sqrt(sum_sq / static_cast<double>(nNodes));
+  std::cout << "max error = " << max_err << "  RMS error = " << rms
+            << std::endl;
 
   return 0;
 }

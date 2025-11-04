@@ -14,20 +14,22 @@
 #include <type_traits> // precision
 
 // 1D problem
-//  U_xx + x = 0, 0 < x < 1 (a < x < b)
-//  u(0) = g = 1 : Dirichlet's Boundary Condition (Must at least 1 condition to
+//  U_xx + 6x = 0, 0 < x < 1 (a < x < b)
+//  u(0) = g1 = 1 : Dirichlet's Boundary Condition (Must at least 1 condition to
+//  u(1) = g2 = 0 : Dirichlet's Boundary Condition (Must at least 1 condition to
 //  find unique solution!)
 //  u_x(1) = h = 1: Neuman's Boundary Condition
 
 // Exact solution
-double solution(double x) { return (-std::pow(x, 3) + 9 * x + 6) / 6; }
+double solution(double x) { return (-std::pow(x, 3) + x); }
 // Input parameters
 namespace modelParameters {
 // Problem's domain (a,b)
 double a{0.0};
 double b{1.0};
-constexpr double g{1.0};
-constexpr double h{1.0};
+constexpr double g1{0.0};
+constexpr double g2{0.0};
+constexpr double h{0.0};
 constexpr Index nNodes{6};
 constexpr Index nElements{nNodes - 1};
 Vector<Index> eleOrigin{0, 1, 2, 3, 4};
@@ -40,7 +42,7 @@ Vector<Vector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
 Matrix<double, nNodes, nNodes> K{};
 Matrix<double, nNodes, 1> U{};
 Matrix<double, nNodes, 1> F{};
-
+Vector<double> nodes{};
 Vector<Vector<double>> element(nElements);
 Vector<double> k(nElements);
 Vector<double> length(nElements);
@@ -56,21 +58,11 @@ Vector<double> generateMesh(double a, double b, Index n) {
 }
 
 // Cluster code
-void assemble() {}
-void applyBC() {}
-
-int main() {
+void shapeFunction() {
   // Equally divied
   using namespace modelParameters;
-
-  Vector<double> nodes{generateMesh(a, b, nNodes)};
-  std::cout << nodes << "'\n";
-
-  // Local indices within the element (0 or 1)
   int local_i = 0;
   int local_j = 1;
-
-  // Elements, shape functions on elements
   for (Index e{0}; e < nElements; ++e) {
     int i = eleOrigin[e];
     int j = eleEnd[e];
@@ -103,8 +95,11 @@ int main() {
       }
     }
   }
-
-  // Rigidity Matrix K: assemble element-wise contributions
+}
+void assemble() { // Rigidity Matrix K: assemble element-wise contributions
+  using namespace modelParameters;
+  int local_i = 0;
+  int local_j = 1;
   for (Index i = 0; i < nNodes; ++i) {
     for (Index j = i; j < nNodes; ++j) {
       // sum contributions from each element
@@ -119,6 +114,8 @@ int main() {
     }
   }
   K.reflect(); // K is symmetric
+  assert(det(K) == 0 &&
+         "Before applying the boundary condition, K must be singular!");
 
   // Force Vector
   F = Matrix<double, nNodes, 1>::zero();
@@ -134,26 +131,34 @@ int main() {
   }
   // Neuman's condition; N3(x=1) = 1 (activate at the last node)
   F[nNodes - 1] += h * 1.0;
-
-  // Force Vector
-  std::cout << K << std::endl;
-
-  //   Handle Dirichlet's condition
-  F[0] = g;
+}
+void applyBC(Index node, double g) { //   Handle Dirichlet's condition
+  using namespace modelParameters;
+  F[node] = g;
   for (Index i = 1; i < nNodes; ++i) {
-    F[i] -= g * K(i, 0);
+    F[i] -= g * K(i, node);
   }
   for (Index i = 0; i < nNodes; ++i) {
-    K(i, 0) = 0.0;
+    K(i, node) = 0.0;
   }
   for (Index j = 0; j < nNodes; ++j) {
-    K(0, j) = 0.0;
+    K(node, j) = 0.0;
   }
-  K(0, 0) = 1.0;
+  K(node, node) = 1.0;
+}
 
+int main() {
+  // Equally divied
+  using namespace modelParameters;
+
+  nodes = generateMesh(a, b, nNodes);
+  shapeFunction();
+  assemble();
+  applyBC(g1, 0);
+  applyBC(g1, 6);
+  std::cout << nodes << "'\n";
+  std::cout << K << std::endl;
   std::cout << F << std::endl;
-
-  // Solve the linear system to obtain deplacement vector U
   U = solveLinearSystem(K, F);
   std::cout << U << std::endl;
   // // ------------------ Error check against exact solution ------------------
