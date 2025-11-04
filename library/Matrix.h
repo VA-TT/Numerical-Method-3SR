@@ -498,8 +498,8 @@ concatenateMatrixHorizontal(const Matrix<T, R1, C1> &A,
 }
 
 // Concatenate 2 matrices vertically
-//   |A|  = | A |
-// + |B|    | B |
+//   |A| & |B| -> | A |
+//                | B |
 template <typename T, Index R1, Index C1, Index R2, Index C2>
 Matrix<T, (R1 + R2), C1> concatenateMatrixVertical(const Matrix<T, R1, C1> &A,
                                                    const Matrix<T, R2, C2> &B) {
