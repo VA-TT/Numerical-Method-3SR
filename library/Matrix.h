@@ -416,10 +416,9 @@ public:
   bool isSkewSymmetric() const { return (-(*this) == (this->transpose())); }
 
   bool isOrthogonal() const {
-    if (this->isSquare()) {
-      return (this->inverse() == this->transpose());
-    }
-    return false;
+    if (!this->isSquare())
+      return false;
+    return ((*this) * (this->transpose()) == Matrix::identity());
   }
 
   void reflect() // turn the upper trinagular matrix into symmetric matrix
