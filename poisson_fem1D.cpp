@@ -56,9 +56,12 @@ Vector<double> nodes{};
 Vector<Vector<double>> element(nElements);
 Vector<double> k(nElements);
 Vector<double> length(nElements);
+Index first_node{0};         // index of the last node
+Index last_node{nNodes - 1}; // index of the last node
 
 } // namespace modelParameters
 
+// Mesh generated function
 Vector<double> generateMesh(double a, double b, Index n) {
   Vector<double> nodes;
   for (Index i{0}; i < n; ++i) {
@@ -67,7 +70,9 @@ Vector<double> generateMesh(double a, double b, Index n) {
   return nodes;
 }
 
-// calculating shape function
+// calculating shape functions and its derivative
+// (obviously redundance but objectif here is to show the algorithm
+// in non-shorcut form and test out implemented libraries)
 void shapeFunction() {
   // Equally divied
   using namespace modelParameters;
@@ -106,7 +111,10 @@ void shapeFunction() {
     }
   }
 }
-void assembleKF(double h) {
+
+// More likely than assemble, calculate each element in the rigidity matrix K
+//  and the force vector F; Handling Neuman's boundary condition included
+void assembleKF(Index nodeNeuman, double h) {
   // Rigidity Matrix K: assemble element-wise contributions
   using namespace modelParameters;
   int local_i = 0;
@@ -138,10 +146,11 @@ void assembleKF(double h) {
       F[node] += integrationGauss1D(x1, x2, integrand_F, 2);
     }
   }
-  // Neuman's condition; N3(x=1) = 1 (activate at the last node)
-  F[nNodes - 1] += h * 1.0;
+  // Neuman's condition h * N3(x=1) = h * 1 (activate at the last node)
+  F[nodeNeuman] += h * 1.0;
 }
-void applyBC(Index node, double g) { //   Handle Dirichlet's condition
+//   Handle Dirichlet's condition
+void applyBC(Index node, double g) {
   using namespace modelParameters;
   // Set prescribed DOF value, then remove its contribution from RHS for all
   // other DOFs: F[i] -= g * K(i,node) for i != node
@@ -167,11 +176,11 @@ int main() {
   nodes = generateMesh(a, b, nNodes);
   std::cout << nodes << "'\n";
   shapeFunction();
-  assembleKF(h);
+  assembleKF(last_node, h);
 
   assert(approximatelyEqualAbsRel(det(K), 0.0));
-  applyBC(0, g1);          // Apply u = g1 at first node
-  applyBC(nNodes - 1, g2); // Apply u = g2 at last node
+  applyBC(first_node, g1); // Apply u = g1 at first node
+  applyBC(last_node, g2);  // Apply u = g2 at last node
 
   std::cout << K << std::endl;
   std::cout << F << std::endl;

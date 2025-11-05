@@ -3,7 +3,7 @@
 Created for learning purpose at:
 
 **T2 - Numerical Methods for Non-Linear Mechanics**  
-**Professor : Stefano Dal Pont**  
+**Professor : Stefano Dal Pont; **  
 **Civil Engineering Master Course at Laboratory 3SR**  
 **University Grenoble Alpes**  
 

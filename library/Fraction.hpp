@@ -7,8 +7,8 @@
 
 class Fraction {
 private:
-  int numerator;   // Tử số
-  int denominator; // Mẫu số
+  int numerator;
+  int denominator;
 
   void simplify() {
     if (denominator < 0) {

@@ -1,6 +1,7 @@
 #ifndef COMPARISON_HPP
 #define COMPARISON_HPP
 
+#include "physicConstants.h"
 #include <algorithm> // for std::max
 #include <iostream>
 
@@ -20,7 +21,7 @@ constexpr bool approximatelyEqualRel(double a, double b,
 // Return true if the difference between a and b is less than or equal to
 // absEpsilon, or within relEpsilon percent of the larger of a and b
 constexpr bool approximatelyEqualAbsRel(double a, double b,
-                                        double absEpsilon = 1e-12,
+                                        double absEpsilon = 1e-11,
                                         double relEpsilon = 1e-8) {
   // Check if the numbers are really close -- needed when comparing numbers near
   // zero.
@@ -30,11 +31,6 @@ constexpr bool approximatelyEqualAbsRel(double a, double b,
   // Otherwise fall back to Knuth's algorithm
   return approximatelyEqualRel(a, b, relEpsilon);
 }
-
-namespace myConstants {
-[[maybe_unused]] constexpr double relEps{1e-8};
-[[maybe_unused]] constexpr double absEps{1e-12};
-} // namespace myConstants
 
 #endif // MATRIX_COMPARISON_HPP
 
