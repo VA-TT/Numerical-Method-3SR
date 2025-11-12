@@ -224,10 +224,7 @@ int main() {
     }
 
     // Flatting vector F
-    Vector<double> forceF(nNodes * d);
-    for (Index i{0}; i < forceF.size(); ++i) {
-      forceF[i] = externalForce[i / d][i % d];
-    }
+    Vector<double> forceF{flatten(externalForce, nNodes, d)};
 
     // Solve the linear system to find displacement
     Vector<double> deltaU{solveLinearSystem(assemblyStiffnessK, forceF)};
@@ -257,6 +254,7 @@ int main() {
     }
 
     // Update the position
+    nodes += unflatten(deltaU, nNodes, d);
     // Update the force
 
     iteration++;

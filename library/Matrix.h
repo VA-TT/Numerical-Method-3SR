@@ -6,6 +6,7 @@
 // LU Decomposition (to be implemented) to be more optimized
 // Resize function?
 // EigenValue, EigenVector? Dyadic? Power Matrix?
+// Jacobian, Hessian Matrix
 
 #include "Vector.h"     //My vector class
 #include "comparison.h" //Approximative Comparsion

@@ -59,6 +59,13 @@
         "__nullptr": "cpp",
         "__split_buffer": "cpp",
         "list": "cpp",
-        "__node_handle": "cpp"
+        "__node_handle": "cpp",
+        "ranges": "cpp",
+        "__hash_table": "cpp",
+        "__tree": "cpp",
+        "map": "cpp",
+        "queue": "cpp",
+        "stack": "cpp",
+        "unordered_set": "cpp"
     }
 }

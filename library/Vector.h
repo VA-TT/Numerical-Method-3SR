@@ -251,4 +251,35 @@ bool isParallel(const Vector<T> &v1, const Vector<T> &v2) {
   return approximatelyEqualAbsRel(magnitude(crossProduct(v1, v2)), T{});
 }
 
+// flatten: 2D -> 1D (row-major)
+template <typename T>
+Vector<T> flatten(const Vector<Vector<T>> &twoDVect, Index nRows, Index nCols) {
+  if (static_cast<Index>(twoDVect.size()) != nRows)
+    throw std::invalid_argument("flatten: nRows mismatch");
+  for (Index r = 0; r < nRows; ++r)
+    if (static_cast<Index>(twoDVect[r].size()) != nCols)
+      throw std::invalid_argument("flatten: nCols mismatch");
+
+  Vector<T> flat(nRows * nCols);
+  for (Index i = 0; i < nRows; ++i)
+    for (Index j = 0; j < nCols; ++j)
+      flat[i * nCols + j] = twoDVect[i][j];
+  return flat;
+}
+
+// unflatten: 1D -> 2D (row-major)
+template <typename T>
+Vector<Vector<T>> unflatten(const Vector<T> &oneDVect, Index nRows,
+                            Index nCols) {
+  if (static_cast<Index>(oneDVect.size()) != nRows * nCols)
+    throw std::invalid_argument("unflatten: size mismatch");
+  Vector<Vector<T>> twoDVect(nRows);
+  for (Index i = 0; i < nRows; ++i) {
+    twoDVect[i].resize(static_cast<std::size_t>(nCols));
+    for (Index j = 0; j < nCols; ++j)
+      twoDVect[i][j] = oneDVect[i * nCols + j];
+  }
+  return twoDVect;
+}
+
 #endif
