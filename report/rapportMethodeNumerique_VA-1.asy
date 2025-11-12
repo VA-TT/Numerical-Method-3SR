@@ -1,107 +1,15 @@
-% Minimal English demo document with examples: figure, table, equation, labels, refs and citations
-\documentclass[a4paper,12pt]{article}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
-\usepackage[a4paper,margin=2.5cm]{geometry}
+if(!settings.multipleView) settings.batchView=false;
+settings.tex="pdflatex";
+defaultfilename="rapportMethodeNumerique_VA-1";
+if(settings.render < 0) settings.render=4;
+settings.outformat="";
+settings.inlineimage=true;
+settings.embed=true;
+settings.toolbar=false;
+viewportmargin=(2,2);
 
-% Math, graphics, and nicer tables
-\usepackage{amsmath,amssymb}
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{caption}
-\usepackage{subcaption}
-\usepackage{asymptote}
-
-% Bibliography and hyperlinks
-
-\usepackage{caption}
-\usepackage{subcaption}
-
-% Bibliography and hyperlinks
-\usepackage[english]{babel}
-\usepackage[square,numbers]{natbib}
-\usepackage[unicode=true,bookmarks=true,colorlinks=true,linkcolor=blue,citecolor=red,backref=page]{hyperref}
-\usepackage{cleveref}
-
-% Example placeholder images (from package 'mwe') if available; otherwise replace with your image files
-\usepackage{mwe} % provides example-image
-
-\title{Numerical Methods for Non-Linear Mechanics}
-\author{Viet Anh Quach}
-
-
-\begin{document}
-\maketitle
-
-
-% \begin{abstract}
-
-% \end{abstract}
-
-\section{Introduction}
-This short report present the code that is assign for the subject "Numerical Methods for Non-Linear Mechanics" of the Master Program for Civil Engineering, teached by professor Stafano-Dal Pont at Laboratory 3SR, University Grenoble Alpes, France.
-The object of the course is studying the non-linear problems in mechanics, caused by both the geometric and material behavior.
-The assigment practices therefore is to build in the most general form of the constitutive law, which is not linearity.
-2 main problems are takin into account: A console problem in 2D and a Truss problem in 3D, so the remaining of this reports are divided into two sections of the former subject. 
-Besides, this is a ideal chance to practice, so I also try to provide a solution for the problem of Finite Element Method in 1D and 2D.
-The main code is actually written in \texttt{C++}, with libraries mostly building from scratches. They have been upload to \texttt{Github}, the link to download is provided in \cref{Annexxe}. Any corrections and comments are highly appreciated.
-I would like to thanks the professors for letting me, even though being a PhD student, could join this program to learn. I really appreciated and enjoyed the class.
-
-\section{Theory}
-The following problem was fully described in lecture course \citep{dalpont2020_nonlinear_mech}.
-
-\subsection{Console}
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[height=8cm]{console2D.pdf}
-  \caption{Two elements truss: console 2D}
-  \label{truss2D}
-\end{figure}
-The whole geometry is described in \cref{truss2D}.
-Breifly speaking, the simple truss structure composed by 3 nodes linked by 2 bars and external force $F$ applied on the node $C$ maing an angel $\theta$ with the vertical axis, causing the displacement of the bars and nodes. Gravity is not taken into account.
-In this case, $\vec{x}$ representing position of node $C$ is considered as the main unknown, owing to the fact that it is the only free node and fully represent the equilibrium position of the system.
- $\hat{e}^b$ is the unit vector of the corresponding bar $b$, which is calculated by:
- \begin{equation}
-     \hat{e}^b = \dfrac{\vec{b}}{l^b}
-  \label{unitVectors}
- \end{equation}
+\scan_stop: \mode_if_horizontal:TF {\mode_if_inner:F {\tex_unskip:D \hook_use:n {para/end}\@kernel@after@para@end \mode_if_horizontal:TF {\if_int_compare:w 11=\tex_lastnodetype:D \tex_hskip:D \c_zero_dim \fi: \tex_par:D \hook_use:n {para/after}\@kernel@after@para@after }{\msg_error:nnnn {hooks}{para-mode}{end}{horizontal}}}}\tex_par:D \end{asy}
 \subsection{Truss}
-In truss elements, the only internal effort considered is the axial stress and further, also is a constant.
-$N^b$ denotes this componeet that the right part exerts on the left part of bar $b$, which is assumed to depend only on the length of bar $l^b$ via the constitutive law:
-  \begin{equation}
-     N^b = \mathcal{A}^b (l^b)
-  \label{generalConstitutiveLaw}
- \end{equation}
-In case of large displacelents, this relation is no longer linear, as the length of the bar changed accordingly with the new position of the node, in our case is node C.
-So the problem of the console, can be written as follows:
-  \begin{align}
-    \text{Given the force } \vec{F},\\
-    \text{Find the position } \vec{x} \text{ of node C such that,}\\
-      -\mathcal{A}^1 (l^1(\vec{x})) \hat{e}^1(\vec{x}) -  \mathcal{A}^2 (l^2(\vec{x})) \hat{e}^2(\vec{x}) + \vec{F} = \vec{0}
-  \label{nodeEquilibrium2D}
- \end{align}
-
- This problem is solved by Newton's iterative method in vector form for solving systems of equations.
- For the order-one truncated Taylor series expansion, expression at the iteration (k+1) shall be:
-  \begin{equation}
-     \underline{\underline{\nabla \mathcal{F}}} (\underline{x}^{(k)})  \delta (\underline{x}^{(k)}) = -\mathcal{\underline{F}}(\underline{x}^{(k)})
-  \label{NewtonMethod}
- \end{equation}
- Solving the linear system get us the new value of $\delta x$, so we could update the postion for the next iteration by:
-   \begin{equation}
- \underline{x}^{(k+1)} = \underline{x}^{(k)} + \delta \underline{x}^{(k)}
-  \label{updatePosition}
- \end{equation}
- Apply to the console problem \cref{NewtonMethod} becomes 
- The method requires a stopping criterion: \cref{stopCondition} is chosen to be implemented in the code, as it satisfies the force equilibrium condition at nodes of the problem.
- \begin{equation}
-     \left| f\bigl(x^{(k)}\bigr) \right| < \epsilon
-     \label{stopCondition}
-   \end{equation}
-   As $\epsilon$ is a number small enough to be considered as 0, relatively to the problem solving.
-
 \section{Validation}
 \subsection{Console}
 \subsection{Truss}
@@ -135,7 +43,7 @@ This part just provided the main code. Full version could be download in this \h
 
 % \subsection{How to add Tables}
 
-% Use the table and tabular environments for basic tables --- see Table~\ref{tab:widgets}, for example. For more information, please see this help article on \href{https://www.overleaf.com/learn/latex/tables}{tables}. 
+% Use the table and tabular environments for basic tables --- see Table~\ref{tab:widgets}, for example. For more information, please see this help article on \href{https://www.overleaf.com/learn/latex/tables}{tables}.
 
 % \begin{table}
 % \centering
@@ -151,7 +59,7 @@ This part just provided the main code. Full version could be download in this \h
 
 % Comments can be added to your project by highlighting some text and clicking ``Add comment'' in the top right of the editor pane. To view existing comments, click on the Review menu in the toolbar above. To reply to a comment, click on the Reply button in the lower right corner of the comment. You can close the Review pane by clicking its name on the toolbar when you're done reviewing for the time being.
 
-% Track changes are available on all our \href{https://www.overleaf.com/user/subscription/plans}{premium plans}, and can be toggled on or off using the option at the top of the Review pane. Track changes allow you to keep track of every change made to the document, along with the person making the change. 
+% Track changes are available on all our \href{https://www.overleaf.com/user/subscription/plans}{premium plans}, and can be toggled on or off using the option at the top of the Review pane. Track changes allow you to keep track of every change made to the document, along with the person making the change.
 
 % \subsection{How to add Lists}
 
@@ -171,7 +79,7 @@ This part just provided the main code. Full version could be download in this \h
 
 % \LaTeX{} is great at typesetting mathematics. Let $X_1, X_2, \ldots, X_n$ be a sequence of independent and identically distributed random variables with $\text{E}[X_i] = \mu$ and $\text{Var}[X_i] = \sigma^2 < \infty$, and let
 % \[S_n = \frac{X_1 + X_2 + \cdots + X_n}{n}
-%       = \frac{1}{n}\sum_{i}^{n} X_i\]
+% = \frac{1}{n}\sum_{i}^{n} X_i\]
 % denote their mean. Then as $n$ approaches infinity, the random variables $\sqrt{n}(S_n - \mu)$ converge in distribution to a normal $\mathcal{N}(0, \sigma^2)$.
 
 
@@ -183,7 +91,7 @@ This part just provided the main code. Full version could be download in this \h
 
 % \subsection{How to change the document language and spell check settings}
 
-% Overleaf supports many different languages, including multiple different languages within one document. 
+% Overleaf supports many different languages, including multiple different languages within one document.
 
 % To configure the document language, simply edit the option provided to the babel package in the preamble at the top of this example project. To learn more about the different options, please visit this help article on \href{https://www.overleaf.com/learn/latex/International_language_support}{international language support}.
 
