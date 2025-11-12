@@ -1,7 +1,7 @@
 settings.outformat = "pdf";
 import markers;
 import CAD;
-size(10cm);
+size(6cm);
 defaultpen(linewidth(1));
 
 //Macro draw shifted
@@ -48,10 +48,10 @@ void groundCircle(pair A, real r)
 }
 
 //Axis 
-Label i1 = Label("$\vec{i_1}$", position=EndPoint, align=2S);
-Label i2 = Label("$\vec{i_2}$", position=EndPoint, align=2W);
-draw((0,0)--(2,0),arrow=Arrow(), L = i1);
-draw((0,0)--(0,2),arrow=Arrow(), L = i2);
+Label i1 = Label("$\vec{i_1}$", position=EndPoint, align=S);
+Label i2 = Label("$\vec{i_2}$", position=EndPoint, align=W);
+draw((0,0)--(2,0),arrow=Arrow(size=6), L = i1);
+draw((0,0)--(0,2),arrow=Arrow(size=6), L = i2);
 
 
 // Toạ độ các nút
@@ -73,7 +73,7 @@ dot("$B$", B, 2*SE);
 dot("$C$", C, 2*NE);
 
 //Force
-pair F = (C.x+1,C.y-2);
+pair F = (C.x+2,C.y-2);
 Label f = Label("$\vec{F}$", position=EndPoint, align=E);
 draw(C--F,arrow=Arrow(TeXHead), L = f);
 draw(C--(C.x, F.y),dashed+gray);
