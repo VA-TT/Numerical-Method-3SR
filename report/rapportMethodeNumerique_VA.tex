@@ -77,9 +77,9 @@ $N^b$ denotes this componeet that the right part exerts on the left part of bar 
 In case of large displacelents, this relation is no longer linear, as the length of the bar changed accordingly with the new position of the node, in our case is node C.
 So the problem of the console, can be written as follows:
   \begin{align}
-    \text{Given the force } \vec{F},\\
+    \text{Given the force } \vec{\mathcal{F}},\\
     \text{Find the position } \vec{x} \text{ of node C such that,}\\
-      -\mathcal{A}^1 (l^1(\vec{x})) \hat{e}^1(\vec{x}) -  \mathcal{A}^2 (l^2(\vec{x})) \hat{e}^2(\vec{x}) + \vec{F} = \vec{0}
+      -\mathcal{A}^1 (l^1(\vec{x})) \hat{e}^1(\vec{x}) -  \mathcal{A}^2 (l^2(\vec{x})) \hat{e}^2(\vec{x}) + \vec{\mathcal{F}} = \vec{0}
   \label{nodeEquilibrium2D}
  \end{align}
 
@@ -101,6 +101,23 @@ So the problem of the console, can be written as follows:
      \label{stopCondition}
    \end{equation}
    As $\epsilon$ is a number small enough to be considered as 0, relatively to the problem solving.
+The object is now to transform equation \cref{generalConstitutiveLaw} into a linear form \cref{NewtonMethod} so that it could be numerically solved. 
+Thanks to first-order Taylor expansion again, we obtain the development of sum of the force, which should be approching 0, at iteraion \texttt{k+1} (or in another word, at when node \textbf{C} would take an increment in position into $\vec{x}+ \delta \vec{x}$):
+ \begin{equation}
+  \vec{\mathcal{F}}(\vec{x}+ \delta \vec{x}) = \vec{\mathcal{F}}(\vec{x}) + \left(\nabla\vec{\mathcal{F}}(\vec{x})\right)@\delta \vec{x} = 0
+  \label{TaylorK+1}
+   \end{equation}
+   where the Jacobian matrix $\nabla\vec{\mathcal{F}}(\vec{x})$ is described in the following euqation using Einsten's sum notation:
+   \begin{equation}
+   \nabla\vec{\mathcal{F}}(\vec{x}) = -\dfrac{d\mathcal{A}^i}{dl^i}\left( \vec{e}^i(\vec{x}) \otimes \vec{e}^i(\vec{x}) \right) - \dfrac{\mathcal{A}^1\left(l^i(\vec{x})\right)}{l^i(\vec{x})} \left( \mathbb{I} - \vec{e}^i(\vec{x}) \otimes \vec{e}^i(\vec{x})\right)
+  \label{Jacobian}
+   \end{equation} 
+   Finally, we can solve the system using a single linear vector equation, which is suitable to be implemented into computational calculating:
+    \begin{equation}
+\left(\nabla\vec{\mathcal{F}}(\vec{x}^k)\right)@\delta \vec{x}^k =  - \vec{\mathcal{F}}(\vec{x}^k)
+  \label{finalConsole}
+   \end{equation}
+   The first iteration starts from the initial condition of the system, then the iteration begins until $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ to be considered as 0 like discussed above.
 
 \section{Validation}
 \subsection{Console}
