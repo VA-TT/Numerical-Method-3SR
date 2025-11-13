@@ -67,7 +67,6 @@ In this case, $\vec{x}$ representing position of node $C$ is considered as the m
      \hat{e}^b = \dfrac{\vec{b}}{l^b}
   \label{unitVectors}
  \end{equation}
-\subsection{Truss}
 In truss elements, the only internal effort considered is the axial stress and further, also is a constant.
 $N^b$ denotes this componeet that the right part exerts on the left part of bar $b$, which is assumed to depend only on the length of bar $l^b$ via the constitutive law:
   \begin{equation}
@@ -117,8 +116,8 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
 \left(\nabla\vec{\mathcal{F}}(\vec{x}^k)\right)@\delta \vec{x}^k =  - \vec{\mathcal{F}}(\vec{x}^k)
   \label{finalConsole}
    \end{equation}
-   The first iteration starts from the initial condition of the system, then the iteration begins until $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ to be considered as 0 like discussed above.
-
+   The first iteration starts from the initial condition of the system, then the iteration begins until $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ to be considered null, as discussed above.
+\subsection{Truss}
 \section{Validation}
 \subsection{Console}
 \subsection{Truss}
