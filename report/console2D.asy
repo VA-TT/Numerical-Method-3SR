@@ -24,19 +24,20 @@ trueshift+max(pen));
 // Macro: Vẽ circle + tiếp tuyến dọc + nền gạch chéo
 void groundCircle(pair A, real r)
 {
-    pen fillcolor=blue;
-    pen bordercolor=black;
-    pen tangentcolor=gray;
+    // Use a thin pen for these decorations
+    pen p = linewidth(0.75);
+    pen fillcolor = blue + p;
+    pen bordercolor = black;
+    pen tangentcolor = gray + p;
     real hatchSpacing=r;
-    // Vẽ đường tròn
-    filldraw(circle(A, r), fillcolor, bordercolor);
+
 
     // Tính tọa độ tiếp tuyến dọc bên phải
     real xtan = A.x - r;
 
     // Chiều cao hiển thị cho tiếp tuyến và hatch
-    real ymin = A.y - 2.0*r;
-    real ymax = A.y + 2.0*r;
+    real ymin = A.y - 3.0*r;
+    real ymax = A.y + 3.0*r;
 
     // Vẽ đường tiếp tuyến màu ghi
     draw((xtan, ymin)--(xtan, ymax), tangentcolor);
@@ -45,6 +46,9 @@ void groundCircle(pair A, real r)
     for(real y = ymin; y <= ymax; y += hatchSpacing) {
         draw( (xtan, y) -- (xtan - r * 0.5, y - r* 0.5), tangentcolor );
     }
+
+        // Vẽ đường tròn
+    filldraw(circle(A, r), fillcolor, bordercolor);
 }
 
 //Axis 
@@ -64,19 +68,19 @@ real r = a / 40;
 // Vẽ các thanh
 Label b1 = Label("$\vec{b_1} = \vec{x}$", position=MidPoint, align=2SE);
 Label b2 = Label("$\vec{b_2}$", position=MidPoint, align=2S);
-draw(A--C, L = b1, arrow = MidArrow(TeXHead));
-draw(B--C, L = b2, arrow = MidArrow(TeXHead));
+draw(A--C, red, L = b1, arrow = MidArrow(TeXHead));
+draw(B--C, red, L = b2, arrow = MidArrow(TeXHead));
 
-// Names
-dot("$A$", A, 2*S);
-dot("$B$", B, 2*SE);
-dot("$C$", C, 2*NE);
+// Names (drawn with contrasting color so they are visible over the blue fill)
+dot("$A$", A, 2*S, black);
+dot("$B$", B, 2*NE, black);
+dot("$C$", C, 2*NE, black);
 
 //Force
 pair F = (C.x+2,C.y-2);
 Label f = Label("$\vec{F}$", position=EndPoint, align=E);
-draw(C--F,arrow=Arrow(TeXHead), L = f);
-draw(C--(C.x, F.y),dashed+gray);
+draw(C--F, purple, arrow=Arrow(TeXHead), L = f);
+draw(C--(C.x, F.y-1),dashed+gray);
 pair p1 = (C+F)/2;
 pair p2 = (C.x, C.y-1);
 
@@ -85,11 +89,14 @@ draw(arc(C, p1, p2, direction = CW), L = Label("$\theta$", position=MidPoint, al
 //Dim
 pair dimShiftX = (-1cm, 0);
 pair dimShiftY = (0, 1cm);
-Label barLength = Label("$a$", align=(0,0), position=MidPoint, filltype=Fill(white));
-drawshifted(A -- B, trueshift=dimShiftX, label=barLength, arrow=Arrows(size=8), bar=Bars);
-drawshifted(B -- C, trueshift=dimShiftY, label=barLength, arrow=Arrows(size=8), bar=Bars);
+Label barLengthH = Label("$a$", align=N, position=MidPoint, filltype=Fill(white));
+Label barLengthV = Label("$a$", align=W, position=MidPoint, filltype=Fill(white));
+drawshifted(A -- B, trueshift=dimShiftX, label=barLengthV, arrow=Arrows(size=8), bar=Bars);
+drawshifted(B -- C, trueshift=dimShiftY, label=barLengthH, arrow=Arrows(size=8), bar=Bars);
 
 // Khớp (chấm nhỏ màu xanh)
 groundCircle(A,r);
 groundCircle(B,r);
+filldraw(circle(A, r), blue, black);
+filldraw(circle(B, r), blue, black);
 filldraw(circle(C, r), blue, black);
