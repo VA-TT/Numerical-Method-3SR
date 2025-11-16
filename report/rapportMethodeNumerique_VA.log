@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.6.27)  13 NOV 2025 07:38
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.6.27)  16 NOV 2025 06:07
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -506,11 +506,11 @@ LaTeX Warning: Reference `Annexxe' on page 1 undefined on input line 48.
 
 Package natbib Warning: Citation `dalpont2020_nonlinear_mech' on page 1 undefined on input line 52.
 
-<console2D.pdf, id=51, 172.87585pt x 156.39429pt>
+<console2D.pdf, id=51, 174.03018pt x 156.93633pt>
 File: console2D.pdf Graphic file (type pdf)
 <use console2D.pdf>
 Package pdftex.def Info: console2D.pdf  used on input line 58.
-(pdftex.def)             Requested size: 188.71056pt x 170.71652pt.
+(pdftex.def)             Requested size: 189.32797pt x 170.71652pt.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
@@ -521,6 +521,12 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 {C:/Users/User/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
 
 [2 <./console2D.pdf>]
+<truss.pdf, id=108, 135.40587pt x 227.62039pt>
+File: truss.pdf Graphic file (type pdf)
+<use truss.pdf>
+Package pdftex.def Info: truss.pdf  used on input line 123.
+(pdftex.def)             Requested size: 135.41171pt x 227.62204pt.
+
 No file rapportMethodeNumerique_VA.bbl.
 
 Package caption Warning: Unused \captionsetup[sub] on input line 20.
@@ -531,7 +537,7 @@ Package natbib Warning: There were undefined citations.
 
 
 
-[3] (rapportMethodeNumerique_VA.aux)
+[3 <./truss.pdf>] (rapportMethodeNumerique_VA.aux)
  ***********
 LaTeX2e <2025-06-01> patch level 1
 L3 programming layer <2025-05-26>
@@ -544,17 +550,17 @@ Package rerunfilecheck Info: File `rapportMethodeNumerique_VA.out' has not chang
 (rerunfilecheck)             Checksum: 56AA0974F028C29698C0FAB03F8C2AC3;1063.
  ) 
 Here is how much of TeX's memory you used:
- 16099 strings out of 468219
- 274685 string characters out of 5433353
+ 16109 strings out of 468219
+ 274859 string characters out of 5433353
  787149 words of memory out of 5000000
- 44381 multiletter control sequences out of 15000+600000
+ 44390 multiletter control sequences out of 15000+600000
  641312 words of font info for 79 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  90i,10n,93p,504b,479s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1440.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1728.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm1440.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm2074.pk><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on rapportMethodeNumerique_VA.pdf (3 pages, 149067 bytes).
+Output written on rapportMethodeNumerique_VA.pdf (3 pages, 158529 bytes).
 PDF statistics:
- 330 PDF objects out of 1000 (max. 8388607)
- 28 named destinations out of 1000 (max. 500000)
- 102 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 340 PDF objects out of 1000 (max. 8388607)
+ 29 named destinations out of 1000 (max. 500000)
+ 107 words of extra memory for PDF output out of 10000 (max. 10000000)
 

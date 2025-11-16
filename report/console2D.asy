@@ -1,7 +1,5 @@
 settings.outformat = "pdf";
-import markers;
-import CAD;
-size(6cm);
+size(6cm, keepAspect = true);
 defaultpen(linewidth(1));
 
 //Macro draw shifted
@@ -72,9 +70,9 @@ draw(A--C, red, L = b1, arrow = MidArrow(TeXHead));
 draw(B--C, red, L = b2, arrow = MidArrow(TeXHead));
 
 // Names (drawn with contrasting color so they are visible over the blue fill)
-dot("$A$", A, 2*S, black);
-dot("$B$", B, 2*NE, black);
-dot("$C$", C, 2*NE, black);
+dot("$A$", A, 2*S, blue);
+dot("$B$", B, 2*NE, blue);
+dot("$C$", C, 2*NE, blue);
 
 //Force
 pair F = (C.x+2,C.y-2);
