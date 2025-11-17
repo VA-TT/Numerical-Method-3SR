@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.6.27)  16 NOV 2025 06:07
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.6.27)  16 NOV 2025 11:50
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -524,7 +524,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 <truss.pdf, id=108, 135.40587pt x 227.62039pt>
 File: truss.pdf Graphic file (type pdf)
 <use truss.pdf>
-Package pdftex.def Info: truss.pdf  used on input line 123.
+Package pdftex.def Info: truss.pdf  used on input line 126.
 (pdftex.def)             Requested size: 135.41171pt x 227.62204pt.
 
 No file rapportMethodeNumerique_VA.bbl.
@@ -537,7 +537,9 @@ Package natbib Warning: There were undefined citations.
 
 
 
-[3 <./truss.pdf>] (rapportMethodeNumerique_VA.aux)
+[3 <./truss.pdf>]
+
+[4] (rapportMethodeNumerique_VA.aux)
  ***********
 LaTeX2e <2025-06-01> patch level 1
 L3 programming layer <2025-05-26>
@@ -550,17 +552,17 @@ Package rerunfilecheck Info: File `rapportMethodeNumerique_VA.out' has not chang
 (rerunfilecheck)             Checksum: 56AA0974F028C29698C0FAB03F8C2AC3;1063.
  ) 
 Here is how much of TeX's memory you used:
- 16109 strings out of 468219
- 274859 string characters out of 5433353
- 787149 words of memory out of 5000000
+ 16112 strings out of 468219
+ 274885 string characters out of 5433353
+ 788149 words of memory out of 5000000
  44390 multiletter control sequences out of 15000+600000
  641312 words of font info for 79 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 90i,10n,93p,504b,479s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,11n,93p,504b,471s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1440.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1728.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm1440.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm2074.pk><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on rapportMethodeNumerique_VA.pdf (3 pages, 158529 bytes).
+Output written on rapportMethodeNumerique_VA.pdf (4 pages, 160585 bytes).
 PDF statistics:
- 340 PDF objects out of 1000 (max. 8388607)
- 29 named destinations out of 1000 (max. 500000)
+ 347 PDF objects out of 1000 (max. 8388607)
+ 32 named destinations out of 1000 (max. 500000)
  107 words of extra memory for PDF output out of 10000 (max. 10000000)
 

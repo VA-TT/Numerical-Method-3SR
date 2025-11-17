@@ -63,10 +63,12 @@ The whole geometry is described in \cref{truss2D}.
 Breifly speaking, the simple truss structure composed by 3 nodes linked by 2 bars and external force $F$ applied on the node $C$ maing an angel $\theta$ with the vertical axis, causing the displacement of the bars and nodes. Gravity is not taken into account.
 In this case, $\vec{x}$ representing position of node $C$ is considered as the main unknown, owing to the fact that it is the only free node and fully represent the equilibrium position of the system.
  $\hat{e}^b$ is the unit vector of the corresponding bar $b$, which is calculated by:
- \begin{equation}
-     \hat{e}^b = \dfrac{\vec{b}}{l^b}
-  \label{unitVectors}
- \end{equation}
+ \begin{align}
+  \vec{b} &= \vec{x}^{E(b)} - \vec{x}^{O(b)};\\
+  l^{b} &= || \vec{b}|| ;\\
+     \hat{e}^b &= \dfrac{\vec{b}}{l^b};
+  \label{barVectors}
+ \end{align}
 In truss elements, the only internal effort considered is the axial stress and further, also is a constant.
 $N^b$ denotes this componeet that the right part exerts on the left part of bar $b$, which is assumed to depend only on the length of bar $l^b$ via the constitutive law:
   \begin{equation}
@@ -117,13 +119,15 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
   \label{finalConsole}
    \end{equation}
    The first iteration starts from the initial condition of the system, then the iteration begins until $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ to be considered null, as discussed above.
-\subsection{Truss}
+
+   \subsection{Truss}
 \begin{figure}[h]
   \centering
   \includegraphics[height=8cm]{truss.pdf}
-  \caption{Two elements truss: console 2D}
+  \caption{3D truss}
   \label{truss3D}
 \end{figure}
+Similarly in the previous problem, each bar's geometry is fully accesible through the position of nodes, vectors could be
 \section{Validation}
 \subsection{Console}
 \subsection{Truss}
