@@ -62,20 +62,26 @@ The following problem was fully described in lecture course \citep{dalpont2020_n
 The whole geometry is described in \cref{truss2D}.
 Breifly speaking, the simple truss structure composed by 3 nodes linked by 2 bars and external force $F$ applied on the node $C$ maing an angel $\theta$ with the vertical axis, causing the displacement of the bars and nodes. Gravity is not taken into account.
 In this case, $\vec{x}$ representing position of node $C$ is considered as the main unknown, owing to the fact that it is the only free node and fully represent the equilibrium position of the system.
- $\hat{e}^b$ is the unit vector of the corresponding bar $b$, which is calculated by:
- \begin{align}
-  \vec{b} &= \vec{x}^{E(b)} - \vec{x}^{O(b)};\\
-  l^{b} &= || \vec{b}|| ;\\
-     \hat{e}^b &= \dfrac{\vec{b}}{l^b};
-  \label{barVectors}
- \end{align}
+ $\hat{e}^b$ is the unit vector of the corresponding bar $b$, which is calculated by the position vector of the node where the bar $b$ begins ($\vec{x}^B$) and ends ($\vec{x}^E$) :
+ \begin{subequations}\label{eq:barVectors}
+\begin{align}
+  \vec{b} &= \vec{x}^{E(b)} - \vec{x}^{O(b)}\\
+  l^{b} &= \|\vec{b}\|\\
+  \hat{e}^b &= \dfrac{\vec{b}}{l^b} 
+\end{align}
+\end{subequations}
 In truss elements, the only internal effort considered is the axial stress and further, also is a constant.
-$N^b$ denotes this componeet that the right part exerts on the left part of bar $b$, which is assumed to depend only on the length of bar $l^b$ via the constitutive law:
+To satisfy the nodal equilibrium, at position $C$ the sum of the internal force (left-hand side) and the external force (right-hand side) must balanced:
+  \begin{equation}
+     \sum_{b=1}^2  N^b =  N^1 + N^2 = F
+  \label{generalConstitutiveLaw}
+ \end{equation}
+which $N^b$ denotes this component that the right part exerts on the left part of bar $b$, which is assumed to depend only on the length of bar $l^b$ via the constitutive law:
   \begin{equation}
      N^b = \mathcal{A}^b (l^b)
   \label{generalConstitutiveLaw}
  \end{equation}
-In case of large displacelents, this relation is no longer linear, as the length of the bar changed accordingly with the new position of the node, in our case is node C.
+In case of large displacement, this relation is no longer linear, as the length of the bar changed accordingly with the new position of the node, in our case is node $C$.
 So the problem of the console, can be written as follows:
   \begin{align}
     \text{Given the force } \vec{\mathcal{F}},\\
@@ -110,7 +116,7 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
    \end{equation}
    where the Jacobian matrix $\nabla\vec{\mathcal{F}}(\vec{x})$ is described in the following euqation using Einsten's sum notation:
    \begin{equation}
-   \nabla\vec{\mathcal{F}}(\vec{x}) = -\dfrac{d\mathcal{A}^i}{dl^i}\left( \vec{e}^i(\vec{x}) \otimes \vec{e}^i(\vec{x}) \right) - \dfrac{\mathcal{A}^1\left(l^i(\vec{x})\right)}{l^i(\vec{x})} \left( \mathbb{I} - \vec{e}^i(\vec{x}) \otimes \vec{e}^i(\vec{x})\right)
+   \nabla\vec{\mathcal{F}}(\vec{x}) = -\dfrac{d\mathcal{A}^i}{dl^i}\left( \vec{e}^i(\vec{x}) \otimes \vec{e}^i(\vec{x}) \right) - \dfrac{\mathcal{A}^i\left(l^i(\vec{x})\right)}{l^i(\vec{x})} \left( \mathbb{I} - \vec{e}^i(\vec{x}) \otimes \vec{e}^i(\vec{x})\right)
   \label{Jacobian}
    \end{equation} 
    Finally, we can solve the system using a single linear vector equation, which is suitable to be implemented into computational calculating:
@@ -118,7 +124,7 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
 \left(\nabla\vec{\mathcal{F}}(\vec{x}^k)\right)@\delta \vec{x}^k =  - \vec{\mathcal{F}}(\vec{x}^k)
   \label{finalConsole}
    \end{equation}
-   The first iteration starts from the initial condition of the system, then the iteration begins until $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ to be considered null, as discussed above.
+   The first iteration starts from the initial condition of the system, then the iteration begins, until $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ to be considered null, as discussed above.
 
    \subsection{Truss}
 \begin{figure}[h]
@@ -127,7 +133,8 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
   \caption{3D truss}
   \label{truss3D}
 \end{figure}
-Similarly in the previous problem, each bar's geometry is fully accesible through the position of nodes, vectors could be
+Similarly in the previous problem, each bar's geometry is fully accessible through the position of nodes. Their vectors could be determined totally similar in the previous problem via \cref{eq:barVectors}.
+
 \section{Validation}
 \subsection{Console}
 \subsection{Truss}
