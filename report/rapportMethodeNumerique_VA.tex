@@ -6,7 +6,7 @@
 \usepackage[a4paper,margin=2.5cm]{geometry}
 
 % Math, graphics, and nicer tables
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amssymb, amsfonts}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{caption}
@@ -134,7 +134,47 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
   \label{truss3D}
 \end{figure}
 Similarly in the previous problem, each bar's geometry is fully accessible through the position of nodes. Their vectors could be determined totally similar in the previous problem via \cref{eq:barVectors}.
+The problem of the small deformation truss can be stated as:
 
+  \begin{align}
+    \text{Given the external force } \vec{F}^{e/n}, n \in \mathcal{N}_F \text{ and } \vec{U}^{n}, n \in \mathcal{N}_I\\
+    \text{find the displacement vector } \vec{u}^n, n \in \mathcal{N} \text{ so that } \vec{u}^n = \vec{U}^n, n \in \mathcal{N}_I \text{ and }\\
+      \forall\vec{v}^n \text{ such that } \vec{v}^n = 0, n \in \mathcal{N}_I \\
+      \sum_{b \in \mathcal{B}} k^b \vec{e}_0^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) \vec{e}_0^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) = \sum_{n \in \mathcal{N}_F} \vec{F}^{e/n} \vec{v}^n
+      \label{nodeEquilibrium3D}
+ \end{align}
+which expressed in matrix notation as:
+   \begin{equation}
+    \forall \underline{\mathcal{V}}^t \underline{\underline{\mathcal{K}}} \underline{\mathcal{U}} = \underline{\mathcal{V}}^t \underline{\mathcal{F}}
+    \label{KU=F}
+   \end{equation} 
+The global stiffness matrix $\underline{\underline{\mathcal{K}}}$ could be assembled by multiple methods. One of them is by using the elementary application $K^b$ of bar $b$ along with the connectivity matrix $\underline{\underline{C^n}}$ as followed:
+
+\begin{align}
+  \underline{\underline{\mathcal{K}}} &= \sum_{b \in \mathcal{B}} \left( \underline{\underline{C}}^{E(b)} - \underline{\underline{C}}^{O(b)}\right) \underline{\underline{K}}^b \left( \underline{\underline{C}}^{E(b)} - \underline{\underline{C}}^{O(b)}\right) \\
+  \underline{\underline{C^n}} & =
+  \left[
+  \begin{array}{@{}ccc|ccc|ccc@{}}
+    0 & \cdots & 0 & 1 & 0 & 0 & 0 & \cdots & 0 \\
+    \vdots & \ddots & \vdots & 0 & 1 & 0 & \vdots & \ddots & \vdots \\
+    0 & \cdots & 0 & 0 & 0 & 1 & 0 & \cdots & 0
+  \end{array}
+  \right] \label{connectivityMatrix} \\
+  &\qquad
+  \begin{array}{@{}c@{\ }c@{\ }c@{}}
+    \underbrace{\hphantom{0\ \cdots\ 0}}_{3(n_1)} &
+    \underbrace{\hphantom{1\ 0\ 0}}_{3} &
+    \underbrace{\hphantom{0\ \cdots\ 0}}_{3(N_n)}
+  \end{array}
+\end{align}
+Though this method is easily implemented in coding small problem, when calculating manually by hand, we prefer using the elementary stiffness matrix 
+\begin{equation}
+  \underline{\underline{\mathcal{K}}}^b = \underline{\underline{K}}^b 
+  \begin{bmatrix}
+    1 & -1 \\
+    -1 & 1 
+  \end{bmatrix} \label{elementaryStiffness}
+\end{equation}
 \section{Validation}
 \subsection{Console}
 \subsection{Truss}
