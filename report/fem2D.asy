@@ -115,11 +115,6 @@ pair pO = (0, 0);
 
 label("$\Omega$", (pA+pB+pC+pO)/4);
 
-// Vẽ các side
-path object = pO--pA--pB--pC--cycle;
-draw(object, red);
-
-
 
 // Hàm vẽ pháp tuyến tại điểm P trên đoạn MN
 void drawNormal(pair M, pair N) {
@@ -153,11 +148,17 @@ label("$A$", pA, 2*NE);
 label("$B$", pB, 2*NE);
 label("$C$", pC, 2*NE);
 
+label("$\Gamma_u$", (pO+pA)*2/3, N);
+label("$\Gamma_F = AB \cup BC \cup CO$", midpoint(pO+pC)/4*3, 3*W);
+
+// Vẽ các side
+path object = pO--pA--pB--pC--cycle;
+draw(object, red);
+
 // Axis 
 Label i1 = Label("$\vec{i_1}$", position=EndPoint, align=S);
 Label i2 = Label("$\vec{i_2}$", position=EndPoint, align=W);
 draw((0,0)--(2,0),arrow=Arrow(size=6), L = i1);
 draw((0,0)--(0,2),arrow=Arrow(size=6), L = i2);
 
-label("$\Gamma_u$", (pO+pA)*2/3, N);
-label("$\Gamma_F = AB \cup BC \cup CO$", midpoint(pO+pC)/4*3, 3*W);
+dot(object, blue);
