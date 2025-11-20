@@ -145,10 +145,34 @@ The problem of the small deformation truss can be stated as:
  \end{align}
 which expressed in matrix notation as:
    \begin{equation}
-    \forall \underline{\mathcal{V}}^t \underline{\underline{\mathcal{K}}} \underline{\mathcal{U}} = \underline{\mathcal{V}}^t \underline{\mathcal{F}}
-    \label{KU=F}
+    \forall \underline{\mathcal{V}}^t \underline{\underline{\mathcal{K}}} \underline{\mathcal{U}} = \underline{\mathcal{V}}^t \underline{\mathcal{F}}  
    \end{equation} 
-The global stiffness matrix $\underline{\underline{\mathcal{K}}}$ could be assembled by multiple methods. One of them is by using the elementary application $K^b$ of bar $b$ along with the connectivity matrix $\underline{\underline{C^n}}$ as followed:
+    or in the simpliest way:  
+    \begin{equation}
+ \underline{\underline{\mathcal{K}}} \ \underline{\mathcal{U}} = \underline{\mathcal{F}} \label{KU=F}
+   \end{equation}
+   We can easily verify that:
+       \begin{equation} \underline{\mathcal{F}} = 
+\begin{bmatrix}  
+F_1^{e/1}\\
+F_2^{e/1}\\
+F_3^{e/1}\\
+\vdots\\
+F_1^{e/N}\\
+F_2^{e/N}\\
+F_3^{e/N}\\
+\end{bmatrix}   ; \underline{\mathcal{U}} = 
+\begin{bmatrix}  
+u_1^{1}\\
+u_2^{1}\\
+u_3^{1}\\
+\vdots\\
+u_1^{N}\\
+u_2^{N}\\
+u_3^{N}\\
+\end{bmatrix} 
+\end{equation}
+Meanwhile, the global stiffness matrix $\underline{\underline{\mathcal{K}}}$ could be assembled by multiple methods. One of them is by using the elementary application $K^b$ of bar $b$ along with the connectivity matrix $\underline{\underline{C^n}}$ as followed:
 
 \begin{align}
   \underline{\underline{\mathcal{K}}} &= \sum_{b \in \mathcal{B}} \left( \underline{\underline{C}}^{E(b)} - \underline{\underline{C}}^{O(b)}\right) \underline{\underline{K}}^b \left( \underline{\underline{C}}^{E(b)} - \underline{\underline{C}}^{O(b)}\right) \\
@@ -175,6 +199,8 @@ Though this method is easily implemented in coding small problem, when calculati
     -1 & 1 
   \end{bmatrix} \label{elementaryStiffness}
 \end{equation}
+At this point, $\underline{\underline{\mathcal{K}}}$ should be singular i.e  $\det(\underline{\underline{\mathcal{K}}}) = 0$ because the kinematic boundary condition is not yet applied. Two different techniques are usually proposed: the direct method and the approximated method (so called penalization method).
+
 \section{Validation}
 \subsection{Console}
 \subsection{Truss}
