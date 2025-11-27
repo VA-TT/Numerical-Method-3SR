@@ -28,7 +28,7 @@
 % Example placeholder images (from package 'mwe') if available; otherwise replace with your image files
 \usepackage{mwe} % provides example-image
 
-\title{Numerical Methods for Non-Linear Mechanics}
+\title{\textbf{Numerical Methods for Non-Linear Mechanics}}
 \author{Viet Anh Quach}
 
 
@@ -216,6 +216,7 @@ The approximated is obtained by adding $1/\epsilon$ to the main diagonal terms o
   \caption{1D Finite Element}
   \label{truss3D}
 \end{figure}
+The equilibrium equations therefore, described in the strong form:
 \begin{subequations}
 \begin{align}
   \dfrac{dN}{dx} + f &= 0;\\
@@ -225,6 +226,22 @@ The approximated is obtained by adding $1/\epsilon$ to the main diagonal terms o
   u(0) &= 0;
 \end{align}
 \end{subequations}
+The weak form is expressed by;
+\begin{equation}
+   \forall v \in V, \int^l_0 EA \dfrac{du}{dx}\dfrac{dv}{dx}dx - Rv(0) = \int^l_0fvdx + Fv(l)
+  \label{weakformFEM1D}
+\end{equation}
+\begin{equation}
+  \forall v \in V, a(u,v) + b(R,v) = L(v)
+  \label{weakformFEM1Dcompacted}
+\end{equation}
+rewritten in tensor notation:
+\begin{align}
+  \text{Find $\underline{\mathcal{U}}$ and $\mathcal{R}$ such that:}\\
+ U^1 &= 0;\\
+ \underline{\underline{\mathcal{K}}}\underline{\mathcal{U}} + \mathcal{R} &= \underline{\mathcal{F}}
+  \label{FEM1D}
+\end{align}
 \subsection{FEM2D}
 \begin{figure}[h]
   \centering
@@ -232,6 +249,19 @@ The approximated is obtained by adding $1/\epsilon$ to the main diagonal terms o
   \caption{2D Finite Element}
   \label{truss3D}
 \end{figure}
+\begin{align}
+  \forall \vec{x} \in \Omega, \text{div} \sigma + \vec{f} &= 0;\\
+  \forall \vec{x} \in \Omega,  \sigma &= \lambda \text{tr} \epsilon (\vec{u}) \mathbb{I} + 2\mu\epsilon(\vec{u});\\
+    \forall \vec{x} \in \Gamma_u, \vec{u} &= \vec{U};\\
+    \forall \vec{x} \in \Gamma_F, \sigma @\vec{n} &= \vec{F};\\
+    \forall \vec{x} \in \Gamma_u, \sigma @\vec{n} &= \vec{R};\\
+\end{align}
+weak form:
+\begin{align}
+  \text{Find $\vec{u} \in V_0$ and $\vec{\mathcal{R}}$ such that:}\\
+\forall \vec{v} \in V, \int_\Omega (\lambda \text{tr} \epsilon (\vec{u})\text{tr} \epsilon (\vec{v}) + 2\mu\epsilon(\vec{u}) : \epsilon(\vec{v}))ds - \int_{\Gamma_u}\vec{R}\vec{v}dl = \int_\Omega\vec{f}\vec{v}ds + \int_{\Gamma_F}\vec{F}\vec{v}dl;
+  \label{FEM2D}
+\end{align}
 \section{Validation}
 \subsection{Console}
 \subsection{Truss}

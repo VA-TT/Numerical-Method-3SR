@@ -3,7 +3,7 @@ size(8cm, keepAspect = true);
 
 real lw = linewidth(currentpen);
 // Margin object to shorten paths so arrowheads don't overlap endpoints
-margin ArrowMargins = TrueMargin(lw, 0.2*lw);
+margin ArrowMargins = TrueMargin(lw, 0.1*lw);
 
 //Macro draw shifted
 void drawshifted(path g, pair trueshift, picture pic =
@@ -93,11 +93,11 @@ void distributedF(pair pointStart, pair pointEnd, real f)
 
 
     // Boundary -- use Label constructor (Label(...)) for the draw L parameter
-    draw((pointStart.x, pointStart.y+f)--(pointEnd.x, pointEnd.y+f), forceColor, L = Label("$\vec{f}$", position = MidPoint, align = N));
-
+    // draw((pointStart.x, pointStart.y+f)--(pointEnd.x, pointEnd.y+f), forceColor, L = Label("$\vec{f}$", position = MidPoint, align = N));
+    label("$\vec{f}$", (pointStart +pointEnd)/2 +N, purple);
     // arrow forces
-    for(real x = pointStart.x; x <= pointEnd.x; x += hatchSpacing) {
-           draw( (x, pointStart.y +f) -- (x, pointStart.y), forceColor, arrow = Arrow(TeXHead), margin = ArrowMargins );
+    for(real x = pointStart.x; x < pointEnd.x; x += hatchSpacing) {
+           draw( (x, pointStart.y+0.5) -- (x+f, pointStart.y+0.5), forceColor, arrow = Arrow(TeXHead), margin = ArrowMargins );
     }
 }
 
@@ -120,7 +120,7 @@ draw(pA--pB, red, arrow = MidArrow(TeXHead));
 
 // Concentrated force at node B (arrow pointing to the node)
 pair F = (pB.x + 2, pB.y);
-Label f = Label("$\vec{F}$", position=EndPoint, align=2SE);
+Label f = Label("$\vec{F}$", position=EndPoint, align=2N);
 // Draw concentrated force arrow at B (omit explicit margin to avoid name clash)
 draw(F--pB, purple, arrow=Arrow(), L = f, margin=ArrowMargins);
 
@@ -143,5 +143,5 @@ dot(pB, blue);
 groundCircleV(pA, r);
 
 // Labels for nodes
-label("$A$", pA, 2*NE);
-label("$B$", pB, 2*NE);
+label("$A$", pA, 2*SE);
+label("$B$", pB, 2*SE);
