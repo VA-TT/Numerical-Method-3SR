@@ -52,6 +52,7 @@ Vector<Vector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
 Matrix<double, nNodes, nNodes> K{};
 Matrix<double, nNodes, 1> U{};
 Matrix<double, nNodes, 1> F{};
+Matrix<double, nNodes, 1> R{};
 Vector<double> nodes{};
 Vector<Vector<double>> element(nElements);
 Vector<double> k(nElements);
@@ -169,6 +170,16 @@ void applyBC(Index node, double g) {
   K(node, node) = 1.0;
 }
 
+// Compute reaction vector R = F_original - K_original * U
+void calculateReactions(
+    const Matrix<double, modelParameters::nNodes, modelParameters::nNodes>
+        &K_original,
+    const Matrix<double, modelParameters::nNodes, 1> &F_original,
+    const Matrix<double, modelParameters::nNodes, 1> &U) {
+  using namespace modelParameters;
+  R = -(F_original - K_original * U);
+}
+
 int main() {
   // Equally divied
   using namespace modelParameters;
@@ -179,26 +190,24 @@ int main() {
   assembleKF(last_node, h);
 
   assert(approximatelyEqualAbsRel(det(K), 0.0));
-  
+
   // Save original K and F before applying BC (for reaction force calculation)
   Matrix<double, nNodes, nNodes> K_original = K;
   Matrix<double, nNodes, 1> F_original = F;
-  
+
   applyBC(first_node, g); // Apply u = g1 at first node
 
   std::cout << K << std::endl;
   std::cout << F << std::endl;
   U = solveLinearSystem(K, F);
   std::cout << U << std::endl;
-  
-  // Calculate reaction force at Dirichlet node (first_node)
-  double R = 0.0;
-  for (Index j = 0; j < nNodes; ++j) {
-    R += K_original(first_node, j) * U[j];
-  }
-  R -= F_original[first_node];
-  std::cout << "\nReaction force at node " << first_node << " (x=" << nodes[first_node] 
-            << "): R = " << R << std::endl;
+
+  // Calculate reaction forces using helper function
+  calculateReactions(K_original, F_original, U);
+  std::cout << "\nReaction force at node " << first_node
+            << " (x=" << nodes[first_node] << "): R = " << R[first_node]
+            << std::endl;
+  std::cout << "All reaction forces: " << R << std::endl;
   // ------------------ Error check against exact solution ------------------
   // Compute per-node absolute error, max error and RMS error
   double max_err = 0.0;

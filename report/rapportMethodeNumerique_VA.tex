@@ -12,6 +12,7 @@
 \usepackage{booktabs}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{enumitem}
 \usepackage{asymptote}
 
 % Bibliography and hyperlinks
@@ -83,7 +84,24 @@ which $N^b$ denotes this component that the right part exerts on the left part o
   \label{generalConstitutiveLaw}
  \end{equation}
 In case of large displacement, this relation is no longer linear, as the length of the bar changed accordingly with the new position of the node, in our case is node $C$.
-So the problem of the console, can be written as follows:
+The following constitutive laws may be considered:
+\begin{enumerate}[label=-]
+  \item Linear law:   \begin{equation}
+    \mathcal{A}^b (l^b) = \alpha^b \dfrac{l^b - l^b_0}{l^b_0}
+    \label{linearLaw}
+  \end{equation}
+  \item Saint-Venant Kirchhoff law:
+  \begin{equation}
+    \mathcal{A}^b (l^b) = \alpha^b \dfrac{(l^b)^2 - (l^b_0)^2}{2 (l^b_0)^2}
+    \label{kirchhoffLaw}
+  \end{equation}
+  \item Logarithmic law:
+\begin{equation}
+    \mathcal{A}^b (l^b) = \alpha^b ln(\dfrac{l^b}{l^b_0})
+    \label{logarithmicLaw}
+  \end{equation}
+\end{enumerate}
+So in general form, the problem of the console could be written as follows:
   \begin{align}
     \text{Given the force } \vec{\mathcal{F}},\\
     \text{Find the position } \vec{x} \text{ of node C such that,}\\
