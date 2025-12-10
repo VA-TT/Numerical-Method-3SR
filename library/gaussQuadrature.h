@@ -64,7 +64,7 @@ void valueXiW(int n, const double *&xi_ptr, const double *&w_ptr) {
 }
 
 // Generic 1-D Gauss integration on [a,b] using n points (1 <= n <= 4).
-// By default n = 2 for not light calculation
+// By default n = 2 for light calculation
 double integrationGauss1D(double x1, double x2, std::function<double(double)> f,
                           int n = 2) {
   using namespace gaussQuadrature;

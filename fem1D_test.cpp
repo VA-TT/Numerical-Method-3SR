@@ -179,12 +179,26 @@ int main() {
   assembleKF(last_node, h);
 
   assert(approximatelyEqualAbsRel(det(K), 0.0));
+  
+  // Save original K and F before applying BC (for reaction force calculation)
+  Matrix<double, nNodes, nNodes> K_original = K;
+  Matrix<double, nNodes, 1> F_original = F;
+  
   applyBC(first_node, g); // Apply u = g1 at first node
 
   std::cout << K << std::endl;
   std::cout << F << std::endl;
   U = solveLinearSystem(K, F);
   std::cout << U << std::endl;
+  
+  // Calculate reaction force at Dirichlet node (first_node)
+  double R = 0.0;
+  for (Index j = 0; j < nNodes; ++j) {
+    R += K_original(first_node, j) * U[j];
+  }
+  R -= F_original[first_node];
+  std::cout << "\nReaction force at node " << first_node << " (x=" << nodes[first_node] 
+            << "): R = " << R << std::endl;
   // ------------------ Error check against exact solution ------------------
   // Compute per-node absolute error, max error and RMS error
   double max_err = 0.0;
