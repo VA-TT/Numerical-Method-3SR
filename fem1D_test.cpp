@@ -198,6 +198,7 @@ void calculateReactions(
 
 int main() {
   // Equally divied
+  Timer t;
   using namespace modelParameters;
 
   nodes = generateMesh(a, b, nNodes);
@@ -310,6 +311,6 @@ int main() {
   double rms = std::sqrt(sum_sq / static_cast<double>(nNodes));
   std::cout << "max error = " << max_err << "  RMS error = " << rms
             << std::endl;
-
+  std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
   return 0;
 }

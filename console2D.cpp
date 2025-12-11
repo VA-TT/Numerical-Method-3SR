@@ -148,5 +148,35 @@ int main() {
   std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
 
   // Luu iteration va gia tri delta x de plot
+  // Export iteration vs deltaX for plotting
+  {
+    std::ofstream iterFile("report/console2D_iterations.txt");
+    iterFile << "# iter dx dy mag\n";
+    for (size_t k = 0; k < iteration_array.size(); ++k) {
+      auto it = iteration_array[k];
+      Vector<double> d = deltaX_array[k];
+      double dx = d[0];
+      double dy = d[1];
+      double mag = std::sqrt(dx * dx + dy * dy);
+      iterFile << it << " " << dx << " " << dy << " " << mag << "\n";
+    }
+    iterFile.close();
+  }
+
+  // Export node positions before and after deformation
+  {
+    std::ofstream posFile("report/console2D_positions.txt");
+    // Numeric-only: x_before y_before x_after y_after per line (A, B, C)
+    Vector<double> C_before = x0;
+    Vector<double> C_after = x0 + deltaX;
+    // A
+    posFile << 0.0 << " " << 0.0 << " " << 0.0 << " " << 0.0 << "\n";
+    // B
+    posFile << 0.0 << " " << a << " " << 0.0 << " " << a << "\n";
+    // C
+    posFile << C_before[0] << " " << C_before[1] << " " << C_after[0] << " "
+            << C_after[1] << "\n";
+    posFile.close();
+  }
   return 0;
 }
