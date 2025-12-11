@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2025.4.17)  10 DEC 2025 17:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2025.4.17)  11 DEC 2025 08:20
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -518,7 +518,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2 <./console2D.pdf>]
-<truss.pdf, id=144, 135.40587pt x 227.62039pt>
+<truss.pdf, id=142, 135.40587pt x 227.62039pt>
 File: truss.pdf Graphic file (type pdf)
 <use truss.pdf>
 Package pdftex.def Info: truss.pdf  used on input line 151.
@@ -528,12 +528,12 @@ Package pdftex.def Info: truss.pdf  used on input line 151.
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [3] [4 <./truss.pdf>]
-<fem1D.pdf, id=185, 227.62039pt x 59.5023pt>
+<fem1D.pdf, id=179, 227.62039pt x 59.5023pt>
 File: fem1D.pdf Graphic file (type pdf)
 <use fem1D.pdf>
 Package pdftex.def Info: fem1D.pdf  used on input line 233.
 (pdftex.def)             Requested size: 272.11502pt x 71.13188pt.
-<fem2D.pdf, id=186, 227.62039pt x 127.48628pt>
+<fem2D.pdf, id=180, 227.62039pt x 127.48628pt>
 File: fem2D.pdf Graphic file (type pdf)
 <use fem2D.pdf>
 Package pdftex.def Info: fem2D.pdf  used on input line 266.
@@ -542,11 +542,11 @@ Package pdftex.def Info: fem2D.pdf  used on input line 266.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[5 <./fem1D.pdf>] (./rapportMethodeNumerique_VA.bbl (./rapportMethodeNumerique_VA.brf)
+[5 <./fem1D.pdf>] [6 <./fem2D.pdf>] (./rapportMethodeNumerique_VA.bbl (./rapportMethodeNumerique_VA.brf)
 \tf@brf=\write6
 \openout6 = `rapportMethodeNumerique_VA.brf'.
 
- [6 <./fem2D.pdf>])
+)
 
 Package caption Warning: Unused \captionsetup[sub] on input line 22.
 See the caption package documentation for explanation.
@@ -561,18 +561,18 @@ Package rerunfilecheck Info: File `rapportMethodeNumerique_VA.brf' has not chang
 (rerunfilecheck)             Checksum: 10962DDDA89715E3FD218142E34D85AB;116.
  ) 
 Here is how much of TeX's memory you used:
- 15984 strings out of 478287
- 273502 string characters out of 5849289
- 674054 words of memory out of 5000000
+ 15979 strings out of 478287
+ 273437 string characters out of 5849289
+ 674046 words of memory out of 5000000
  33864 multiletter control sequences out of 15000+600000
  485853 words of font info for 72 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 87i,24n,91p,524b,359s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 87i,20n,91p,524b,359s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1728.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2074.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfti1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1200.pfb>
-Output written on rapportMethodeNumerique_VA.pdf (7 pages, 263964 bytes).
+Output written on rapportMethodeNumerique_VA.pdf (7 pages, 263043 bytes).
 PDF statistics:
- 342 PDF objects out of 1000 (max. 8388607)
- 283 compressed objects within 3 object streams
- 85 named destinations out of 1000 (max. 500000)
+ 333 PDF objects out of 1000 (max. 8388607)
+ 275 compressed objects within 3 object streams
+ 80 named destinations out of 1000 (max. 500000)
  173 words of extra memory for PDF output out of 10000 (max. 10000000)
 

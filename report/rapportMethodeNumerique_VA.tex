@@ -45,8 +45,8 @@
 This short report present the code that is assign for the subject "Numerical Methods for Non-Linear Mechanics" of the Master Program for Civil Engineering, teached by professor Stafano-Dal Pont at Laboratory 3SR, University Grenoble Alpes, France.
 The object of the course is studying the non-linear problems in mechanics, caused by both the geometric and material behavior.
 The assigment practices therefore is to build in the most general form of the constitutive law, which is not linearity.
-2 main problems are takin into account: A console problem in 2D and a Truss problem in 3D, so the remaining of this reports are divided into two sections of the former subject. 
-Besides, this is a ideal chance to practice, so I also try to provide a solution for the problem of Finite Element Method in 1D and 2D.
+2 main problems are takin into account: A console problem in 2D and a Truss problem in 3D, hence the remaining of this reports are divided into two sections of the former subject. 
+Besides, this is a ideal chance to practice, thus I also try to provide a solution for the problem of Finite Element Method in 1D and 2D.
 The main code is actually written in \texttt{C++}, with libraries mostly building from scratches. They have been upload to \texttt{Github}, the link to download is provided in \cref{Annexxe}. Any corrections and comments are highly appreciated.
 I would like to thanks the professors for letting me, even though being a PhD student, could join this program to learn. I really appreciated and enjoyed the class.
 
@@ -101,10 +101,10 @@ The following constitutive laws may be considered:
     \label{logarithmicLaw}
   \end{equation}
 \end{enumerate}
-So in general form, the problem of the console could be written as follows:
+Hence, in general form, the problem of the console could be written as follows:
   \begin{align}
-    \text{Given the force } \vec{\mathcal{F}},\\
-    \text{Find the position } \vec{x} \text{ of node C such that,}\\
+    \text{Given the force } \vec{\mathcal{F}}, \nonumber\\
+    \text{Find the position } \vec{x} \text{ of node C such that,} \nonumber\\
       -\mathcal{A}^1 (l^1(\vec{x})) \hat{e}^1(\vec{x}) -  \mathcal{A}^2 (l^2(\vec{x})) \hat{e}^2(\vec{x}) + \vec{\mathcal{F}} = \vec{0}
   \label{nodeEquilibrium2D}
  \end{align}
@@ -156,10 +156,10 @@ Similarly in the previous problem, each bar's geometry is fully accessible throu
 The problem of the small deformation truss can be stated as:
 
   \begin{align}
-    \text{Given the external force } \vec{F}^{e/n}, n \in \mathcal{N}_F \text{ and } \vec{U}^{n}, n \in \mathcal{N}_I\\
-    \text{find the displacement vector } \vec{u}^n, n \in \mathcal{N} \text{ so that } \vec{u}^n = \vec{U}^n, n \in \mathcal{N}_I \text{ and }\\
-      \forall\vec{v}^n \text{ such that } \vec{v}^n = 0, n \in \mathcal{N}_I \\
-      \sum_{b \in \mathcal{B}} k^b \vec{e}_0^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) \vec{e}_0^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) = \sum_{n \in \mathcal{N}_F} \vec{F}^{e/n} \vec{v}^n
+    \text{Given the external force } \vec{F}^{e/n}, n \in \mathcal{N}_F \text{ and } \vec{U}^{n}, n \in \mathcal{N}_I \nonumber\\
+    \text{find the displacement vector } \vec{u}^n, n \in \mathcal{N} \text{ so that } \vec{u}^n = \vec{U}^n, n \in \mathcal{N}_I \text{ and } \nonumber\\
+      \forall\vec{v}^n \text{ such that } \vec{v}^n = 0, n \in \mathcal{N}_I \nonumber \\
+      \sum_{b \in \mathcal{B}} k^b \vec{e}_0^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) \vec{e}_0^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) = \sum_{n \in \mathcal{N}_F} \vec{F}^{e/n} \vec{v}^n 
       \label{nodeEquilibrium3D}
  \end{align}
 which expressed in matrix notation as:
@@ -207,9 +207,9 @@ Meanwhile, the global stiffness matrix $\underline{\underline{\mathcal{K}}}$ cou
   \right] \label{connectivityMatrix} \\
   &\qquad
   \begin{array}{@{}c@{\ }c@{\ }c@{}}
-    \underbrace{\hphantom{0\ \cdots\ 0}}_{3(n_1)} &
-    \underbrace{\hphantom{1\ 0\ 0}}_{3} &
-    \underbrace{\hphantom{0\ \cdots\ 0}}_{3(N_n)}
+    \underbrace{\hspace{1.8cm}}_{3(n-1)} \ &
+    \underbrace{\hspace{1.3cm}}_{3} \ &
+    \underbrace{\hspace{1.8cm}}_{3(N-n)}
   \end{array}
 \end{align}
 Though this method is easily implemented in coding small problem, when calculating manually by hand, we prefer using the elementary stiffness matrix 
@@ -291,6 +291,7 @@ weak form:
 \subsection{Truss}
 \subsection{FEM1D}
 \subsection{FEM2D}
+Stucking at the generation of the mesh.....
 \section{Conclusion}
 \section[Annexxe]{Annexxe}\label{Annexxe}
 This part just provided the main code. Full version could be download in this \href{https://github.com/VA-TT/Numerical-Method-3SR}{link}.
