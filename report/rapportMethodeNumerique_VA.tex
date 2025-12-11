@@ -309,15 +309,22 @@ The particular point of \texttt{FEM} comparing with Galerkin's method is using s
 \end{figure}
 
 \subsection{FEM2D}
-\section{Application}
+In constructing...Stucking at the generation of the mesh.....
+\section{Application Conclusion}
 \subsection{Console}
+The code is able to handle 2D Truss problems with 2 nodes, as a trial solution to the 3D truss problem following.
 \subsection{Truss}
+The code is able to handle any non-linear truss problem, 2D and 3D, including the console problem above. Though the Hardening incremented law should be implemented in the future to wider the range of problem that could be handled.
 \subsection{FEM1D}
-\subsection{FEM2D}
-Stucking at the generation of the mesh.....
+The code has been implemented in a way to solve any 1D bar problmem, with whatever the constraint conditions are, both Dirichlet and Neuman's condition. As long as the differential equation satisfied the form $u_{xx} = f(x) + c$ with $f(x)$ is a polynomial function of x, including $cx^0$.
+This leads to the application of distributed load and concentration load exhibited on the bar.
+Though the numerical cost could be reduced strongly using reference element, element Matrix, ... etc but this initial version is to test out all the functioning of the sub-coded also. Gladly, the solution seems to adapted well with the analytical one as expected.
 \section{Conclusion}
+In a nutshell, the code provided trustable result. Further implemented still rested to continue.
+Thanks to using C++, time elapsed to execute one code is less then $10^{-3}$ second on the student's computer.
+Further optimization...
 \section[Annexxe]{Annexxe}\label{Annexxe}
-This part just provided the main code. Full version could be downloaded in this \href{https://github.com/VA-TT/Numerical-Method-3SR}{link}.
+Full version of the codes, including libraries used, could be downloaded in this \href{https://github.com/VA-TT/Numerical-Method-3SR}{link}.
 
 \bibliographystyle{apalike}
 \bibliography{Bibliography}
