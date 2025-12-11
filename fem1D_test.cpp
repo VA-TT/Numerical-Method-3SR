@@ -22,7 +22,9 @@
 // Exact solution for u'' + x = 0 with u(0)=1 and u'(1)=1
 // Solve: u'' = -x -> u' = -x^2/2 + C1. Using u'(1)=1 -> C1 = 1 + 1/2 = 1.5
 // u = -x^3/6 + 1.5*x + C2. Using u(0)=1 -> C2 = 1
-double solution(double x) { return (-std::pow(x, 3) / 6.0 + 1.5 * x + 1.0); }
+// prototype for analytic solution (defined after modelParameters so it can
+// use those values)
+double solution(double x);
 
 namespace modelParameters {
 ////////////////////////////////////////////////////////////
@@ -31,17 +33,21 @@ namespace modelParameters {
 // Problem's domain (a,b)
 double a{0.0};
 double b{1.0};
-constexpr double g{1.0};               // Dirichlet
-constexpr double h{1.0};               // Neuman
+// Dirichlet and Neumann boundary values (defaults)
+constexpr double g{0.0};  // Dirichlet at x=0 (u(0)=g)
+constexpr double h{10.0}; // Neumann at x=1 (N(1)=h)
+// Uniform distributed load (default). If you want a spatially varying
+// load, replace rhsFunction accordingly (e.g. [](auto x){ return x; }).
+constexpr double uniform_load{5.0};
 constexpr Index nNodes{6};             // Numbers of nodes
 constexpr Index nElements{nNodes - 1}; // Numbers of elements
-// Start and end of elements, could be generate automatically
-Vector<Index> eleOrigin{0, 1, 2, 3, 4};
-Vector<Index> eleEnd{1, 2, 3, 4, 5};
-constexpr double EA = 1.0;
+// Start and end of elements, will be generated automatically in main
+Vector<Index> eleOrigin;
+Vector<Index> eleEnd;
+constexpr double EA = 10.0;
 
-// Right hand side function
-auto rhsFunction = [](auto x) { return x; };
+// Right hand side function: default is uniform load `uniform_load`.
+auto rhsFunction = [](auto x) { return uniform_load; };
 
 ////////////////////////////////////////////////////////////
 //////////////////////////// END ///////////////////////////
@@ -61,6 +67,15 @@ Index first_node{0};         // index of the last node
 Index last_node{nNodes - 1}; // index of the last node
 
 } // namespace modelParameters
+
+// Analytic solution for uniform load: u(x) = (1/EA)*( f*(L*x - x^2/2) + F*x )
+double solution(double x) {
+  using namespace modelParameters;
+  double f = uniform_load;
+  double L = b;
+  double F = h; // Neumann at x = L
+  return (1.0 / EA) * (f * (L * x - 0.5 * x * x) + F * x);
+}
 
 // Mesh generated function
 Vector<double> generateMesh(double a, double b, Index n) {
@@ -125,8 +140,9 @@ void assembleKF(Index nodeNeuman, double h) {
       // sum contributions from each element
       for (Index e = 0; e < nElements; ++e) {
         // for element e, use the e-th local derivative function stored in N_x
+        // include EA in the stiffness integrand so K = \int EA N'_i N'_j
         auto integrand_K = [&, i, j, e](double x) {
-          return N_x[i][e](x) * N_x[j][e](x);
+          return EA * N_x[i][e](x) * N_x[j][e](x);
         };
         K(i, j) += integrationGauss1D(element[e][local_i], element[e][local_j],
                                       integrand_K, 4);
@@ -186,6 +202,13 @@ int main() {
 
   nodes = generateMesh(a, b, nNodes);
   std::cout << nodes << "'\n";
+  // Generate element connectivity automatically from number of nodes
+  eleOrigin = Vector<Index>();
+  eleEnd = Vector<Index>();
+  for (Index e = 0; e < nElements; ++e) {
+    eleOrigin.push_back(e);
+    eleEnd.push_back(e + 1);
+  }
   shapeFunction();
   assembleKF(last_node, h);
 
@@ -204,10 +227,71 @@ int main() {
 
   // Calculate reaction forces using helper function
   calculateReactions(K_original, F_original, U);
+  // Compute internal axial force at x=0 (from first element) and print
+  double N0 = 0.0;
+  if (length.size() > 0) {
+    // axial force N = EA * du/dx approximated by linear element slope
+    N0 = EA * (U[1] - U[0]) / length[0];
+  }
   std::cout << "\nReaction force at node " << first_node
             << " (x=" << nodes[first_node] << "): R = " << R[first_node]
             << std::endl;
+  std::cout << "Internal axial N(0) = " << N0 << "   R[0] = " << R[0]
+            << "   N(0)+R[0] = " << (N0 + R[0]) << std::endl;
   std::cout << "All reaction forces: " << R << std::endl;
+  // Export numeric nodal data for plotting (Asymptote)
+  {
+    std::ofstream dataFile("report/fem1D_data.asy");
+    dataFile << "// Generated nodal data from fem1D_test.cpp\n";
+    dataFile << "real[] xn = {";
+    for (Index i = 0; i < modelParameters::nNodes; ++i) {
+      dataFile << nodes[i];
+      if (i + 1 < modelParameters::nNodes)
+        dataFile << ",";
+    }
+    dataFile << "};\n";
+    dataFile << "real[] un = {";
+    for (Index i = 0; i < modelParameters::nNodes; ++i) {
+      dataFile << U[i];
+      if (i + 1 < modelParameters::nNodes)
+        dataFile << ",";
+    }
+    dataFile << "};\n";
+    dataFile.close();
+  }
+  // Also export a simple two-column text file for Asymptote input
+  {
+    // Compute element axial forces (constant per linear element)
+    Vector<double> N_elem;
+    for (Index e = 0; e < modelParameters::nElements; ++e) {
+      Index i = modelParameters::eleOrigin[e];
+      Index j = modelParameters::eleEnd[e];
+      double Ne = modelParameters::EA * (U[j] - U[i]) / length[e];
+      N_elem.push_back(Ne);
+    }
+
+    // Compute nodal axial forces by averaging adjacent element forces
+    Vector<double> N_node;
+    N_node.resize(modelParameters::nNodes);
+    for (Index idx = 0; idx < modelParameters::nNodes; ++idx) {
+      if (idx == 0) {
+        N_node[idx] = (N_elem.size() > 0) ? N_elem[0] : 0.0;
+      } else if (idx == modelParameters::nNodes - 1) {
+        N_node[idx] = (N_elem.size() > 0) ? N_elem[N_elem.size() - 1] : 0.0;
+      } else {
+        double left = N_elem[idx - 1];
+        double right = N_elem[idx];
+        N_node[idx] = 0.5 * (left + right);
+      }
+    }
+
+    std::ofstream txtFile("report/fem1D_6nodes.txt");
+    // Write three columns: x, u(x), N(x)
+    for (Index i = 0; i < modelParameters::nNodes; ++i) {
+      txtFile << nodes[i] << " " << U[i] << " " << N_node[i] << "\n";
+    }
+    txtFile.close();
+  }
   // ------------------ Error check against exact solution ------------------
   // Compute per-node absolute error, max error and RMS error
   double max_err = 0.0;

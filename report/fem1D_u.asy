@@ -23,10 +23,10 @@ b = transpose(b);
 real[] x2 = b[0];
 real[] u2 = b[1];
 path p2 = graph(x2,u2);
-draw(p2, green+dashed, "FEM $n=6$");
+draw(p2, blue+dashed, "FEM $n=6$");
 // Draw dots at FEM nodes
 for(int i=0; i < x2.length; ++i){
-    dot((x2[i], u2[i]), green);
+    dot((x2[i], u2[i]), blue);
 }
 for(int i=0; i < x1.length; ++i){
     dot((x1[i], u1[i]), purple);
