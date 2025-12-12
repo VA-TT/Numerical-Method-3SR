@@ -73,6 +73,11 @@ Dual cos(const Dual &d) {
   return Dual{std::cos(d.getVal()), -std::sin(d.getVal()) * d.getDer()};
 }
 
+inline Dual log(const Dual &d) {
+  // d/dx log(x) = 1/x
+  return Dual{std::log(d.getVal()), d.getDer() / d.getVal()};
+}
+
 inline Dual operator-(const Dual &d, double b) {
   return Dual{d.getVal() - b, d.getDer()};
 }

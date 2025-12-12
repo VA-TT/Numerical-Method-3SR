@@ -19,7 +19,7 @@
 |o/---> i1
 #endif
 
-// Model Parameters
+// Model Initial Parameters
 namespace modelParameters {
 constexpr Index n{2}; // number of equilibrium equations
 
@@ -34,7 +34,7 @@ double a{10.0}; // Distance between node 0 and 1 = bar length
 Vector<double> x0{(i1 * a + i2 * a)};
 double l01{magnitude(x0)};          // length bar 1
 double l02{magnitude(x0 - a * i2)}; // length bar 2
-double force{150e3};                // Imposed Force
+double force{1.5e6};                // Imposed Force
 double theta{20}; // Inclined angle of the force with relative to vertical
 double thetaRadian{theta * std::numbers::pi / 180}; // converte to radian
 
@@ -53,37 +53,49 @@ double alpha1{E * A1}, alpha2{E * A2};
 // tolerance for Newton's method
 double epsilon{1e-8};
 int max_iteration{100};
+
+// Choosing non-linear Saint-Venant Kirchhoff law
+int law{1};
 } // namespace modelParameters
 
 // Constitutive law
 template <typename T>
-inline auto constitutiveLaw(double alpha, T l, double l0) {
-  return (alpha * (l - l0) / l0);
-  // return (alpha * (l * l - l0 * l0) / (2 * l0 * l0));
-  // return (alpha * std::log(l / l0));
+inline auto constitutiveLaw(int law, double alpha, T l, double l0) {
+  switch (law) {
+  case 0:
+    return (alpha * (l - l0) / l0); // Linear law
+  case 1:
+    return (alpha * (l * l - l0 * l0) /
+            (2 * l0 * l0)); // Saint-Venant Kirchhoff law
+  case 2:
+    return (alpha * log(l / l0)); // Logarithmic law
+  default:
+    return (alpha * (l - l0) / l0); // Linear law by default
+  }
 }
 
 int main() {
-  Timer t;
+  Timer t; // Measusing time elapsed
   using namespace modelParameters;
 
-  // Define func as a lambda that matches the expected signature for
-  // automaticDiff
-  auto func1 = [](auto x1) { return constitutiveLaw(alpha1, x1, l01); };
-  auto func2 = [](auto x2) { return constitutiveLaw(alpha2, x2, l02); };
+  // Create 2 lambda functions for 2 bars
+  auto func1 = [](auto x1) { return constitutiveLaw(law, alpha1, x1, l01); };
+  auto func2 = [](auto x2) { return constitutiveLaw(law, alpha2, x2, l02); };
 
   // Setting up
   int iteration{0};
 
-  std::vector<int> iteration_array;
+  std::vector<int> iteration_array; // to plot the iteration-deltaX graph
   std::vector<Vector<double>> deltaX_array;
+  std::vector<Vector<double>> F_array;
   iteration_array.reserve(max_iteration);
   deltaX_array.reserve(max_iteration);
-  Vector<double> deltaX(2);
-  Vector<double> Fk(2);
+  F_array.reserve(max_iteration);
+  Vector<double> deltaX(2); // The displacement vector of node C
+  Vector<double> Fk(2);     // Sum of internal and external force at iteration k
 
   std::cout << "=== Newton-Raphson Iteration ===" << std::endl;
-
+  // Vectors at iteration k
   Vector<double> x(2);
   double l1{}, l2{};
   Vector<double> e1(2), e2(2);
@@ -101,9 +113,7 @@ int main() {
     e2 = (x - a * i2) / l2;
 
     // Calculate F at iteration k
-    Fk = -func1(l1) * e1 - func2(l2) * e2 + externalForce;
-    std::cout << "Iteration " << iteration << ": |Fk| = " << magnitude(Fk)
-              << std::endl;
+    Fk = -func1(l1) * e1 - func2(l2) * e2 + externalForce; //-->0
 
     // Use F as the quality of approximation
     if (magnitude(Fk) < epsilon) {
@@ -119,53 +129,48 @@ int main() {
     nablaF += -(func2(l2) / l2) * (I - tensorProduct<n, n>(e2, e2));
 
     // Solve the linear system
-    std::cout << tensorProduct<n, n>(e1, e1) << '\n';
-    std::cout << std::setprecision(12);
-    std::cout << "[DEBUG] l1=" << l1 << " l01=" << l01
-              << " func1(l1)=" << func1(l1)
-              << " expected dfunc1/dl1=" << (alpha1 / l01)
-              << " autoDiff(func1,l1)=" << automaticDiff(func1, l1) << '\n';
-    std::cout << "nabla F: " << nablaF << '\n';
-    std::cout << "Fk: " << Fk << '\n';
     deltaX_increment = solveLinearSystem(nablaF, -Fk);
+    // Accumulating deltaX
     deltaX += deltaX_increment;
 
+    std::cout << "Iteration " << iteration << ": |Fk| = " << magnitude(Fk)
+              << ": |dx| = " << magnitude(deltaX) << std::endl;
     // Saving the output
     iteration_array.push_back(iteration);
     deltaX_array.push_back(deltaX);
+    F_array.push_back(Fk);
 
     iteration++;
-  }
+  } // End of calculation
 
+  // Processing the result...
+  // If the solution is failted to converge: alert
   if (iteration >= max_iteration) {
     std::cout << "Failed to converge after " << max_iteration << " iterations"
               << std::endl;
   }
-
+  // Printing out the result
   std::cout << "\nFinal displacement: " << deltaX << std::endl;
   std::cout << "Final position: " << x0 + deltaX << "\n";
   std::cout << "Total iterations: " << iteration << std::endl;
   std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
 
-  // Luu iteration va gia tri delta x de plot
   // Export iteration vs deltaX for plotting
   {
-    std::ofstream iterFile("report/console2D_iterations.txt");
-    iterFile << "# iter dx dy mag\n";
+    std::ofstream dataFile("report/console2D_graph.dat");
+    dataFile << "# iter u force\n";
     for (size_t k = 0; k < iteration_array.size(); ++k) {
       auto it = iteration_array[k];
-      Vector<double> d = deltaX_array[k];
-      double dx = d[0];
-      double dy = d[1];
-      double mag = std::sqrt(dx * dx + dy * dy);
-      iterFile << it << " " << dx << " " << dy << " " << mag << "\n";
+      double u = magnitude(deltaX_array[k]);
+      double f = magnitude(F_array[k]);
+      dataFile << it << " " << u << " " << f << "\n";
     }
-    iterFile.close();
+    dataFile.close();
   }
 
   // Export node positions before and after deformation
   {
-    std::ofstream posFile("report/console2D_positions.txt");
+    std::ofstream posFile("report/console2D_positions.dat");
     // Numeric-only: x_before y_before x_after y_after per line (A, B, C)
     Vector<double> C_before = x0;
     Vector<double> C_after = x0 + deltaX;

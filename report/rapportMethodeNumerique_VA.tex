@@ -52,6 +52,7 @@ I would like to thanks the professors for letting me, even though being a PhD st
 
 \section{Theory}
 The following problem was fully described in lecture course \citep{dalpont2020_nonlinear_mech} of professor \citeauthor{dalpont2020_nonlinear_mech}.
+This section just represent it but with the particular methods using within the following codes and the reasons of these choice.
 
 \subsection{Console}
 
@@ -62,7 +63,7 @@ The following problem was fully described in lecture course \citep{dalpont2020_n
   \label{truss2D}
 \end{figure}
 The whole geometry is described in \cref{truss2D}.
-Breifly speaking, the simple truss structure composed by 3 nodes linked by 2 bars and external force $F$ applied on the node $C$ maing an angel $\theta$ with the vertical axis, causing the displacement of the bars and nodes. Gravity is not taken into account.
+Briefly speaking, the simple truss structure composed by 3 nodes linked by 2 bars and external force $F$ applied on the node $C$ maing an angel $\theta$ with the vertical axis, causing the displacement of the bars and nodes. Gravity is not taken into account.
 In this case, $\vec{x}$ representing position of node $C$ is considered as the main unknown, owing to the fact that it is the only free node and fully represent the equilibrium position of the system.
  $\hat{e}^b$ is the unit vector of the corresponding bar $b$, which is calculated by the position vector of the node where the bar $b$ begins ($\vec{x}^B$) and ends ($\vec{x}^E$) :
  \begin{subequations}\label{eq:barVectors}
@@ -73,18 +74,18 @@ In this case, $\vec{x}$ representing position of node $C$ is considered as the m
 \end{align}
 \end{subequations}
 In truss elements, the only internal effort considered is the axial stress and further, also is a constant.
-To satisfy the nodal equilibrium, at position $C$ the sum of the internal force (left-hand side) and the external force (right-hand side) must balanced:
+To satisfy the nodal equilibrium, at position $C$ the sum of the internal force (left-hand side) and the external force (right-hand side) must be balanced:
   \begin{equation}
      \sum_{b=1}^2  N^b =  N^1 + N^2 = F
-  \label{generalConstitutiveLaw}
+  \label{consoleEquilibrium}
  \end{equation}
 which $N^b$ denotes this component that the right part exerts on the left part of bar $b$, which is assumed to depend only on the length of bar $l^b$ via the constitutive law:
   \begin{equation}
      N^b = \mathcal{A}^b (l^b)
   \label{generalConstitutiveLaw}
  \end{equation}
-In case of large displacement, this relation is no longer linear, as the length of the bar changed accordingly with the new position of the node, in our case is node $C$.
-The following constitutive laws may be considered:
+In case of large displacement, this relation is no longer linear, as the bar's vectors are changed accordingly with the new position of the nodes, in our case is particularly node $C$.
+The following elastic constitutive laws may be considered, so that the tension $N^b$ taken into account only on the bar length variation:
 \begin{enumerate}[label=-]
   \item Linear law:   \begin{equation}
     \mathcal{A}^b (l^b) = \alpha^b \dfrac{l^b - l^b_0}{l^b_0}
@@ -115,18 +116,23 @@ Hence, in general form, the problem of the console could be written as follows:
      \underline{\underline{\nabla \mathcal{F}}} (\underline{x}^{(k)})  \delta (\underline{x}^{(k)}) = -\mathcal{\underline{F}}(\underline{x}^{(k)})
   \label{NewtonMethod}
  \end{equation}
- Solving the linear system get us the new value of $\delta x$, so we could update the postion for the next iteration by:
+ Solving the linear system get us the new value of $\delta x$, so we could update the position for the next iteration by:
    \begin{equation}
  \underline{x}^{(k+1)} = \underline{x}^{(k)} + \delta \underline{x}^{(k)}
   \label{updatePosition}
  \end{equation}
  Apply to the console problem \cref{NewtonMethod} becomes 
- The method requires a stopping criterion: \cref{stopCondition} is chosen to be implemented in the code, as it satisfies the force equilibrium condition at nodes of the problem.
+ The method requires a stopping criterion: \cref{forceStop} is chosen to be implemented in the code, as it satisfies the force equilibrium condition at nodes of the problem.
  \begin{equation}
      \left| f\bigl(x^{(k)}\bigr) \right| < \epsilon
-     \label{stopCondition}
+     \label{forceStop}
    \end{equation}
-   As $\epsilon$ is a number small enough to be considered as 0, relatively to the problem solving.
+      where $\epsilon$ is a number small enough to be considered as 0, relatively to the problem solving.
+   Another substitute approch is stopping at the iteration where the displacement is neglectable, which will be used in \cref{theoryTruss}:
+    \begin{equation}
+     \left| x^{k+1} - x^k \right| < \epsilon
+     \label{displacementStop}
+   \end{equation}
 The object is now to transform equation \cref{generalConstitutiveLaw} into a linear form \cref{NewtonMethod} so that it could be numerically solved. 
 Thanks to first-order Taylor expansion again, we obtain the development of sum of the force, which should be approching 0, at iteraion \texttt{k+1} (or in another word, at when node \textbf{C} would take an increment in position into $\vec{x}+ \delta \vec{x}$):
  \begin{equation}
@@ -145,7 +151,7 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
    \end{equation}
    The first iteration starts from the initial condition of the system, then the iteration begins, until $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ to be considered null, as discussed above.
 
-   \subsection{Truss}
+   \subsection{Truss} \label{theoryTruss}
 \begin{figure}[h]
   \centering
   \includegraphics[height=6cm]{truss.pdf}
@@ -282,6 +288,8 @@ weak form:
 \end{align}
 \section{Validation}
 \subsection{Console}
+As proved in figure, the rate of convergence by Newton method is quadratic.
+Student choosed the Saint-Venant Kirchhoff law to present the result, with the intention to capture the non-linearity in both the constitutive law via \cref{generalConstitutiveLaw} and the large deformation's effect in \cref{eq:barVectors}.
 \subsection{Truss}
 \subsection{FEM1D}
 Taking trivial value as follows: $f = 5kN;\ F = 10kN;\ EA = 10 kN;\ L = 1m$, once could verify the anylytic solution to be: $R = -15 kN; \ u(x) = 1.5x - 0.25x^2 (m);\ N(x) = 15 - 5x (kN);$
