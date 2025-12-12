@@ -16,7 +16,7 @@ path p1 = graph(x1,u1);
 draw(p1, purple+dashed, "FEM $n=2$");
 
 
-// FEM 5 nodes
+// FEM 6 nodes
 file sixNode = input("fem1D_6nodes.txt").line();
 real[][] b = sixNode;
 b = transpose(b);

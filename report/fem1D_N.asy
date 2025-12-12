@@ -19,7 +19,7 @@ for(int i=0; i < x1.length; ++i){
     dot((x1[i], N1[i]), purple);
 }
 
-// FEM 5 nodes
+// FEM 6 nodes
 file sixNode = input("fem1D_6nodes.txt").line();
 real[][] b = sixNode;
 b = transpose(b);

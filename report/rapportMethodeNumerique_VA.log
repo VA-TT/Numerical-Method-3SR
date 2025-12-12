@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2025.4.17)  12 DEC 2025 14:12
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2025.4.17)  12 DEC 2025 17:33
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -423,6 +423,12 @@ LaTeX Warning: Label `truss3D' multiply defined.
 
 LaTeX Warning: Label `truss3D@cref' multiply defined.
 
+
+LaTeX Warning: Label `solutionFEM1D' multiply defined.
+
+
+LaTeX Warning: Label `solutionFEM1D@cref' multiply defined.
+
 )
 \openout1 = `rapportMethodeNumerique_VA.aux'.
 
@@ -536,7 +542,7 @@ File: t1cmtt.fd 2019/12/16 v2.5j Standard LaTeX font definitions
 <console2D.pdf, id=75, 174.03018pt x 156.93633pt>
 File: console2D.pdf Graphic file (type pdf)
 <use console2D.pdf>
-Package pdftex.def Info: console2D.pdf  used on input line 76.
+Package pdftex.def Info: console2D.pdf  used on input line 77.
 (pdftex.def)             Requested size: 157.77286pt x 142.26378pt.
 
 
@@ -548,7 +554,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 <truss.pdf, id=134, 135.40587pt x 227.62039pt>
 File: truss.pdf Graphic file (type pdf)
 <use truss.pdf>
-Package pdftex.def Info: truss.pdf  used on input line 172.
+Package pdftex.def Info: truss.pdf  used on input line 173.
 (pdftex.def)             Requested size: 101.55826pt x 170.71652pt.
 
 
@@ -558,13 +564,13 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 <fem1D.pdf, id=170, 227.62039pt x 59.5023pt>
 File: fem1D.pdf Graphic file (type pdf)
 <use fem1D.pdf>
-Package pdftex.def Info: fem1D.pdf  used on input line 255.
+Package pdftex.def Info: fem1D.pdf  used on input line 256.
 (pdftex.def)             Requested size: 272.11502pt x 71.13188pt.
  [5 <./fem1D.pdf>]
 <fem2D.pdf, id=192, 227.62039pt x 127.48628pt>
 File: fem2D.pdf Graphic file (type pdf)
 <use fem2D.pdf>
-Package pdftex.def Info: fem2D.pdf  used on input line 288.
+Package pdftex.def Info: fem2D.pdf  used on input line 289.
 (pdftex.def)             Requested size: 304.80829pt x 170.71652pt.
  (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2020/03/24 1.8d listings language file
@@ -573,28 +579,44 @@ File: lstlang1.sty 2020/03/24 1.8d listings language file
 ) (/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2020/03/24 1.8d (Carsten Heinz)
 )
-Overfull \hbox (23.5739pt too wide) in paragraph at lines 309--310
+Overfull \hbox (23.5739pt too wide) in paragraph at lines 310--311
 \T1/cmr/m/n/12 Assume the bar to be rect-an-gle, the in-put pa-ram-e-ters are put in a names-pace \T1/cmtt/m/n/12 modelParameters
  []
 
-[6 <./fem2D.pdf>] [7]
-<fem1D_u.pdf, id=263, 201.3924pt x 150.94392pt>
-File: fem1D_u.pdf Graphic file (type pdf)
-<use fem1D_u.pdf>
-Package pdftex.def Info: fem1D_u.pdf  used on input line 362.
-(pdftex.def)             Requested size: 227.77971pt x 170.71652pt.
+[6 <./fem2D.pdf>]
+<console2D_results.pdf, id=230, 170.7178pt x 146.71814pt>
+File: console2D_results.pdf Graphic file (type pdf)
+<use console2D_results.pdf>
+Package pdftex.def Info: console2D_results.pdf  used on input line 354.
+(pdftex.def)             Requested size: 165.54916pt x 142.26378pt.
+<console_plot.pdf, id=231, 284.52296pt x 170.97878pt>
+File: console_plot.pdf Graphic file (type pdf)
+<use console_plot.pdf>
+Package pdftex.def Info: console_plot.pdf  used on input line 360.
+(pdftex.def)             Requested size: 236.74876pt x 142.26378pt.
 
-Overfull \hbox (9.2645pt too wide) in paragraph at lines 362--363
+Overfull \hbox (18.23355pt too wide) in paragraph at lines 360--361
  [][] 
  []
 
-<fem1D_N.pdf, id=264, 201.3121pt x 152.1384pt>
+[7 <./console2D_results.pdf> <./console_plot.pdf>]
+<fem1D_u.pdf, id=286, 201.3924pt x 150.94392pt>
+File: fem1D_u.pdf Graphic file (type pdf)
+<use fem1D_u.pdf>
+Package pdftex.def Info: fem1D_u.pdf  used on input line 383.
+(pdftex.def)             Requested size: 227.77971pt x 170.71652pt.
+
+Overfull \hbox (9.2645pt too wide) in paragraph at lines 383--384
+ [][] 
+ []
+
+<fem1D_N.pdf, id=287, 201.3121pt x 152.1384pt>
 File: fem1D_N.pdf Graphic file (type pdf)
 <use fem1D_N.pdf>
-Package pdftex.def Info: fem1D_N.pdf  used on input line 369.
+Package pdftex.def Info: fem1D_N.pdf  used on input line 390.
 (pdftex.def)             Requested size: 225.9134pt x 170.71652pt.
 
-Overfull \hbox (7.3982pt too wide) in paragraph at lines 369--370
+Overfull \hbox (7.3982pt too wide) in paragraph at lines 390--391
  [][] 
  []
 
@@ -612,18 +634,18 @@ Package rerunfilecheck Info: File `rapportMethodeNumerique_VA.brf' has not chang
 (rerunfilecheck)             Checksum: 10962DDDA89715E3FD218142E34D85AB;116.
  ) 
 Here is how much of TeX's memory you used:
- 18229 strings out of 478287
- 302812 string characters out of 5849289
- 971789 words of memory out of 5000000
- 36066 multiletter control sequences out of 15000+600000
+ 18252 strings out of 478287
+ 303353 string characters out of 5849289
+ 970180 words of memory out of 5000000
+ 36086 multiletter control sequences out of 15000+600000
  486936 words of font info for 74 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  87i,20n,91p,576b,2078s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1728.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2074.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm0600.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfti1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1200.pfb>
-Output written on rapportMethodeNumerique_VA.pdf (9 pages, 360902 bytes).
+Output written on rapportMethodeNumerique_VA.pdf (9 pages, 372109 bytes).
 PDF statistics:
- 399 PDF objects out of 1000 (max. 8388607)
- 330 compressed objects within 4 object streams
- 102 named destinations out of 1000 (max. 500000)
- 167 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 423 PDF objects out of 1000 (max. 8388607)
+ 350 compressed objects within 4 object streams
+ 103 named destinations out of 1000 (max. 500000)
+ 177 words of extra memory for PDF output out of 10000 (max. 10000000)
 

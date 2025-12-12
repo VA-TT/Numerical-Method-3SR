@@ -62,8 +62,9 @@ The object of the course is studying the non-linear problems in mechanics, cause
 The assigment practices therefore is to build in the most general form of the constitutive law, which is not linearity.
 2 main problems are takin into account: A console problem in 2D and a Truss problem in 3D, hence the remaining of this reports are divided into two sections of the former subject. 
 Besides, this is a ideal chance to practice, thus I also try to provide a solution for the problem of Finite Element Method in 1D and 2D.
-The main code is actually written in \texttt{C++}, with libraries mostly building from scratches. They have been upload to \texttt{Github}, the link to download is provided in \cref{Annexxe}. Any corrections and comments are highly appreciated.
-I would like to thanks the professors for letting me, even though being a PhD student, could join this program to learn. I really appreciated and enjoyed the class.
+The main code is actually written in \texttt{C++}, with libraries mostly building from scratches. They have been upload to \texttt{Github}, the link to download is provided in \cref{Annexxe}. 
+The plotting is realized by \texttt{Asymptote} - a vector graphic language with cpp-liked commands. The whole purpose is to learn so any corrections and comments are highly appreciated.
+I would like to thank the professors for letting me, even though being a PhD student, could join this program to learn. I really appreciated and enjoyed the class.
 
 \section{Theory}
 The following problem was fully described in lecture course \citep{dalpont2020_nonlinear_mech} of professor \citeauthor{dalpont2020_nonlinear_mech}.
@@ -286,7 +287,7 @@ rewritten in tensor notation:
 \begin{figure}[h]
   \centering
   \includegraphics[height=6cm]{fem2D.pdf}
-  \caption{2D Finite Element}
+  \caption{Deformed console}
   \label{truss3D}
 \end{figure}
 \begin{align}
@@ -333,20 +334,40 @@ The final result obtained is:
 \begin{verbatim}
 === 2D CONSOLE PROBLEM ===
 Iteration 0: |Fk| = 1.5e+06: |dx| = 2.48569
-Iteration 1: |Fk| = 814055: |dx| = 2.22288
-Iteration 2: |Fk| = 19706.4: |dx| = 2.20577
-Iteration 3: |Fk| = 42.1839: |dx| = 2.20574
-Iteration 4: |Fk| = 0.00015477: |dx| = 2.20574
+Iteration 1: |Fk| = 814055: |dx| = 0.312942
+Iteration 2: |Fk| = 19706.4: |dx| = 0.0172449
+Iteration 3: |Fk| = 42.1839: |dx| = 3.20384e-05
+Iteration 4: |Fk| = 0.00015477: |dx| = 1.26595e-10
 Solution founded.
 
 Final displacement: [0.526986, -2.14187]
 Final position: [10.527, 7.85813]
 Total iterations: 5
-Time elapsed: 0.000294909 seconds
+Time elapsed: 0.000276144 seconds
 \end{verbatim}
-The value are all justified by calculation manually and other codes.
 
-As proved in figure, the rate of convergence by Newton method is quadratic.
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[height=5cm]{console2D_results.pdf}
+        \caption{Deformed console schematic}
+        \label{consoleDeformed}
+    \end{subfigure}%
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[height=5cm]{console_plot.pdf}
+        \caption{Displacement and sum of forces on node C}
+        \label{plotConsole}
+    \end{subfigure}
+    \caption{Solutions of the 2D console problem}
+    \label{solutionFEM1D}
+\end{figure}
+
+As showed in diagram \cref{consoleDeformed}, under the effect of force $\vec{F}$, node C displaced from position (10,10) to (10.53, 7.86). These values are all justified by calculation manually and other codes.
+
+As proved in figure \cref{plotConsole}, the rate of convergence (in logarithm proportion) by Newton method is quadratic.
 Student choosed the Saint-Venant Kirchhoff law to present the result, with the intention to capture the non-linearity in both the constitutive law via \cref{generalConstitutiveLaw} and the large deformation's effect in \cref{eq:barVectors}.
 \subsection{Truss}
 \subsection{FEM1D}

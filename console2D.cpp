@@ -134,10 +134,10 @@ int main() {
     deltaX += deltaX_increment;
 
     std::cout << "Iteration " << iteration << ": |Fk| = " << magnitude(Fk)
-              << ": |dx| = " << magnitude(deltaX) << std::endl;
+              << ": |dx| = " << magnitude(deltaX_increment) << std::endl;
     // Saving the output
     iteration_array.push_back(iteration);
-    deltaX_array.push_back(deltaX);
+    deltaX_array.push_back(deltaX_increment);
     F_array.push_back(Fk);
 
     iteration++;
@@ -158,7 +158,7 @@ int main() {
   // Export iteration vs deltaX for plotting
   {
     std::ofstream dataFile("report/console2D_graph.dat");
-    dataFile << "# iter u force\n";
+    dataFile << "# iter dx dy u force\n";
     for (size_t k = 0; k < iteration_array.size(); ++k) {
       auto it = iteration_array[k];
       double u = magnitude(deltaX_array[k]);
