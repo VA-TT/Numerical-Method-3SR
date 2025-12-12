@@ -14,6 +14,21 @@
 \usepackage{subcaption}
 \usepackage{enumitem}
 \usepackage{asymptote}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstdefinestyle{cpp}{
+    language=C++,
+    basicstyle=\ttfamily\small,
+    numbers=left,
+    numberstyle=\tiny,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    frame=single,
+    breaklines=true,
+    tabsize=4
+}
 
 % Bibliography and hyperlinks
 
@@ -62,8 +77,8 @@ This section just represent it but with the particular methods using within the 
   \caption{Two elements truss: console 2D}
   \label{truss2D}
 \end{figure}
-The whole geometry is described in \cref{truss2D}.
-Briefly speaking, the simple truss structure composed by 3 nodes linked by 2 bars and external force $F$ applied on the node $C$ maing an angel $\theta$ with the vertical axis, causing the displacement of the bars and nodes. Gravity is not taken into account.
+We begin with the most simplified problem which the whole geometry is described in \cref{truss2D}.
+Briefly speaking, the simple truss structure is in 2 dimensions, composed by 3 nodes linked by 2 bars only. External force $F$ applied on the node $C$ maing an angel $\theta$ with the vertical axis, causing the displacement of the bars and nodes. Gravity is not taken into account.
 In this case, $\vec{x}$ representing position of node $C$ is considered as the main unknown, owing to the fact that it is the only free node and fully represent the equilibrium position of the system.
  $\hat{e}^b$ is the unit vector of the corresponding bar $b$, which is calculated by the position vector of the node where the bar $b$ begins ($\vec{x}^B$) and ends ($\vec{x}^E$) :
  \begin{subequations}\label{eq:barVectors}
@@ -113,12 +128,12 @@ Hence, in general form, the problem of the console could be written as follows:
  This problem is solved by Newton's iterative method in vector form for solving systems of equations.
  For the order-one truncated Taylor series expansion, expression at the iteration (k+1) shall be:
   \begin{equation}
-     \underline{\underline{\nabla \mathcal{F}}} (\underline{x}^{(k)})  \delta (\underline{x}^{(k)}) = -\mathcal{\underline{F}}(\underline{x}^{(k)})
+     \nabla \vec{\mathcal{F}} (\vec{x}^{(k)}) @ \delta (\vec{x}^{(k)}) = -\vec{\mathcal{{F}}}\left(\vec{x}^{(k)}\right)
   \label{NewtonMethod}
  \end{equation}
  Solving the linear system get us the new value of $\delta x$, so we could update the position for the next iteration by:
    \begin{equation}
- \underline{x}^{(k+1)} = \underline{x}^{(k)} + \delta \underline{x}^{(k)}
+ \vec{x}^{(k+1)} = \vec{x}^{(k)} + \delta \vec{x}^{(k)}
   \label{updatePosition}
  \end{equation}
  Apply to the console problem \cref{NewtonMethod} becomes 
@@ -136,7 +151,7 @@ Hence, in general form, the problem of the console could be written as follows:
 The object is now to transform equation \cref{generalConstitutiveLaw} into a linear form \cref{NewtonMethod} so that it could be numerically solved. 
 Thanks to first-order Taylor expansion again, we obtain the development of sum of the force, which should be approching 0, at iteraion \texttt{k+1} (or in another word, at when node \textbf{C} would take an increment in position into $\vec{x}+ \delta \vec{x}$):
  \begin{equation}
-  \vec{\mathcal{F}}(\vec{x}+ \delta \vec{x}) = \vec{\mathcal{F}}(\vec{x}) + \left(\nabla\vec{\mathcal{F}}(\vec{x})\right)@\delta \vec{x} = 0
+  \vec{\mathcal{F}}(\vec{x}+ \delta \vec{x}) = \vec{\mathcal{F}}(\vec{x}) + \left(\nabla\vec{\mathcal{F}}(\vec{x})\right)@\delta \vec{x}  \rightarrow 0
   \label{TaylorK+1}
    \end{equation}
    where the Jacobian matrix $\nabla\vec{\mathcal{F}}(\vec{x})$ is described in the following euqation using Einsten's sum notation:
@@ -149,7 +164,7 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
 \left(\nabla\vec{\mathcal{F}}(\vec{x}^k)\right)@\delta \vec{x}^k =  - \vec{\mathcal{F}}(\vec{x}^k)
   \label{finalConsole}
    \end{equation}
-   The first iteration starts from the initial condition of the system, then the iteration begins, until $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ to be considered null, as discussed above.
+   The first iteration starts from the initial condition of the system, then the iteration begins, until the residual $\vec{\mathcal{F}}(\vec{x}^k) < \epsilon$ could be considered null, as discussed above.
 
    \subsection{Truss} \label{theoryTruss}
 \begin{figure}[h]
@@ -158,6 +173,7 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
   \caption{3D truss}
   \label{truss3D}
 \end{figure}
+The 3D truss problem is a problem enhanced from the previous, which is in 3 dimensions and the numbers of bars could be as numerous as required.
 Similarly in the previous problem, each bar's geometry is fully accessible through the position of nodes. Their vectors could be determined totally similar in the previous problem via \cref{eq:barVectors}.
 The problem of the small deformation truss can be stated as:
 
@@ -288,6 +304,48 @@ weak form:
 \end{align}
 \section{Validation}
 \subsection{Console}
+
+
+Assume the bar to be rectangle, the input parameters are put in a namespace \texttt{modelParameters} within the code so one could change it accordingly to needs.
+\begin{lstlisting}[style=cpp]
+namespace modelParameters {
+// Bar's parameters
+double E{25e9}; // Module Young
+double a{10.0}; // Distance between node 0 and 1 = bar length
+
+double force{1.5e6};                // Imposed Force
+// Inclined angle between the force with relative to vertical axis
+double theta{20};
+
+// Section dimension (rectangle)
+double b1{0.02}, h1{0.05};
+double b2{0.02}, h2{0.05};
+
+// tolerance for Newton's method
+double epsilon{1e-8};
+
+// Choosing non-linear Saint-Venant Kirchhoff law
+int law{1}; 
+}
+\end{lstlisting}
+
+The final result obtained is:
+\begin{verbatim}
+=== 2D CONSOLE PROBLEM ===
+Iteration 0: |Fk| = 1.5e+06: |dx| = 2.48569
+Iteration 1: |Fk| = 814055: |dx| = 2.22288
+Iteration 2: |Fk| = 19706.4: |dx| = 2.20577
+Iteration 3: |Fk| = 42.1839: |dx| = 2.20574
+Iteration 4: |Fk| = 0.00015477: |dx| = 2.20574
+Solution founded.
+
+Final displacement: [0.526986, -2.14187]
+Final position: [10.527, 7.85813]
+Total iterations: 5
+Time elapsed: 0.000294909 seconds
+\end{verbatim}
+The value are all justified by calculation manually and other codes.
+
 As proved in figure, the rate of convergence by Newton method is quadratic.
 Student choosed the Saint-Venant Kirchhoff law to present the result, with the intention to capture the non-linearity in both the constitutive law via \cref{generalConstitutiveLaw} and the large deformation's effect in \cref{eq:barVectors}.
 \subsection{Truss}

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2025.4.17)  12 DEC 2025 11:33
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2025.4.17)  12 DEC 2025 14:12
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -215,12 +215,49 @@ Package: etexcmds 2019/12/15 v1.7 Avoid name clashes with e-TeX commands (HO)
 ))
 \openout4 = `rapportMethodeNumerique_VA.pre'.
 
+) (/usr/share/texlive/texmf-dist/tex/latex/listings/listings.sty
+\lst@mode=\count287
+\lst@gtempboxa=\box54
+\lst@token=\toks26
+\lst@length=\count288
+\lst@currlwidth=\dimen181
+\lst@column=\count289
+\lst@pos=\count290
+\lst@lostspace=\dimen182
+\lst@width=\dimen183
+\lst@newlines=\count291
+\lst@lineno=\count292
+\lst@maxwidth=\dimen184
+ (/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2020/03/24 1.8d (Carsten Heinz)
+\c@lstnumber=\count293
+\lst@skipnumbers=\count294
+\lst@framebox=\box55
+) (/usr/share/texlive/texmf-dist/tex/latex/listings/listings.cfg
+File: listings.cfg 2020/03/24 1.8d listings configuration
+))
+Package: listings 2020/03/24 1.8d (Carsten Heinz)
+ (/usr/share/texlive/texmf-dist/tex/latex/xcolor/xcolor.sty
+Package: xcolor 2021/10/31 v2.13 LaTeX color extensions (UK)
+ (/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 227.
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1352.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1356.
+Package xcolor Info: Model `RGB' extended on input line 1368.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1370.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1371.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1372.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1373.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1374.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1375.
 ) (/usr/share/texlive/texmf-dist/tex/latex/natbib/natbib.sty
 Package: natbib 2010/09/13 8.31b (PWD, AO)
 \bibhang=\skip53
 \bibsep=\skip54
 LaTeX Info: Redefining \cite on input line 694.
-\c@NAT@ctr=\count287
+\c@NAT@ctr=\count295
 ) (/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref.sty
 Package: hyperref 2021-06-07 v7.00m Hypertext links for LaTeX
  (/usr/share/texlive/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
@@ -243,9 +280,9 @@ Package: auxhook 2019-12-17 v1.6 Hooks for auxiliary files (HO)
 ) (/usr/share/texlive/texmf-dist/tex/latex/kvoptions/kvoptions.sty
 Package: kvoptions 2020-10-07 v3.14 Key value format for package options (HO)
 )
-\@linkdim=\dimen181
-\Hy@linkcounter=\count288
-\Hy@pagecounter=\count289
+\@linkdim=\dimen185
+\Hy@linkcounter=\count296
+\Hy@pagecounter=\count297
  (/usr/share/texlive/texmf-dist/tex/latex/hyperref/pd1enc.def
 File: pd1enc.def 2021-06-07 v7.00m Hyperref: PDFDocEncoding definition (HO)
 Now handling font encoding PD1 ...
@@ -255,7 +292,7 @@ File: hyperref-langpatches.def 2021-06-07 v7.00m Hyperref: patches for babel lan
 ) (/usr/share/texlive/texmf-dist/tex/generic/intcalc/intcalc.sty
 Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
 )
-\Hy@SavedSpaceFactor=\count290
+\Hy@SavedSpaceFactor=\count298
  (/usr/share/texlive/texmf-dist/tex/latex/hyperref/puenc.def
 File: puenc.def 2021-06-07 v7.00m Hyperref: PDF Unicode definition (HO)
 Now handling font encoding PU ...
@@ -285,19 +322,19 @@ Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO)
 ))
 Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 286.
 ))
-\c@Hy@tempcnt=\count291
+\c@Hy@tempcnt=\count299
  (/usr/share/texlive/texmf-dist/tex/latex/url/url.sty
 \Urlmuskip=\muskip17
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
 )
 LaTeX Info: Redefining \url on input line 4804.
-\XeTeXLinkMargin=\dimen182
+\XeTeXLinkMargin=\dimen186
  (/usr/share/texlive/texmf-dist/tex/generic/bitset/bitset.sty
 Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
 )
-\Fld@menulength=\count292
-\Field@Width=\dimen183
-\Fld@charsize=\dimen184
+\Fld@menulength=\count300
+\Field@Width=\dimen187
+\Fld@charsize=\dimen188
 Package hyperref Info: Hyper figures OFF on input line 6076.
 Package hyperref Info: Link nesting OFF on input line 6081.
 Package hyperref Info: Hyper index ON on input line 6084.
@@ -311,15 +348,15 @@ LaTeX Info: Redefining \pageref on input line 6150.
 Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
 package with kernel methods
 )
-\Hy@abspage=\count293
-\c@Item=\count294
-\c@Hfootnote=\count295
+\Hy@abspage=\count301
+\c@Item=\count302
+\c@Hfootnote=\count303
 )
 Package hyperref Info: Driver (autodetected): hpdftex.
  (/usr/share/texlive/texmf-dist/tex/latex/hyperref/hpdftex.def
 File: hpdftex.def 2021-06-07 v7.00m Hyperref driver for pdfTeX
-\Fld@listcount=\count296
-\c@bookmark@seq@number=\count297
+\Fld@listcount=\count304
+\c@bookmark@seq@number=\count305
 \Hy@SectionHShift=\skip55
 ) (/usr/share/texlive/texmf-dist/tex/latex/cleveref/cleveref.sty
 Package: cleveref 2018/03/27 v0.21.4 Intelligent cross-referencing
@@ -334,44 +371,45 @@ LaTeX Info: Redefining \cpagerefrange on input line 2370.
 LaTeX Info: Redefining \Cpagerefrange on input line 2370.
 LaTeX Info: Redefining \labelcref on input line 2370.
 LaTeX Info: Redefining \labelcpageref on input line 2370.
+Package cleveref Info: `listings' support loaded on input line 3131.
 ) (/usr/share/texlive/texmf-dist/tex/latex/mwe/mwe.sty
 Package: mwe 2018/03/30 v0.5 Package to support minimal working examples (MWE)
  (/usr/share/texlive/texmf-dist/tex/latex/lipsum/lipsum.sty (/usr/share/texlive/texmf-dist/tex/latex/l3packages/l3keys2e/l3keys2e.sty (/usr/share/texlive/texmf-dist/tex/latex/l3kernel/expl3.sty
 Package: expl3 2022-01-21 L3 programming layer (loader) 
  (/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2022-01-12 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count298
-\l__pdf_internal_box=\box54
+\l__color_backend_stack_int=\count306
+\l__pdf_internal_box=\box56
 ))
 Package: l3keys2e 2022-01-12 LaTeX2e option processing using LaTeX3 keys
 )
 Package: lipsum 2021-09-20 v2.7 150 paragraphs of Lorem Ipsum dummy text
-\g__lipsum_par_int=\count299
-\l__lipsum_a_int=\count300
-\l__lipsum_b_int=\count301
+\g__lipsum_par_int=\count307
+\l__lipsum_a_int=\count308
+\l__lipsum_b_int=\count309
  (/usr/share/texlive/texmf-dist/tex/latex/lipsum/lipsum.ltd.tex)) (/usr/share/texlive/texmf-dist/tex/latex/blindtext/blindtext.sty
 Package: blindtext 2012/01/06 V2.0 blindtext-Package
  (/usr/share/texlive/texmf-dist/tex/latex/tools/xspace.sty
 Package: xspace 2014/10/28 v1.13 Space after command names (DPC,MH)
 )
-\c@blindtext=\count302
-\c@Blindtext=\count303
-\c@blind@countparstart=\count304
-\blind@countxx=\count305
-\blindtext@numBlindtext=\count306
-\blind@countyy=\count307
-\c@blindlist=\count308
-\c@blindlistlevel=\count309
-\c@blindlist@level=\count310
-\blind@listitem=\count311
-\c@blind@listcount=\count312
-\c@blind@levelcount=\count313
-\blind@mathformula=\count314
-\blind@Mathformula=\count315
-\c@blind@randomcount=\count316
-\c@blind@randommax=\count317
-\c@blind@pangramcount=\count318
-\c@blind@pangrammax=\count319
+\c@blindtext=\count310
+\c@Blindtext=\count311
+\c@blind@countparstart=\count312
+\blind@countxx=\count313
+\blindtext@numBlindtext=\count314
+\blind@countyy=\count315
+\c@blindlist=\count316
+\c@blindlistlevel=\count317
+\c@blindlist@level=\count318
+\blind@listitem=\count319
+\c@blind@listcount=\count320
+\c@blind@levelcount=\count321
+\blind@mathformula=\count322
+\blind@Mathformula=\count323
+\c@blind@randomcount=\count324
+\c@blind@randommax=\count325
+\c@blind@pangramcount=\count326
+\c@blind@pangrammax=\count327
 )) (./rapportMethodeNumerique_VA.aux
 
 LaTeX Warning: Label `truss3D' multiply defined.
@@ -388,24 +426,24 @@ LaTeX Warning: Label `truss3D@cref' multiply defined.
 )
 \openout1 = `rapportMethodeNumerique_VA.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 36.
-LaTeX Font Info:    ... okay on input line 36.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 51.
+LaTeX Font Info:    ... okay on input line 51.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -443,17 +481,17 @@ LaTeX Font Info:    ... okay on input line 36.
 
 (/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count320
-\scratchdimen=\dimen185
-\scratchbox=\box55
-\nofMPsegments=\count321
-\nofMParguments=\count322
-\everyMPshowfont=\toks26
-\MPscratchCnt=\count323
-\MPscratchDim=\dimen186
-\MPnumerator=\count324
-\makeMPintoPDFobject=\count325
-\everyMPtoPDFconversion=\toks27
+\scratchcounter=\count328
+\scratchdimen=\dimen189
+\scratchbox=\box57
+\nofMPsegments=\count329
+\nofMParguments=\count330
+\everyMPshowfont=\toks27
+\MPscratchCnt=\count331
+\MPscratchDim=\dimen190
+\MPnumerator=\count332
+\makeMPintoPDFobject=\count333
+\everyMPtoPDFconversion=\toks28
 ) (/usr/share/texlive/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
@@ -462,15 +500,10 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 ))
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: hyperref package is loaded.
+Package caption Info: listings package is loaded.
 Package caption Info: End \AtBeginDocument code.
- (/usr/share/texlive/texmf-dist/tex/latex/graphics/color.sty
-Package: color 2021/12/07 v1.3c Standard LaTeX Color (DPC)
- (/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/color.cfg
-File: color.cfg 2016/01/02 v1.6 sample color configuration
-)
-Package color Info: Driver file: pdftex.def on input line 149.
-)
-Package hyperref Info: Link coloring ON on input line 36.
+\c@lstlisting=\count334
+Package hyperref Info: Link coloring ON on input line 51.
  (/usr/share/texlive/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2021-04-02 v2.47 Cross-referencing by name of section
  (/usr/share/texlive/texmf-dist/tex/latex/refcount/refcount.sty
@@ -478,32 +511,32 @@ Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
 ) (/usr/share/texlive/texmf-dist/tex/generic/gettitlestring/gettitlestring.sty
 Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
-\c@section@level=\count326
+\c@section@level=\count335
 )
-LaTeX Info: Redefining \ref on input line 36.
-LaTeX Info: Redefining \pageref on input line 36.
-LaTeX Info: Redefining \nameref on input line 36.
+LaTeX Info: Redefining \ref on input line 51.
+LaTeX Info: Redefining \pageref on input line 51.
+LaTeX Info: Redefining \nameref on input line 51.
  (./rapportMethodeNumerique_VA.out) (./rapportMethodeNumerique_VA.out)
 \@outlinefile=\write5
 \openout5 = `rapportMethodeNumerique_VA.out'.
 
-Package backref Info: ** backref set up for natbib ** on input line 36.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 38.
+Package backref Info: ** backref set up for natbib ** on input line 51.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 53.
  (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 38.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 53.
  (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 50.
+LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 65.
  (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2019/12/16 v2.5j Standard LaTeX font definitions
 )
 <console2D.pdf, id=75, 174.03018pt x 156.93633pt>
 File: console2D.pdf Graphic file (type pdf)
 <use console2D.pdf>
-Package pdftex.def Info: console2D.pdf  used on input line 61.
+Package pdftex.def Info: console2D.pdf  used on input line 76.
 (pdftex.def)             Requested size: 157.77286pt x 142.26378pt.
 
 
@@ -515,7 +548,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 <truss.pdf, id=134, 135.40587pt x 227.62039pt>
 File: truss.pdf Graphic file (type pdf)
 <use truss.pdf>
-Package pdftex.def Info: truss.pdf  used on input line 157.
+Package pdftex.def Info: truss.pdf  used on input line 172.
 (pdftex.def)             Requested size: 101.55826pt x 170.71652pt.
 
 
@@ -525,40 +558,51 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 <fem1D.pdf, id=170, 227.62039pt x 59.5023pt>
 File: fem1D.pdf Graphic file (type pdf)
 <use fem1D.pdf>
-Package pdftex.def Info: fem1D.pdf  used on input line 239.
+Package pdftex.def Info: fem1D.pdf  used on input line 255.
 (pdftex.def)             Requested size: 272.11502pt x 71.13188pt.
  [5 <./fem1D.pdf>]
-<fem2D.pdf, id=193, 227.62039pt x 127.48628pt>
+<fem2D.pdf, id=192, 227.62039pt x 127.48628pt>
 File: fem2D.pdf Graphic file (type pdf)
 <use fem2D.pdf>
-Package pdftex.def Info: fem2D.pdf  used on input line 272.
+Package pdftex.def Info: fem2D.pdf  used on input line 288.
 (pdftex.def)             Requested size: 304.80829pt x 170.71652pt.
- [6 <./fem2D.pdf>]
-<fem1D_u.pdf, id=235, 201.3924pt x 150.94392pt>
+ (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2020/03/24 1.8d listings language file
+) (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2020/03/24 1.8d listings language file
+) (/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2020/03/24 1.8d (Carsten Heinz)
+)
+Overfull \hbox (23.5739pt too wide) in paragraph at lines 309--310
+\T1/cmr/m/n/12 Assume the bar to be rect-an-gle, the in-put pa-ram-e-ters are put in a names-pace \T1/cmtt/m/n/12 modelParameters
+ []
+
+[6 <./fem2D.pdf>] [7]
+<fem1D_u.pdf, id=263, 201.3924pt x 150.94392pt>
 File: fem1D_u.pdf Graphic file (type pdf)
 <use fem1D_u.pdf>
-Package pdftex.def Info: fem1D_u.pdf  used on input line 304.
+Package pdftex.def Info: fem1D_u.pdf  used on input line 362.
 (pdftex.def)             Requested size: 227.77971pt x 170.71652pt.
 
-Overfull \hbox (9.2645pt too wide) in paragraph at lines 304--305
+Overfull \hbox (9.2645pt too wide) in paragraph at lines 362--363
  [][] 
  []
 
-<fem1D_N.pdf, id=236, 201.3121pt x 152.1384pt>
+<fem1D_N.pdf, id=264, 201.3121pt x 152.1384pt>
 File: fem1D_N.pdf Graphic file (type pdf)
 <use fem1D_N.pdf>
-Package pdftex.def Info: fem1D_N.pdf  used on input line 311.
+Package pdftex.def Info: fem1D_N.pdf  used on input line 369.
 (pdftex.def)             Requested size: 225.9134pt x 170.71652pt.
 
-Overfull \hbox (7.3982pt too wide) in paragraph at lines 311--312
+Overfull \hbox (7.3982pt too wide) in paragraph at lines 369--370
  [][] 
  []
 
-[7 <./fem1D_u.pdf> <./fem1D_N.pdf>] (./rapportMethodeNumerique_VA.bbl (./rapportMethodeNumerique_VA.brf)
+[8 <./fem1D_u.pdf> <./fem1D_N.pdf>] (./rapportMethodeNumerique_VA.bbl (./rapportMethodeNumerique_VA.brf)
 \tf@brf=\write6
 \openout6 = `rapportMethodeNumerique_VA.brf'.
 
-) [8] (./rapportMethodeNumerique_VA.aux)
+) [9] (./rapportMethodeNumerique_VA.aux)
 
 LaTeX Warning: There were multiply-defined labels.
 
@@ -568,18 +612,18 @@ Package rerunfilecheck Info: File `rapportMethodeNumerique_VA.brf' has not chang
 (rerunfilecheck)             Checksum: 10962DDDA89715E3FD218142E34D85AB;116.
  ) 
 Here is how much of TeX's memory you used:
- 16016 strings out of 478287
- 274141 string characters out of 5849289
- 675656 words of memory out of 5000000
- 33897 multiletter control sequences out of 15000+600000
- 486622 words of font info for 73 fonts, out of 8000000 for 9000
+ 18229 strings out of 478287
+ 302812 string characters out of 5849289
+ 971789 words of memory out of 5000000
+ 36066 multiletter control sequences out of 15000+600000
+ 486936 words of font info for 74 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 87i,20n,91p,576b,507s stack positions out of 5000i,500n,10000p,200000b,80000s
-{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1728.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2074.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfti1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1200.pfb>
-Output written on rapportMethodeNumerique_VA.pdf (8 pages, 291597 bytes).
+ 87i,20n,91p,576b,2078s stack positions out of 5000i,500n,10000p,200000b,80000s
+{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1728.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2074.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm0600.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfti1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1200.pfb>
+Output written on rapportMethodeNumerique_VA.pdf (9 pages, 360902 bytes).
 PDF statistics:
- 361 PDF objects out of 1000 (max. 8388607)
- 298 compressed objects within 3 object streams
- 81 named destinations out of 1000 (max. 500000)
+ 399 PDF objects out of 1000 (max. 8388607)
+ 330 compressed objects within 4 object streams
+ 102 named destinations out of 1000 (max. 500000)
  167 words of extra memory for PDF output out of 10000 (max. 10000000)
 

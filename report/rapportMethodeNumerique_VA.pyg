@@ -1,0 +1,11 @@
+double f(double x) {
+    return x*x - 2.0;
+}
+
+int main() {
+    double x = 1.0;
+    for(int k=0; k<10; ++k) {
+        x = x - f(x)/(2*x);
+    }
+    std::cout << x << std::endl;
+}

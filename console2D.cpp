@@ -35,7 +35,7 @@ Vector<double> x0{(i1 * a + i2 * a)};
 double l01{magnitude(x0)};          // length bar 1
 double l02{magnitude(x0 - a * i2)}; // length bar 2
 double force{1.5e6};                // Imposed Force
-double theta{20}; // Inclined angle of the force with relative to vertical
+double theta{20}; // Inclined degree of the force with relative to vertical
 double thetaRadian{theta * std::numbers::pi / 180}; // converte to radian
 
 Vector<double> f1{force * std::sin(thetaRadian) *
@@ -94,7 +94,7 @@ int main() {
   Vector<double> deltaX(2); // The displacement vector of node C
   Vector<double> Fk(2);     // Sum of internal and external force at iteration k
 
-  std::cout << "=== Newton-Raphson Iteration ===" << std::endl;
+  std::cout << "=== 2D CONSOLE PROBLEM ===" << std::endl;
   // Vectors at iteration k
   Vector<double> x(2);
   double l1{}, l2{};
@@ -163,25 +163,10 @@ int main() {
       auto it = iteration_array[k];
       double u = magnitude(deltaX_array[k]);
       double f = magnitude(F_array[k]);
-      dataFile << it << " " << u << " " << f << "\n";
+      dataFile << it << " " << deltaX_array[k][0] << " " << deltaX_array[k][1]
+               << " " << u << " " << f << "\n";
     }
     dataFile.close();
-  }
-
-  // Export node positions before and after deformation
-  {
-    std::ofstream posFile("report/console2D_positions.dat");
-    // Numeric-only: x_before y_before x_after y_after per line (A, B, C)
-    Vector<double> C_before = x0;
-    Vector<double> C_after = x0 + deltaX;
-    // A
-    posFile << 0.0 << " " << 0.0 << " " << 0.0 << " " << 0.0 << "\n";
-    // B
-    posFile << 0.0 << " " << a << " " << 0.0 << " " << a << "\n";
-    // C
-    posFile << C_before[0] << " " << C_before[1] << " " << C_after[0] << " "
-            << C_after[1] << "\n";
-    posFile.close();
   }
   return 0;
 }
