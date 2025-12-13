@@ -26,9 +26,13 @@
     commentstyle=\color{green!50!black},
     stringstyle=\color{red},
     frame=single,
+    rulecolor=\color{black!40},
+    backgroundcolor=\color{gray!8},
+    framesep=5pt,
     breaklines=true,
     tabsize=4
 }
+
 
 % Bibliography and hyperlinks
 
@@ -63,7 +67,7 @@ The assigment practices therefore is to build in the most general form of the co
 2 main problems are takin into account: A console problem in 2D and a Truss problem in 3D, hence the remaining of this reports are divided into two sections of the former subject. 
 Besides, this is a ideal chance to practice, thus I also try to provide a solution for the problem of Finite Element Method in 1D and 2D.
 The main code is actually written in \texttt{C++}, with libraries mostly building from scratches. They have been upload to \texttt{Github}, the link to download is provided in \cref{Annexxe}. 
-The plotting is realized by \texttt{Asymptote} - a vector graphic language with C-like features. The whole purpose is to learn so any corrections and comments are highly appreciated.
+The plotting and schemetic diagram is realized by \texttt{Asymptote} - a vector graphic language with C-like features. The whole purpose is to learn so any corrections and comments are highly appreciated.
 I would like to thank the professors for letting me, even though being a PhD student, could join this program to learn. I really appreciated and enjoyed the class.
 
 \section{Theory}
@@ -272,10 +276,25 @@ The weak form is expressed by;
    \forall v \in V, \int^l_0 EA \dfrac{du}{dx}\dfrac{dv}{dx}dx - Rv(0) = \int^l_0fvdx + Fv(l)
   \label{weakformFEM1D}
 \end{equation}
-\begin{equation}
-  \forall v \in V, a(u,v) + b(R,v) = L(v)
+where $v \in V0$ is the virtual field that we can choose such that $v(0) = 0$ to get rid of the reaction part in \cref{weakformFEM1D}. 
+Or rewrite in another linear compacted form:
+\begin{align}
+  \forall v \in V, a(u,v) + b(R,v) &= L(v) \\
+  \text{with: }
+  a(u, v) &= EA \dfrac{du}{dx}\dfrac{dv}{dx}dx;\\
+  b(R,v) &= -Rv(0) = 0;\\
+  L(v) &=  \int^l_0fvdx + Fv(l)
   \label{weakformFEM1Dcompacted}
-\end{equation}
+\end{align}
+The displacemen field $u(x)$, similarly $v(x)$ is approximated by discretizing via Galerkin's method:
+    \begin{equation}
+u(x) \approx u^a(x) = U^i N^i  \label{Galerkin}
+   \end{equation}
+   Finite Element Method is a Galerkin-like method but with a particular choice of shape function $N^i$ as the low-order hat function via Lagrange's basis.
+       \begin{equation}
+ N^i(x_j) = \delta_{ij} = \dfrac{x - x_j}{x_i - x_j} \label{Hat function}
+   \end{equation}
+
 rewritten in tensor notation:
 \begin{align}
   \text{Find $\underline{\mathcal{U}}$ and $\mathcal{R}$ such that:}\\
@@ -295,7 +314,7 @@ rewritten in tensor notation:
   \forall \vec{x} \in \Omega,  \sigma &= \lambda \text{tr} \epsilon (\vec{u}) \mathbb{I} + 2\mu\epsilon(\vec{u});\\
     \forall \vec{x} \in \Gamma_u, \vec{u} &= \vec{U};\\
     \forall \vec{x} \in \Gamma_F, \sigma @\vec{n} &= \vec{F};\\
-    \forall \vec{x} \in \Gamma_u, \sigma @\vec{n} &= \vec{R};\\
+    \forall \vec{x} \in \Gamma_u, \sigma @\vec{n} &= \vec{R};
 \end{align}
 weak form:
 \begin{align}
@@ -305,8 +324,7 @@ weak form:
 \end{align}
 \section{Validation}
 \subsection{Console}
-
-
+The initial position $x_0 $is, inituitively, taken by the intitial configuration to assure better convergence and avoid unnecessary numbers of iteration. 
 Assume the bar to be rectangle, the input parameters are put in a namespace \texttt{modelParameters} within the code so one could change it accordingly to needs.
 \begin{lstlisting}[style=cpp]
 namespace modelParameters {
@@ -329,9 +347,8 @@ double epsilon{1e-8};
 int law{1}; 
 }
 \end{lstlisting}
-
-The final result obtained is:
-\begin{verbatim}
+The final result obtained by printing to the console (terminal) is:
+\begin{lstlisting}[style=cpp]
 === 2D CONSOLE PROBLEM ===
 Iteration 0: |Fk| = 1.5e+06: |dx| = 2.48569
 Iteration 1: |Fk| = 814055: |dx| = 0.312942
@@ -344,7 +361,7 @@ Final displacement: [0.526986, -2.14187]
 Final position: [10.527, 7.85813]
 Total iterations: 5
 Time elapsed: 0.000276144 seconds
-\end{verbatim}
+\end{lstlisting}
 
 
 \begin{figure}[h]
@@ -366,7 +383,7 @@ Time elapsed: 0.000276144 seconds
 \end{figure}
 
 As showed in diagram \cref{consoleDeformed}, under the effect of force $\vec{F}$, node C displaced from position (10,10) to (10.53, 7.86). These values are all justified by calculation manually and other codes.
-
+At the beginning of iteration number 5, noticing that the sum of forces acting on node C and the its displacement is already approched to a value less than $\epsilon = 10^{-10}$ , the process stoped and the final value was taken at the last step, which is iteration number $4^{text}$.
 As proved in figure \cref{plotConsole}, the rate of convergence (in logarithm proportion) by Newton method is quadratic.
 Student choosed the Saint-Venant Kirchhoff law to present the result, with the intention to capture the non-linearity in both the constitutive law via \cref{generalConstitutiveLaw} and the large deformation's effect in \cref{eq:barVectors}.
 \subsection{Truss}
@@ -412,7 +429,7 @@ Thanks to using C++, time elapsed to execute one code is less then $10^{-3}$ sec
 Further optimization...
 \section[Annexxe]{Annexxe}\label{Annexxe}
 Full version of the codes, including libraries used, could be downloaded in this \href{https://github.com/VA-TT/Numerical-Method-3SR}{link}.
-
+The scripted presented in this report are \texttt{console2D.cpp, truss3D.cpp, fem1D.cpp}, along with their compiled programs.
 \bibliographystyle{apalike}
 \bibliography{Bibliography}
 
