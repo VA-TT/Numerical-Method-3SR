@@ -12,13 +12,13 @@ Including:
 * Library: Including all the needed mathematics library thanks to this free guided [C++ website](https://www.learncpp.com/). The following algorithms was copied from there with citations in each header file: _"Approximation.h"_ & _"Random.h"_ & _"Clock.h"_. Others are self-made, no third-party library was used.
 
 * Main code: Numerical solution using C++ for
-  * 3D Truss problem: small deformation
   * 2D Console
+  * 3D Truss problem: small deformation
   * FEM 1D
   * FEM 2D
 
 * Python: The translation to Python version of the problems above.
 
-* Report: Report in Latex for the Console and Truss problem.
+* Report: Report in Latex and Asymptote for the listed problems.
 
 _**NOTE**_: The code is written in C++20 standard
