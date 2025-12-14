@@ -391,7 +391,8 @@ Student choosed the Saint-Venant Kirchhoff law to present the result, with the i
 Taking trivial value as follows: $f = 5kN;\ F = 10kN;\ EA = 10 kN;\ L = 1m$, once could verify the anylytic solution to be: $R = -15 kN; \ u(x) = 1.5x - 0.25x^2 (m);\ N(x) = 15 - 5x (kN);$
 Using the script, though the reaction force at the first node $R (x=0) = -15$kN is always calculated precisely, the deformation $u(x)$ and the axial force $N(x)$ are highly depended on the number of nodes.
 \Cref{solutionFEM1D} shows the numerical solution of the code, comparing with the analytical one. It was shown that the deformation $u(x)$ is obviously more precise, when the bar is discretized by using more elements.
-The particular point of \texttt{FEM} comparing with Galerkin's method is using special shape function, particularly in this case is first-order hat function, via Lagrange's basis. This is well explained by when we discretized $u(x) = N_j u_j$. As $u_j$ is a constant, $u(x)$ is a first order polynomial (\cref{deformationFEM1D}), leading to its derivative to be a constant, hence $N(x) = EA\ du/dx $ is a constant on each element also (\cref{axialforceFEM1D}).
+The particular point of \texttt{FEM} comparing with Galerkin's method is using special shape function, particularly in this case is first-order hat function, via Lagrange's basis. This is well explained by when we discretized $u(x) = N_j u_j$. As $u_j$ is a constant, $u(x)$ is a first order polynomial (\cref{deformationFEM1D}), leading to its derivative to be a constant, consequently $N(x) = EA\ du/dx $ is a constant on each element also (\cref{axialforceFEM1D}).
+Though this phenomenon is expected, as in the annexxe A of \citep{dalpont2020_nonlinear_mech}.
 
 \begin{figure}[h]
     \centering
@@ -421,7 +422,7 @@ The code is able to handle 2D Truss problems with 2 nodes, as a trial solution t
 The code is able to handle any non-linear truss problem, 2D and 3D, including the console problem above. Though the Hardening incremented law should be implemented in the future to wider the range of problem that could be handled.
 \subsection{FEM1D}
 The code has been implemented in a way to solve any 1D bar problmem, with whatever the constraint conditions are, both Dirichlet and Neuman's condition. As long as the differential equation satisfied the form $u_{xx} = f(x) + c$ with $f(x)$ is a polynomial function of x, including $cx^0$.
-This leads to the application of distributed load and concentration load exhibited on the bar.
+This leads to the application of distributed load and concentration load exhibited on the bar, manipulated by the two function \texttt{rhsFunction() \& applyBC()}.
 Though the numerical cost could be reduced strongly using reference element, element Matrix, ... etc but this initial version is to test out all the functioning of the sub-coded also. Gladly, the solution seems to adapted well with the analytical one as expected.
 \section{Conclusion}
 In a nutshell, the code provided trustable result. Further implemented still rested to continue.

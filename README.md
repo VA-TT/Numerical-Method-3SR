@@ -13,9 +13,9 @@ Including:
 
 * Main code: Numerical solution using C++ for
   * 2D Console
-  * 3D Truss problem: small deformation
+  * 3D Truss problem
   * FEM 1D
-  * FEM 2D
+  * FEM 2D (in construction)
 
 * Python: The translation to Python version of the problems above.
 
