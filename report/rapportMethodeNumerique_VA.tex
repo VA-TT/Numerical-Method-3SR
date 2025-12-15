@@ -407,7 +407,6 @@ Final position: [10.527, 7.85813]
 Time elapsed: 0.000122333 seconds
 \end{lstlisting}
 
-
 \begin{figure}[h]
     \centering
     \begin{subfigure}[b]{0.48\textwidth}
@@ -432,7 +431,59 @@ As proved in figure \cref{plotConsole}, the rate of convergence (in logarithm pr
 Student chose the Saint-Venant Kirchhoff law to present the result, with the intention to capture the non-linearity in both the constitutive law via \cref{generalConstitutiveLaw} and the large deformation's effect in \cref{eq:barVectors}.
 \subsection{Truss}
 The code also verify the stiffness matrix $\underline{\underline{\mathcal{K}}}$ before applying the kinematic boundary condition (via virtual field constraint) is symmetric and singular ($\det (\underline{\underline{\mathcal{K}}}) = 0$).
+\begin{lstlisting}[style=cpp]
+// Model Parameters
+namespace modelParameters {
+// Problem dimension:
+constexpr Index d{3};
 
+// Geometry of the truss
+constexpr Index nNodes{8}; // number of nodes
+constexpr Index nBars{10}; // number of bars
+
+Vector<Vector<double>> nodes{
+    {0.0, 0.0, 0.0},     // Node 0
+    {10.0, 0.0, 0.0},    // Node 1
+    {0.0, 0.0, 10.0},    // Node 2
+    {10.0, 0.0, 10.0},   // Node 3
+    {0.0, -10.0, 0.0},   // Node 4
+    {10.0, -10.0, 0.0},  // Node 5
+    {0.0, -10.0, 10.0},  // Node 6
+    {10.0, -10.0, 10.0}, // Node 7
+
+};
+// Bar connectivity: store node indices for each bar's origin and end
+Vector<Index> barOrigin{0, 2, 3, 2, 3, 4, 6, 7, 3, 2};
+Vector<Index> barEnd{2, 3, 1, 6, 7, 6, 7, 5, 6, 7};
+
+Vector<Index> nodeImposed{0, 1, 4, 5};
+Vector<Vector<double>> displacementImposed{
+    {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+Vector<Index> nodeFree(nNodes - nodeImposed.size());
+
+// Section dimension (Rectangular)
+double youngModulus{25e9}; // Module Young
+double b{0.02}, h{0.05};
+
+//  External loads at nodes - Direct 3D force vectors
+Vector<Vector<double>> externalForce{
+    {0.0, 0.0, 0.0},      // Node 0: no force
+    {0.0, 0.0, 0.0},      // Node 1: no force
+    {0.0, 0.0, -15000.0}, // Node 2: 15kN downward (z-direction)
+    {0.0, 0.0, -15000.0}, // Node 3: 15kN downward
+    {0.0, 0.0, 0.0},      // Node 4: no force
+    {0.0, 0.0, 0.0},      // Node 5: no force
+    {0.0, 0.0, -15000.0}, // Node 6: 15kN downward
+    {0.0, 0.0, -15000.0}  // Node 7: 15kN downward
+};
+// Choosing non-linear Saint-Venant Kirchhoff law
+int law{1};
+
+// tolerance for Newton's method
+double epsilon{1e-8};
+int max_iteration{100};
+} // namespace modelParameters
+\end{lstlisting}
 \subsection{FEM1D}
 Taking trivial values as follows: $f = 5~\text{kN}, \ F = 10~\text{kN}, EA = 10~\text{kN}, \ L = 1~\text{m}$,
 one can verify the analytic solution to be: $R = -15~\text{kN}, \ u(x) = 1.5\,x - 0.25\,x^2~(\text{m}), \ N(x) = 15 - 5x~(\text{kN})$.

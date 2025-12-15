@@ -28,7 +28,7 @@
 
 // Model Parameters
 namespace modelParameters {
-// Problem dimension: Considering the 2D implementation first
+// Problem dimension:
 constexpr Index d{3};
 
 // Unit vectors
@@ -69,7 +69,7 @@ double A{b * h};
 double alpha{youngModulus * A};
 
 //  External loads at nodes - Direct 3D force vectors
-// Chuyen ve Matrix
+// External Force applying
 Vector<Vector<double>> externalForce{
     {0.0, 0.0, 0.0},      // Node 0: no force
     {0.0, 0.0, 0.0},      // Node 1: no force
