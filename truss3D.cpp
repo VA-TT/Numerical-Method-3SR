@@ -80,8 +80,17 @@ Vector<Vector<double>> externalForce{
     {0.0, 0.0, -15000.0}, // Node 6: 15kN downward
     {0.0, 0.0, -15000.0}  // Node 7: 15kN downward
 };
+// Displacement Vector
+Vector<double> U(nNodes *d), UImposed(nNodes *d), UFree(nNodes *d);
+Vector<double> totalDispalcement(nNodes *d);
+// Axial Force inside the Bars and applying on Nodes
 Vector<Vector<double>> internalForceBar(nBars);
 Vector<Vector<double>> internalForceNodes(nNodes);
+std::vector<int> iteration_array;
+std::vector<Vector<double>> deltaU_array;
+
+// Rigidity kt of each bar
+Vector<double> k(nBars);
 // Choosing non-linear Saint-Venant Kirchhoff law
 int law{1};
 
@@ -106,20 +115,8 @@ inline auto constitutiveLaw(int law, double alpha, T l, double l0) {
   }
 }
 
-int main() {
-  Timer t;
+void validateInput() {
   using namespace modelParameters;
-  // A(l) = N(l)/l. We wrap l0 via the lambda capture when differentiating.
-  auto At = [=](double l, double l0) {
-    return constitutiveLaw(law, alpha, l, l0) / l;
-  };
-
-  auto kt = [=](double l, double l0) {
-    auto func = [=](auto x) { return constitutiveLaw(law, alpha, x, l0) / x; };
-    return automaticDiff(func, l);
-  };
-
-  // Checking the input
   assert(nodes.size() == nNodes && "numbers of nodes must be consistent!");
   assert(barOrigin.size() == nBars && barEnd.size() == nBars &&
          "numbers of bars must be consistent!");
@@ -131,13 +128,11 @@ int main() {
     assert(externalForce[i].size() == d &&
            "Each force vector must have d components");
   }
+}
 
-  // Setting up
-
-  Vector<double> U(nNodes * d), UImposed(nNodes * d), UFree(nNodes * d);
-
-  // Identify free nodes
-  Vector<Index> nodeFree(nNodes - nodeImposed.size());
+void setUp() {
+  using namespace modelParameters;
+  // Identify free nodes space Nf
   Index nf{0};
   bool isImposed = false;
   for (Index n{0}; n < nNodes; ++n) {
@@ -153,23 +148,34 @@ int main() {
       ++nf;
     }
   }
-
   assert(nf == nodeFree.size() && "Mismatch in free node count");
-
-  int iteration{0};
-
-  std::vector<int> iteration_array;
-  std::vector<Vector<double>> deltaU_array;
   iteration_array.reserve(max_iteration);
   deltaU_array.reserve(max_iteration);
-  Vector<double> totalDispalcement(nNodes * d);
+}
+
+int main() {
+  Timer t;
+  using namespace modelParameters;
+  validateInput();
+  setUp();
+  // At(l) = N(l)/l. We wrap l0 via the lambda capture when differentiating.
+  auto At = [=](double l, double l0) {
+    return constitutiveLaw(law, alpha, l, l0) / l;
+  };
+  // kt = dA/dl as a function
+  auto kt = [=](double l, double l0) {
+    auto func = [=](auto x) { return constitutiveLaw(law, alpha, x, l0) / x; };
+    return automaticDiff(func, l);
+  };
+
+  int iteration{0};
 
   std::cout << "=== 3D TRUSS PROBLEM ===" << std::endl;
 
   while (iteration < max_iteration) {
 
     for (Index b{0}; b < nBars; ++b) {
-      // compute original bar's vectors from node coordinates
+      // compute bar's vectors from node coordinates
       vectorBars[b] = nodes[barEnd[b]] - nodes[barOrigin[b]];
       lengthBars[b] = magnitude(vectorBars[b]);
       // Saving neutral bar's lengths
@@ -178,23 +184,9 @@ int main() {
       }
       unitVectorBars[b] = vectorBars[b] / lengthBars[b];
     }
-    // Rigidity kt of each bar
-    Vector<double> k(nBars);
-    // Fix the constitutive law
-    for (Index b{0}; b < nBars; ++b) {
-      k[b] = kt(lengthBars[b], length0Bars[b]);
-    }
-
-    Vector<Matrix<double, d, d>> elementaryApplicationK(nBars);
-    for (Index b{0}; b < nBars; ++b) {
-      elementaryApplicationK[b] =
-          At(lengthBars[b], length0Bars[b]) * Matrix<double, d, d>::identity() +
-          (1 / lengthBars[b]) * k[b] *
-              tensorProduct<d, d>(vectorBars[b], vectorBars[b]);
-    }
 
     // COMPUTING FORCE VECTOR F
-    // Internal force calculation: N[b] = A[b] * e[b]
+    // Internal force calculation: N[b] = A[b] * e[b] = At[b] * r[b]
     for (Index b{0}; b < nBars; ++b) {
       internalForceBar[b] =
           constitutiveLaw(law, alpha, lengthBars[b], length0Bars[b]) *
@@ -215,7 +207,7 @@ int main() {
     // Flatting vector F
     Vector<double> externalForceFlatten{flatten(externalForce, nNodes, d)};
     Vector<double> internalForceFlatten{flatten(internalForceNodes, nNodes, d)};
-    // Modify the right-hand side: F' = F_external - F_internal
+    // Modify the right-hand side: F = F_external - F_internal
     Vector<double> forceF = externalForceFlatten - internalForceFlatten;
 
     // Saving
@@ -235,6 +227,18 @@ int main() {
     }
 
     // COMPUTING STIFNESS MATRIX K
+    // kb
+    for (Index b{0}; b < nBars; ++b) {
+      k[b] = kt(lengthBars[b], length0Bars[b]);
+    }
+
+    Vector<Matrix<double, d, d>> elementaryApplicationK(nBars);
+    for (Index b{0}; b < nBars; ++b) {
+      elementaryApplicationK[b] =
+          At(lengthBars[b], length0Bars[b]) * Matrix<double, d, d>::identity() +
+          (1 / lengthBars[b]) * k[b] *
+              tensorProduct<d, d>(vectorBars[b], vectorBars[b]);
+    }
     //  Connectivity Matrix
     Vector<Matrix<double, d, d * nNodes>> C(nNodes);
 

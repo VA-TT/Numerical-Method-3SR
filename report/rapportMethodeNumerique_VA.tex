@@ -191,10 +191,11 @@ The problem of the truss system can be stated:
     \text{Given the external force } \vec{F}^{e/n}, n \in \mathcal{N}_F \text{ and } \vec{U}^{n}, n \in \mathcal{N}_I \nonumber\\
     \text{find the displacement vector } \vec{u}^n, n \in \mathcal{N} \text{ so that } \vec{u}^n = \vec{U}^n, n \in \mathcal{N}_I \text{ and } \nonumber\\
       \forall\vec{v}^n \text{ such that } \vec{v}^n = 0, n \in \mathcal{N}_I \nonumber \\
-      \sum_{b \in \mathcal{B}} k^b \vec{e}^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) \vec{e}^b \left( \vec{v}^{E(b)} - \vec{v}^{O(b)}\right) = \sum_{n \in \mathcal{N}_F} \vec{F}^{e/n} \vec{v}^n 
+     - \sum_{b \in \mathcal{B}} N^b \vec{e}^b \left( \vec{v}^{E(b)} - \vec{v}^{O(b)}\right) + \sum_{n \in \mathcal{N}_F} \vec{F}^{e/n} \vec{v}^n  = 0 \\
+     \text{where:}\quad N^b = \mathcal{A}^b \left( l^b \right) \nonumber
       \label{nodeEquilibrium3D}
  \end{align}
-which expressed in matrix notation as:
+The above equation could be expressed in matrix notation as:
    \begin{equation}
     \forall \underline{\mathcal{V}}, \underline{\mathcal{V}}^t \underline{\underline{\mathcal{K}}} \underline{\mathcal{U}} = \underline{\mathcal{V}}^t \underline{\mathcal{F}}  
    \end{equation} 

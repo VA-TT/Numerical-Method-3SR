@@ -36,6 +36,11 @@ public:
   // Constructor with initializer_list
   Vector(std::initializer_list<T> list) : m_elements(list) {}
 
+  // Vector 0
+  static Vector<T> zero(Index n) { return Vector<T>(n); }
+
+  // Đưa mọi phần tử về 0, giữ nguyên kích thước
+  void resetZero() { (*this) = Vector::zero(); }
   // // Constructor 3D (x, y, z)
   // Vector(const T& x, const T& y, const T& z) : m_elements{x, y, z} {}
 
