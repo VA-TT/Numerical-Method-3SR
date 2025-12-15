@@ -180,7 +180,9 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
 \end{figure}
 The 3D truss problem is a problem enhanced from the previous, which is in 3 dimensions and the numbers of bars could be as numerous as required.
 Similarly in the previous problem, each bar's geometry is fully accessible through the position of nodes. Their vectors could be determined totally similar in the previous problem via \cref{eq:barVectors}.
-The problem of the small deformation truss can be stated as:
+Referencing to \cref{updatePosition}, instead of $\delta x$, we determine $\vec{u}^n$ as the displacement of node $n$ between the initial configuration and the deformed one. 
+Defining the set of bars is $\mathcal{B}$, while the set of nodes is $\mathcal{N} = \mathcal{N_I} \cup \mathcal{N_F}$, where $\mathcal{N}_I$ signifies the set of nodes which has its position (displacement) imposed, and $\mathcal{N}_F$ is the set of nodes that is applied with external forces, including the reactions .
+The problem of the small deformation truss can be stated:
 
   \begin{align}
     \text{Given the external force } \vec{F}^{e/n}, n \in \mathcal{N}_F \text{ and } \vec{U}^{n}, n \in \mathcal{N}_I \nonumber\\

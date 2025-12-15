@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.6.27)  14 DEC 2025 09:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.6.27)  15 DEC 2025 08:17
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -593,10 +593,10 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 [3]
 
 [4 <./truss.pdf>]
-<fem1D.pdf, id=168, 227.62039pt x 59.5023pt>
+<fem1D.pdf, id=169, 227.62039pt x 59.5023pt>
 File: fem1D.pdf Graphic file (type pdf)
 <use fem1D.pdf>
-Package pdftex.def Info: fem1D.pdf  used on input line 260.
+Package pdftex.def Info: fem1D.pdf  used on input line 262.
 (pdftex.def)             Requested size: 272.11502pt x 71.13188pt.
 
 
@@ -604,7 +604,7 @@ Package pdftex.def Info: fem1D.pdf  used on input line 260.
 <fem2D.pdf, id=191, 227.62039pt x 127.48628pt>
 File: fem2D.pdf Graphic file (type pdf)
 <use fem2D.pdf>
-Package pdftex.def Info: fem2D.pdf  used on input line 308.
+Package pdftex.def Info: fem2D.pdf  used on input line 310.
 (pdftex.def)             Requested size: 304.80829pt x 170.71652pt.
 
 
@@ -615,44 +615,40 @@ File: lstlang1.sty 2024/09/23 1.10c listings language file
 ) (C:\Users\User\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstmisc.sty
 File: lstmisc.sty 2024/09/23 1.10c (Carsten Heinz)
 )
-<console2D_results.pdf, id=231, 170.7178pt x 146.71814pt>
-File: console2D_results.pdf Graphic file (type pdf)
-<use console2D_results.pdf>
-Package pdftex.def Info: console2D_results.pdf  used on input line 371.
-(pdftex.def)             Requested size: 165.54916pt x 142.26378pt.
-<console_plot.pdf, id=232, 284.52296pt x 170.97878pt>
-File: console_plot.pdf Graphic file (type pdf)
-<use console_plot.pdf>
-Package pdftex.def Info: console_plot.pdf  used on input line 377.
-(pdftex.def)             Requested size: 236.74876pt x 142.26378pt.
-
-Overfull \hbox (18.23355pt too wide) in paragraph at lines 377--378
- [][] 
- []
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
 
 [7]
-<fem1D_u.pdf, id=284, 201.3924pt x 150.94392pt>
-File: fem1D_u.pdf Graphic file (type pdf)
-<use fem1D_u.pdf>
-Package pdftex.def Info: fem1D_u.pdf  used on input line 401.
-(pdftex.def)             Requested size: 227.77971pt x 170.71652pt.
+<console2D_results.pdf, id=267, 170.7178pt x 146.71814pt>
+File: console2D_results.pdf Graphic file (type pdf)
+<use console2D_results.pdf>
+Package pdftex.def Info: console2D_results.pdf  used on input line 373.
+(pdftex.def)             Requested size: 165.54916pt x 142.26378pt.
+<console_plot.pdf, id=268, 284.52296pt x 170.97878pt>
+File: console_plot.pdf Graphic file (type pdf)
+<use console_plot.pdf>
+Package pdftex.def Info: console_plot.pdf  used on input line 379.
+(pdftex.def)             Requested size: 236.74876pt x 142.26378pt.
 
-Overfull \hbox (9.2645pt too wide) in paragraph at lines 401--402
+Overfull \hbox (18.23355pt too wide) in paragraph at lines 379--380
  [][] 
  []
 
-<fem1D_N.pdf, id=285, 201.3121pt x 152.1384pt>
+<fem1D_u.pdf, id=277, 201.3924pt x 150.94392pt>
+File: fem1D_u.pdf Graphic file (type pdf)
+<use fem1D_u.pdf>
+Package pdftex.def Info: fem1D_u.pdf  used on input line 403.
+(pdftex.def)             Requested size: 227.77971pt x 170.71652pt.
+
+Overfull \hbox (9.2645pt too wide) in paragraph at lines 403--404
+ [][] 
+ []
+
+<fem1D_N.pdf, id=278, 201.3121pt x 152.1384pt>
 File: fem1D_N.pdf Graphic file (type pdf)
 <use fem1D_N.pdf>
-Package pdftex.def Info: fem1D_N.pdf  used on input line 408.
+Package pdftex.def Info: fem1D_N.pdf  used on input line 410.
 (pdftex.def)             Requested size: 225.9134pt x 170.71652pt.
 
-Overfull \hbox (7.3982pt too wide) in paragraph at lines 408--409
+Overfull \hbox (7.3982pt too wide) in paragraph at lines 410--411
  [][] 
  []
 
@@ -661,13 +657,13 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 
 
-[8 <./console2D_results.pdf> <./console_plot.pdf>] (rapportMethodeNumerique_VA.bbl (rapportMethodeNumerique_VA.brf)
+[8 <./console2D_results.pdf> <./console_plot.pdf>]
+
+[9 <./fem1D_u.pdf> <./fem1D_N.pdf>] (rapportMethodeNumerique_VA.bbl (rapportMethodeNumerique_VA.brf)
 \tf@brf=\write6
 \openout6 = `rapportMethodeNumerique_VA.brf'.
 
-
-
-[9 <./fem1D_u.pdf> <./fem1D_N.pdf>])
+)
 
 [10] (rapportMethodeNumerique_VA.aux)
  ***********
@@ -686,13 +682,13 @@ Package rerunfilecheck Info: File `rapportMethodeNumerique_VA.brf' has not chang
 Here is how much of TeX's memory you used:
  18917 strings out of 468219
  315130 string characters out of 5433353
- 1191430 words of memory out of 5000000
+ 1162616 words of memory out of 5000000
  47069 multiletter control sequences out of 15000+600000
  644502 words of font info for 86 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 90i,20n,93p,563b,1379s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,20n,93p,563b,2096s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecti1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm1095.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1095.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm0600.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1440.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ectt1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm1200.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1728.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm1440.pk> <C:\Users\User\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx2074.pk><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi6.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/User/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on rapportMethodeNumerique_VA.pdf (10 pages, 350423 bytes).
+Output written on rapportMethodeNumerique_VA.pdf (10 pages, 351792 bytes).
 PDF statistics:
  751 PDF objects out of 1000 (max. 8388607)
  121 named destinations out of 1000 (max. 500000)
