@@ -16,7 +16,7 @@
 // 1D problem
 //  U_xx + x = 0, 0 < x < 1 (a < x < b)
 //  u(0) = g = 1 : Dirichlet's Boundary Condition (Must at least 1 condition to
-//  find unique solution!)
+//  prevent rigid movement and ensure unique solution!)
 //  u_x(1) = h = 1: Neuman's Boundary Condition
 
 // Exact solution for u'' + x = 0 with u(0)=1 and u'(1)=1
@@ -33,11 +33,11 @@ namespace modelParameters {
 // Problem's domain (a,b)
 double a{0.0};
 double b{1.0};
-// Dirichlet and Neumann boundary values (defaults)
+// Dirichlet and Neumann boundary values
 constexpr double g{0.0};  // Dirichlet at x=0 (u(0)=g)
 constexpr double h{10.0}; // Neumann at x=1 (N(1)=h)
-// Uniform distributed load (default). If you want a spatially varying
-// load, replace rhsFunction accordingly (e.g. [](auto x){ return x; }).
+// Uniform distributed load . If spatially varying load is wanted, replace
+// rhsFunction accordingly (e.g. [](auto x){ return x; }).
 constexpr double uniform_load{5.0};
 constexpr Index nNodes{6};             // Numbers of nodes
 constexpr Index nElements{nNodes - 1}; // Numbers of elements
@@ -201,8 +201,9 @@ int main() {
   Timer t;
   using namespace modelParameters;
 
+  std::cout << "=== FEM 1D PROBLEM ===" << std::endl;
   nodes = generateMesh(a, b, nNodes);
-  std::cout << nodes << "'\n";
+  std::cout << "Coordinates of nodes x_i: \n" << nodes << '\n';
   // Generate element connectivity automatically from number of nodes
   eleOrigin = Vector<Index>();
   eleEnd = Vector<Index>();
@@ -221,10 +222,10 @@ int main() {
 
   applyBC(first_node, g); // Apply u = g1 at first node
 
-  std::cout << K << std::endl;
-  std::cout << F << std::endl;
+  // std::cout << K << std::endl;
+  // std::cout << F << std::endl;
   U = solveLinearSystem(K, F);
-  std::cout << U << std::endl;
+  std::cout << "Displacement vector U: \n" << Vector<double>(U) << std::endl;
 
   // Calculate reaction forces using helper function
   calculateReactions(K_original, F_original, U);
@@ -234,58 +235,27 @@ int main() {
     // axial force N = EA * du/dx approximated by linear element slope
     N0 = EA * (U[1] - U[0]) / length[0];
   }
-  std::cout << "\nReaction force at node " << first_node
-            << " (x=" << nodes[first_node] << "): R = " << R[first_node]
-            << std::endl;
-  std::cout << "Internal axial N(0) = " << N0 << "   R[0] = " << R[0]
-            << "   N(0)+R[0] = " << (N0 + R[0]) << std::endl;
-  std::cout << "All reaction forces: " << R << std::endl;
-  // Export numeric nodal data for plotting (Asymptote)
-  {
-    std::ofstream dataFile("report/fem1D_data.asy");
-    dataFile << "// Generated nodal data from fem1D_test.cpp\n";
-    dataFile << "real[] xn = {";
-    for (Index i = 0; i < modelParameters::nNodes; ++i) {
-      dataFile << nodes[i];
-      if (i + 1 < modelParameters::nNodes)
-        dataFile << ",";
-    }
-    dataFile << "};\n";
-    dataFile << "real[] un = {";
-    for (Index i = 0; i < modelParameters::nNodes; ++i) {
-      dataFile << U[i];
-      if (i + 1 < modelParameters::nNodes)
-        dataFile << ",";
-    }
-    dataFile << "};\n";
-    dataFile.close();
-  }
-  // Also export a simple two-column text file for Asymptote input
+
+  std::cout << "Reaction force vector R: \n" << Vector<double>(R) << std::endl;
+
   {
     // Compute element axial forces (constant per linear element)
-    Vector<double> N_elem;
-    for (Index e = 0; e < modelParameters::nElements; ++e) {
-      Index i = modelParameters::eleOrigin[e];
-      Index j = modelParameters::eleEnd[e];
-      double Ne = modelParameters::EA * (U[j] - U[i]) / length[e];
-      N_elem.push_back(Ne);
+    Vector<double> N_elem(nElements);
+    for (Index e = 0; e < nElements; ++e) {
+      Index i = eleOrigin[e];
+      Index j = eleEnd[e];
+      N_elem[e] = EA * (U[j] - U[i]) / length[e];
     }
 
-    // Compute nodal axial forces by averaging adjacent element forces
-    Vector<double> N_node;
-    N_node.resize(modelParameters::nNodes);
-    for (Index idx = 0; idx < modelParameters::nNodes; ++idx) {
-      if (idx == 0) {
-        N_node[idx] = (N_elem.size() > 0) ? N_elem[0] : 0.0;
-      } else if (idx == modelParameters::nNodes - 1) {
-        N_node[idx] = (N_elem.size() > 0) ? N_elem[N_elem.size() - 1] : 0.0;
-      } else {
-        double left = N_elem[idx - 1];
-        double right = N_elem[idx];
-        N_node[idx] = 0.5 * (left + right);
-      }
+    // Assign element axial force to its two end nodes (overwrite if shared)
+    Vector<double> N_node(nNodes);
+    for (Index e = 0; e < nElements; ++e) {
+      Index i = eleOrigin[e];
+      Index j = eleEnd[e];
+      N_node[i] = N_elem[e];
+      N_node[j] = N_elem[e];
     }
-
+    std::cout << "Axial force vector N: \n" << N_node << std::endl;
     std::ofstream txtFile("report/fem1D_6nodes.txt");
     // Write three columns: x, u(x), N(x)
     for (Index i = 0; i < modelParameters::nNodes; ++i) {
@@ -293,24 +263,6 @@ int main() {
     }
     txtFile.close();
   }
-  // ------------------ Error check against exact solution ------------------
-  // Compute per-node absolute error, max error and RMS error
-  double max_err = 0.0;
-  double sum_sq = 0.0;
-  for (Index i = 0; i < nNodes; ++i) {
-    double x = nodes[i];
-    double u_num = U[i];
-    double u_ex = solution(x);
-    double err = std::fabs(u_num - u_ex);
-    if (err > max_err)
-      max_err = err;
-    sum_sq += err * err;
-    std::cout << "x=" << x << "  U_num=" << u_num << "  U_ex=" << u_ex
-              << "  err=" << err << "\n";
-  }
-  double rms = std::sqrt(sum_sq / static_cast<double>(nNodes));
-  std::cout << "max error = " << max_err << "  RMS error = " << rms
-            << std::endl;
   std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
   return 0;
 }

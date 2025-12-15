@@ -21,7 +21,7 @@
 
 // Model Initial Parameters
 namespace modelParameters {
-constexpr Index n{2}; // number of equilibrium equations
+constexpr Index B{2}; // number of bars
 
 // Unit vectors
 Vector<double> i1{1.0, 0.0};
@@ -79,8 +79,8 @@ int main() {
   using namespace modelParameters;
 
   // Create 2 lambda functions for 2 bars
-  auto func1 = [](auto x1) { return constitutiveLaw(law, alpha1, x1, l01); };
-  auto func2 = [](auto x2) { return constitutiveLaw(law, alpha2, x2, l02); };
+  auto func1 = [=](auto x1) { return constitutiveLaw(law, alpha1, x1, l01); };
+  auto func2 = [=](auto x2) { return constitutiveLaw(law, alpha2, x2, l02); };
 
   // Setting up
   int iteration{0};
@@ -99,7 +99,7 @@ int main() {
   Vector<double> x(2);
   double l1{}, l2{};
   Vector<double> e1(2), e2(2);
-  Matrix<double, n, n> nablaF{};
+  Matrix<double, B, B> nablaF{};
   auto I = Matrix<double, 2, 2>::identity();
   Vector<double> deltaX_increment(2);
 
@@ -117,16 +117,16 @@ int main() {
 
     // Use F as the quality of approximation
     if (magnitude(Fk) < epsilon) {
-      std::cout << "Solution founded.\n";
+      std::cout << "Solution founded at iteraion " << iteration << ".\n";
       break;
     }
 
     // Calculate NablaF at itaration k
-    nablaF = Matrix<double, n, n>{};
-    nablaF += -automaticDiff(func1, l1) * tensorProduct<n, n>(e1, e1);
-    nablaF += -automaticDiff(func2, l2) * tensorProduct<n, n>(e2, e2);
-    nablaF += -(func1(l1) / l1) * (I - tensorProduct<n, n>(e1, e1));
-    nablaF += -(func2(l2) / l2) * (I - tensorProduct<n, n>(e2, e2));
+    nablaF = Matrix<double, B, B>{};
+    nablaF += -automaticDiff(func1, l1) * tensorProduct<2, 2>(e1, e1);
+    nablaF += -automaticDiff(func2, l2) * tensorProduct<2, 2>(e2, e2);
+    nablaF += -(func1(l1) / l1) * (I - tensorProduct<2, 2>(e1, e1));
+    nablaF += -(func2(l2) / l2) * (I - tensorProduct<2, 2>(e2, e2));
 
     // Solve the linear system
     deltaX_increment = solveLinearSystem(nablaF, -Fk);
@@ -152,7 +152,6 @@ int main() {
   // Printing out the result
   std::cout << "\nFinal displacement: " << deltaX << std::endl;
   std::cout << "Final position: " << x0 + deltaX << "\n";
-  std::cout << "Total iterations: " << iteration << std::endl;
   std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
 
   // Export iteration vs deltaX for plotting

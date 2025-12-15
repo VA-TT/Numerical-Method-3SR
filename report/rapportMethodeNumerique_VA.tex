@@ -16,6 +16,7 @@
 \usepackage{asymptote}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{multirow}
 
 \lstdefinestyle{cpp}{
     language=C++,
@@ -44,13 +45,15 @@
 \usepackage[square,numbers]{natbib}
 \usepackage[unicode=true,bookmarks=true,colorlinks=true,linkcolor=blue,citecolor=red,backref=page]{hyperref}
 \usepackage{cleveref}
+\crefname{section}{Annexe}{Annexes}  
+\Crefname{section}{Annexe}{Annexes} 
 
 % Example placeholder images (from package 'mwe') if available; otherwise replace with your image files
 \usepackage{mwe} % provides example-image
 
 \title{\textbf{Numerical Methods for Non-Linear Mechanics}}
 \author{Viet Anh Quach}
-
+\date{} % Remove date from title page
 
 \begin{document}
 \maketitle
@@ -64,9 +67,9 @@
 This short report present the code that is assign for the subject "Numerical Methods for Non-Linear Mechanics" of the Master Program for Civil Engineering, teached by professor Stafano-Dal Pont at Laboratory 3SR, University Grenoble Alpes, France.
 The object of the course is studying the non-linear problems in mechanics, caused by both the geometric and material behavior.
 The assigment practices therefore is to build in the most general form of the constitutive law, which is not linearity.
-2 main problems are takin into account: A console problem in 2D and a Truss problem in 3D, hence the remaining of this reports are divided into two sections of the former subject. 
+2 main problems are takin into account: A console problem in 2D and a Truss problem in 3D, hence the remaining of this report are divided into two sections of the former subject. 
 Besides, this is a ideal chance to practice, thus I also try to provide a solution for the problem of Finite Element Method in 1D and 2D.
-The main code is actually written in \texttt{C++}, with libraries mostly building from scratches. They have been upload to \texttt{Github}, the link to download is provided in \cref{Annexxe}. 
+The main code is actually written in \texttt{C++}, with libraries mostly building from scratches. They have been uploaded to \texttt{Github}, the link to download is provided in \cref{Annexe}. 
 The plotting and schemetic diagram is realized by \texttt{Asymptote} - a vector graphic language with C-like features. The whole purpose is to learn so any corrections and comments are highly appreciated.
 I would like to thank the professors for letting me, even though being a PhD student, could join this program to learn. I really appreciated and enjoyed the class.
 
@@ -182,18 +185,18 @@ The 3D truss problem is a problem enhanced from the previous, which is in 3 dime
 Similarly in the previous problem, each bar's geometry is fully accessible through the position of nodes. Their vectors could be determined totally similar in the previous problem via \cref{eq:barVectors}.
 Referencing to \cref{updatePosition}, instead of $\delta x$, we determine $\vec{u}^n$ as the displacement of node $n$ between the initial configuration and the deformed one. 
 Defining the set of bars is $\mathcal{B}$, while the set of nodes is $\mathcal{N} = \mathcal{N_I} \cup \mathcal{N_F}$, where $\mathcal{N}_I$ signifies the set of nodes which has its position (displacement) imposed, and $\mathcal{N}_F$ is the set of nodes that is applied with external forces, including the reactions .
-The problem of the small deformation truss can be stated:
+The problem of the truss system can be stated:
 
   \begin{align}
     \text{Given the external force } \vec{F}^{e/n}, n \in \mathcal{N}_F \text{ and } \vec{U}^{n}, n \in \mathcal{N}_I \nonumber\\
     \text{find the displacement vector } \vec{u}^n, n \in \mathcal{N} \text{ so that } \vec{u}^n = \vec{U}^n, n \in \mathcal{N}_I \text{ and } \nonumber\\
       \forall\vec{v}^n \text{ such that } \vec{v}^n = 0, n \in \mathcal{N}_I \nonumber \\
-      \sum_{b \in \mathcal{B}} k^b \vec{e}_0^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) \vec{e}_0^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) = \sum_{n \in \mathcal{N}_F} \vec{F}^{e/n} \vec{v}^n 
+      \sum_{b \in \mathcal{B}} k^b \vec{e}^b \left( \vec{u}^{E(b)} - \vec{u}^{O(b)}\right) \vec{e}^b \left( \vec{v}^{E(b)} - \vec{v}^{O(b)}\right) = \sum_{n \in \mathcal{N}_F} \vec{F}^{e/n} \vec{v}^n 
       \label{nodeEquilibrium3D}
  \end{align}
 which expressed in matrix notation as:
    \begin{equation}
-    \forall \underline{\mathcal{V}}^t \underline{\underline{\mathcal{K}}} \underline{\mathcal{U}} = \underline{\mathcal{V}}^t \underline{\mathcal{F}}  
+    \forall \underline{\mathcal{V}}, \underline{\mathcal{V}}^t \underline{\underline{\mathcal{K}}} \underline{\mathcal{U}} = \underline{\mathcal{V}}^t \underline{\mathcal{F}}  
    \end{equation} 
     or in the simpliest way:  
     \begin{equation}
@@ -241,14 +244,15 @@ Meanwhile, the global stiffness matrix $\underline{\underline{\mathcal{K}}}$ cou
     \underbrace{\hspace{1.8cm}}_{3(N-n)}
   \end{array}
 \end{align}
-Though this method is easily implemented in coding small problem, when calculating manually by hand, we prefer using the elementary stiffness matrix 
-\begin{equation}
-  \underline{\underline{\mathcal{K}}}^b = \underline{\underline{K}}^b 
-  \begin{bmatrix}
-    1 & -1 \\
-    -1 & 1 
-  \end{bmatrix} \label{elementaryStiffness}
-\end{equation}
+Though this method is easily implemented in coding small problem, at the numerical cost owing to storing and calculating all the huge dimension connectivity matrix.
+% when calculating manually by hand, we prefer using the elementary stiffness matrix 
+% \begin{equation}
+%   \underline{\underline{\mathcal{K}}}^b = \underline{\underline{K}}^b 
+%   \begin{bmatrix}
+%     1 & -1 \\
+%     -1 & 1 
+%   \end{bmatrix} \label{elementaryStiffness}
+% \end{equation}
 At this point, $\underline{\underline{\mathcal{K}}}$ should be singular i.e  $\det(\underline{\underline{\mathcal{K}}})=0$ because the kinematic boundary condition is not yet applied. Two different techniques are usually proposed: the direct method and the approximated method (so-called penalization method).
 The approximated is obtained by adding $1/\epsilon$ to the main diagonal terms of $\underline{\underline{\mathcal{K}}}$ which corresponds to the nodes of $\mathcal{N}_I$:
    \begin{equation}
@@ -278,32 +282,71 @@ The weak form is expressed by;
    \forall v \in V, \int^l_0 EA \dfrac{du}{dx}\dfrac{dv}{dx}dx - Rv(0) = \int^l_0fvdx + Fv(l)
   \label{weakformFEM1D}
 \end{equation}
-where $v \in V0$ is the virtual field that we can choose such that $v(0) = 0$ to get rid of the reaction part in \cref{weakformFEM1D}. 
+where $v \in V_0$ is the virtual field that we can choose such that $v(0) = 0$ to get rid of the reaction part in \cref{weakformFEM1D}. 
 Or rewrite in another linear compacted form:
 \begin{align}
   \forall v \in V, a(u,v) + b(R,v) &= L(v) \\
   \text{with: }
-  a(u, v) &= EA \dfrac{du}{dx}\dfrac{dv}{dx}dx;\\
+  a(u, v) &= \int_0^l EA \dfrac{du}{dx}\dfrac{dv}{dx}dx;\\
   b(R,v) &= -Rv(0) = 0;\\
   L(v) &=  \int^l_0fvdx + Fv(l)
   \label{weakformFEM1Dcompacted}
 \end{align}
-The displacemen field $u(x)$, similarly $v(x)$ is approximated by discretizing via Galerkin's method:
+The displacement field $u(x)$, similarly $v(x)$ is approximated by discretizing via Galerkin's method:
     \begin{equation}
-u(x) \approx u^a(x) = U^i N^i  \label{Galerkin}
+u(x) \approx u^a(x) = U^i N^i;\ v(x) \approx v^a(x) = V^i N^i  \label{Galerkin}
    \end{equation}
    Finite Element Method is a Galerkin-like method but with a particular choice of shape function $N^i$ as the low-order hat function via Lagrange's basis.
        \begin{equation}
  N^i(x_j) = \delta_{ij} = \dfrac{x - x_j}{x_i - x_j} \label{Hat function}
    \end{equation}
 
-rewritten in tensor notation:
+Rewritten \cref{weakformFEM1D} in tensor notation:
 \begin{align}
   \text{Find $\underline{\mathcal{U}}$ and $\mathcal{R}$ such that:}\\
  U^1 &= 0;\\
- \underline{\underline{\mathcal{K}}}\underline{\mathcal{U}} + \mathcal{R} &= \underline{\mathcal{F}}
+ \underline{\underline{\mathcal{K}}}\ \underline{\mathcal{U}} + \mathcal{R} &= \underline{\mathcal{F}}
   \label{FEM1D}
 \end{align}
+The boundary condition in this section is applied through direct method, with 2 types of well-known condition: the Dirichlet's condition and Neumann's condition.
+In order to calculate each element of stiffness matrix $\mathcal{K}_{ij} = EA \int_0^l  N_i N_j dx$. The numerical integration scheme is Gaussian quadrature (document distributed during the course) with 2 points, values referencing in \cref{GaussWeight}.
+   \begin{equation}
+    \int^1_{-1}h(\xi)d\xi = \sum^N_{i=1} h(\xi_i)W_i
+\label{gaussQuadrature}
+\end{equation}
+After assembly the stiffness matrix, by choosing the suitable virtual field, we could calculate the displacement vector $\underline{\mathcal{U}}$ and then identify the reaction $\mathcal{R}$ afterward.
+
+\begin{table}[h]
+\centering
+\caption{Gauss-Legendre Quadrature Points and Weights in range $[-1,1]$}
+\begin{tabular}{|c|p{4cm}|p{3cm}|} 
+\hline
+\textbf{n} & \textbf{Gauss Points } $\xi_i$ & \textbf{Weights } $W_i$ \\
+\hline
+1 & $\{0\}$ & $\{2\}$ \\
+\hline
+2 & $\left\{-\dfrac{1}{\sqrt{3}}, \dfrac{1}{\sqrt{3}}\right\}$ & $\{1,1\}$ \\[0.5cm]
+\hline
+3 & $\left\{{-\sqrt{\dfrac{3}{5}}, 0 , \sqrt{\dfrac{3}{5}}}\right\}$ & $\left\{\dfrac{5}{9}, \dfrac{8}{9}, \dfrac{5}{9}\right\}$ \\[0.3cm]
+\hline
+4 & 
+$\left\{
+\begin{array}{c}
+\pm\sqrt{\dfrac{3}{7} + \dfrac{2}{7}\sqrt{\dfrac{6}{5}}}, \\
+\pm\sqrt{\dfrac{3}{7} - \dfrac{2}{7}\sqrt{\dfrac{6}{5}}}
+\end{array}
+\right\}$ 
+& 
+$\left\{
+\begin{array}{c}
+\dfrac{18 - \sqrt{30}}{36}, \\
+\dfrac{18 + \sqrt{30}}{36}
+\end{array}
+\right\}$ \\
+\hline
+\end{tabular}  \label{GaussWeight}
+\end{table}
+
 \subsection{FEM2D}
 \begin{figure}[h]
   \centering
@@ -326,7 +369,7 @@ weak form:
 \end{align}
 \section{Validation}
 \subsection{Console}
-The initial position $x_0 $is, inituitively, taken by the intitial configuration to assure better convergence and avoid unnecessary numbers of iteration. 
+The initial position $x_0 $is, inituitively, taken by the initial configuration to assure better convergence and avoid unnecessary numbers of iteration. 
 Assume the bar to be rectangle, the input parameters are put in a namespace \texttt{modelParameters} within the code so one could change it accordingly to needs.
 \begin{lstlisting}[style=cpp]
 namespace modelParameters {
@@ -357,12 +400,11 @@ Iteration 1: |Fk| = 814055: |dx| = 0.312942
 Iteration 2: |Fk| = 19706.4: |dx| = 0.0172449
 Iteration 3: |Fk| = 42.1839: |dx| = 3.20384e-05
 Iteration 4: |Fk| = 0.00015477: |dx| = 1.26595e-10
-Solution founded.
+Solution founded at iteraion 5.
 
 Final displacement: [0.526986, -2.14187]
 Final position: [10.527, 7.85813]
-Total iterations: 5
-Time elapsed: 0.000276144 seconds
+Time elapsed: 0.000122333 seconds
 \end{lstlisting}
 
 
@@ -385,16 +427,46 @@ Time elapsed: 0.000276144 seconds
 \end{figure}
 
 As showed in diagram \cref{consoleDeformed}, under the effect of force $\vec{F}$, node C displaced from position (10,10) to (10.53, 7.86). These values are all justified by calculation manually and other codes.
-At the beginning of iteration number 5, noticing that the sum of forces acting on node C and the its displacement is already approched to a value less than $\epsilon = 10^{-10}$ , the process stoped and the final value was taken at the last step, which is iteration number $4^{text}$.
+At the beginning of iteration number 5, noticing that the sum of forces acting on node C and its displacement has already approched to a value less than $\epsilon = 10^{-10}$ , the process stoped and the final value was taken at the last step, which is iteration number $4^{text}$.
 As proved in figure \cref{plotConsole}, the rate of convergence (in logarithm proportion) by Newton method is quadratic.
-Student choosed the Saint-Venant Kirchhoff law to present the result, with the intention to capture the non-linearity in both the constitutive law via \cref{generalConstitutiveLaw} and the large deformation's effect in \cref{eq:barVectors}.
+Student chose the Saint-Venant Kirchhoff law to present the result, with the intention to capture the non-linearity in both the constitutive law via \cref{generalConstitutiveLaw} and the large deformation's effect in \cref{eq:barVectors}.
 \subsection{Truss}
+The code also verify the stiffness matrix $\underline{\underline{\mathcal{K}}}$ before applying the kinematic boundary condition (via virtual field constraint) is symmetric and singular ($\det (\underline{\underline{\mathcal{K}}}) = 0$).
+
 \subsection{FEM1D}
-Taking trivial value as follows: $f = 5kN;\ F = 10kN;\ EA = 10 kN;\ L = 1m$, once could verify the anylytic solution to be: $R = -15 kN; \ u(x) = 1.5x - 0.25x^2 (m);\ N(x) = 15 - 5x (kN);$
+Taking trivial values as follows: $f = 5~\text{kN}, \ F = 10~\text{kN}, EA = 10~\text{kN}, \ L = 1~\text{m}$,
+one can verify the analytic solution to be: $R = -15~\text{kN}, \ u(x) = 1.5\,x - 0.25\,x^2~(\text{m}), \ N(x) = 15 - 5x~(\text{kN})$.
+\begin{lstlisting}[style=cpp]
+namespace modelParameters {
+// Problem's domain (a,b)
+double a{0.0};
+double b{1.0};
+// Dirichlet and Neumann boundary values
+constexpr double g{0.0};  // Dirichlet at x=0 (u(0)=g)
+constexpr double h{10.0}; // Neumann at x=1 (N(1)=h=10kN)
+constexpr double uniform_load{5.0}; // Uniform distributed load
+constexpr Index nNodes{6};             // Numbers of nodes
+constexpr Index nElements{nNodes - 1}; // Numbers of elements
+constexpr double EA = 10.0;}
+\end{lstlisting}
+Giving the output to the console:
+\begin{lstlisting}[style=cpp]
+=== FEM 1D PROBLEM ===
+Coordinates of nodes x_i: 
+[0, 0.2, 0.4, 0.6, 0.8, 1]
+Displacement vector U: 
+[0, 0.29, 0.56, 0.81, 1.04, 1.25]
+Reaction force vector R: 
+[-15, -0, -4.44089e-16, 2.22045e-16, 2.22045e-16, -7.10543e-15]
+Axial force vector N: 
+[14.5, 13.5, 12.5, 11.5, 10.5, 10.5]
+Time elapsed: 0.000358521 seconds
+\end{lstlisting}
+
 Using the script, though the reaction force at the first node $R (x=0) = -15$kN is always calculated precisely, the deformation $u(x)$ and the axial force $N(x)$ are highly depended on the number of nodes.
 \Cref{solutionFEM1D} shows the numerical solution of the code, comparing with the analytical one. It was shown that the deformation $u(x)$ is obviously more precise, when the bar is discretized by using more elements.
 The particular point of \texttt{FEM} comparing with Galerkin's method is using special shape function, particularly in this case is first-order hat function, via Lagrange's basis. This is well explained by when we discretized $u(x) = N_j u_j$. As $u_j$ is a constant, $u(x)$ is a first order polynomial (\cref{deformationFEM1D}), leading to its derivative to be a constant, consequently $N(x) = EA\ du/dx $ is a constant on each element also (\cref{axialforceFEM1D}).
-Though this phenomenon is expected, as in the annexxe A of \citep{dalpont2020_nonlinear_mech}.
+Though this phenomenon is expected, as in the annexe A of \citep{dalpont2020_nonlinear_mech}.
 
 \begin{figure}[h]
     \centering
@@ -424,13 +496,14 @@ The code is able to handle 2D Truss problems with 2 nodes, as a trial solution t
 The code is able to handle any non-linear truss problem, 2D and 3D, including the console problem above. Though the Hardening incremented law should be implemented in the future to wider the range of problem that could be handled.
 \subsection{FEM1D}
 The code has been implemented in a way to solve any 1D bar problmem, with whatever the constraint conditions are, both Dirichlet and Neuman's condition. As long as the differential equation satisfied the form $u_{xx} = f(x) + c$ with $f(x)$ is a polynomial function of x, including $cx^0$.
-This leads to the application of distributed load and concentration load exhibited on the bar, manipulated by the two function \texttt{rhsFunction() \& applyBC()}.
+This leads to the application of distributed, concentrated and/or spatially varying load exhibited on the bar, manipulated by the two function \texttt{rhsFunction() \& applyBC()}.
 Though the numerical cost could be reduced strongly using reference element, element Matrix, ... etc but this initial version is to test out all the functioning of the sub-coded also. Gladly, the solution seems to adapted well with the analytical one as expected.
 \section{Conclusion}
 In a nutshell, the code provided trustable result. Further implemented still rested to continue.
 Thanks to using C++, time elapsed to execute one code is less then $10^{-3}$ second on the student's computer.
 Further optimization...
-\section[Annexxe]{Annexxe}\label{Annexxe}
+\appendix
+\section{Annexe}\label{Annexe}
 Full version of the codes, including libraries used, could be downloaded in this \href{https://github.com/VA-TT/Numerical-Method-3SR}{link}.
 The scripted presented in this report are \texttt{console2D.cpp, truss3D.cpp, fem1D.cpp}, along with their compiled programs.
 \bibliographystyle{apalike}
