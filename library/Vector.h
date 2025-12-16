@@ -40,7 +40,10 @@ public:
   static Vector<T> zero(Index n) { return Vector<T>(n); }
 
   // Đưa mọi phần tử về 0, giữ nguyên kích thước
-  void resetZero() { (*this) = Vector::zero(); }
+  void resetZero() {
+    for (auto &e : m_elements)
+      e = T{};
+  }
   // // Constructor 3D (x, y, z)
   // Vector(const T& x, const T& y, const T& z) : m_elements{x, y, z} {}
 

@@ -68,17 +68,17 @@ double b{0.02}, h{0.05};
 double A{b * h};
 double alpha{youngModulus * A};
 
+//  External loads at nodes - Direct 3D force vectors
 // External Force applying
-double forceZ{-1.5e6};
 Vector<Vector<double>> externalForce{
-    {0.0, 0.0, 0.0},    // Node 0: no force
-    {0.0, 0.0, 0.0},    // Node 1: no force
-    {0.0, 0.0, forceZ}, // Node 2: 1.5 MN downward (z-direction)
-    {0.0, 0.0, forceZ}, // Node 3: 1.5 MN downward
-    {0.0, 0.0, 0.0},    // Node 4: no force
-    {0.0, 0.0, 0.0},    // Node 5: no force
-    {0.0, 0.0, forceZ}, // Node 6: 1.5 MN downward
-    {0.0, 0.0, forceZ}  // Node 7: 1.5 MN downward
+    {0.0, 0.0, 0.0},      // Node 0: no force
+    {0.0, 0.0, 0.0},      // Node 1: no force
+    {0.0, 0.0, -15000.0}, // Node 2: 15kN downward (z-direction)
+    {0.0, 0.0, -15000.0}, // Node 3: 15kN downward
+    {0.0, 0.0, 0.0},      // Node 4: no force
+    {0.0, 0.0, 0.0},      // Node 5: no force
+    {0.0, 0.0, -15000.0}, // Node 6: 15kN downward
+    {0.0, 0.0, -15000.0}  // Node 7: 15kN downward
 };
 // Displacement Vector
 Vector<double> U(nNodes *d), UImposed(nNodes *d), UFree(nNodes *d);
@@ -86,19 +86,13 @@ Vector<double> totalDispalcement(nNodes *d);
 // Axial Force inside the Bars and applying on Nodes
 Vector<Vector<double>> internalForceBar(nBars);
 Vector<Vector<double>> internalForceNodes(nNodes);
-Vector<Vector<double>> reactionR(nNodes);
-Matrix<double, d * nNodes, d * nNodes> assemblyStiffnessK{};
 std::vector<int> iteration_array;
 std::vector<Vector<double>> deltaU_array;
-std::vector<double> incrementNorm_array;
-std::vector<double> residualNorm_array;
-Vector<double> k(nBars);
 
+// Rigidity kt of each bar
+Vector<double> k(nBars);
 // Choosing non-linear Saint-Venant Kirchhoff law
 int law{1};
-
-// Penalization method
-double penalty{1.0 / 1e-18}; // 1/epsilon
 
 // tolerance for Newton's method
 double epsilon{1e-8};
@@ -134,8 +128,6 @@ void validateInput() {
     assert(externalForce[i].size() == d &&
            "Each force vector must have d components");
   }
-  assert(nodeImposed.size() == displacementImposed.size() &&
-         "Size of imposed nodes must be consistent!");
 }
 
 void setUp() {
@@ -182,8 +174,8 @@ int main() {
 
   while (iteration < max_iteration) {
 
-    // Update bar geometry based on current node positions
     for (Index b{0}; b < nBars; ++b) {
+      // compute bar's vectors from node coordinates
       vectorBars[b] = nodes[barEnd[b]] - nodes[barOrigin[b]];
       lengthBars[b] = magnitude(vectorBars[b]);
       // Saving neutral bar's lengths
@@ -193,71 +185,48 @@ int main() {
       unitVectorBars[b] = vectorBars[b] / lengthBars[b];
     }
 
-    // Compute internal forces at current configuration:
-    // N[b] = A[b] * e[b] = At[b] * r[b]
+    // COMPUTING FORCE VECTOR F
+    // Internal force calculation: N[b] = A[b] * e[b] = At[b] * r[b]
     for (Index b{0}; b < nBars; ++b) {
       internalForceBar[b] =
           constitutiveLaw(law, alpha, lengthBars[b], length0Bars[b]) *
           unitVectorBars[b];
     }
-
     // Assemble internal force vector at nodes
     for (Index n{0}; n < nNodes; ++n) {
-      internalForceNodes[n] =
-          Vector<double>::zero(d); // reset to prepare for accumulation
+      internalForceNodes[n] = Vector<double>(d);
+      for (Index k = 0; k < d; ++k)
+        internalForceNodes[n][k] = 0.0;
     }
+
     for (Index b{0}; b < nBars; ++b) {
       internalForceNodes[barEnd[b]] += internalForceBar[b];
       internalForceNodes[barOrigin[b]] += -internalForceBar[b];
     }
 
-    // Flatten force vectors
-    Vector<double> externalresidualForcelatten{
-        flatten(externalForce, nNodes, d)};
-    Vector<double> internalresidualForcelatten{
-        flatten(internalForceNodes, nNodes, d)};
+    // Flatting vector F
+    Vector<double> externalForceFlatten{flatten(externalForce, nNodes, d)};
+    Vector<double> internalForceFlatten{flatten(internalForceNodes, nNodes, d)};
+    // Modify the right-hand side: F = F_external - F_internal
+    Vector<double> forceF = externalForceFlatten - internalForceFlatten;
 
-    // Compute residual force : F = Fext _ Fint
-    Vector<double> residualForce =
-        externalresidualForcelatten - internalresidualForcelatten;
+    // Saving
+    double residualNorm = magnitude(forceF);
 
-    // Reaction at fixed points
-    for (Index ii = 0; ii < nNodes; ++ii) {
-      reactionR[ii] = Vector<double>::zero(d);
-    }
+    if (residualNorm < epsilon) {
+      std::cout << "Solution founded at iteration " << iteration << ".\n\n";
 
-    for (Index idx = 0; idx < nodeImposed.size(); ++idx) {
-      Index n = nodeImposed[idx];
-      for (Index k = 0; k < d; ++k) {
-        // R = F_int - F_ext
-        reactionR[n][k] = internalresidualForcelatten[d * n + k] -
-                          externalresidualForcelatten[d * n + k];
-      }
-    }
-    Vector<double> reactionFlatten = flatten(reactionR, nNodes, d);
-
-    // Stopping criterion: F_ext - F_int + R = 0
-    Vector<double> globalEquilibrium = residualForce + reactionFlatten;
-    double globalEquilibriumNorm = magnitude(globalEquilibrium);
-
-    // Check global force equilibrium at nodes
-    if (magnitude(globalEquilibrium) < epsilon) {
-      std::cout << "Solution converged at iteration " << iteration << ".\n\n";
-
+      // Final result
       std::cout << "Final displacement: " << totalDispalcement << std::endl;
-      std::cout << "\nFinal positions:\n";
+      std::cout << "Final positions:\n";
       for (Index n = 0; n < nNodes; ++n) {
         std::cout << "  Node " << n << ": " << nodes[n] << std::endl;
       }
-      std::cout << "\nReactions at supports:\n";
-      for (Index idx = 0; idx < nodeImposed.size(); ++idx) {
-        Index n = nodeImposed[idx];
-        std::cout << "  Node " << n << ": " << reactionR[n] << std::endl;
-      }
+      std::cout << "Total iterations: " << iteration << std::endl;
       break;
     }
 
-    //  Assemble stiffness matrix
+    // COMPUTING STIFNESS MATRIX K
     // kb
     for (Index b{0}; b < nBars; ++b) {
       k[b] = kt(lengthBars[b], length0Bars[b]);
@@ -272,6 +241,7 @@ int main() {
     }
     //  Connectivity Matrix
     Vector<Matrix<double, d, d * nNodes>> C(nNodes);
+
     const auto Id = Matrix<double, d, d>::identity();
     Matrix<double, d, d * nNodes> Ci{};
     for (Index n{0}; n < nNodes; ++n) {
@@ -283,7 +253,8 @@ int main() {
       }
       C[n] = Ci;
     }
-    assemblyStiffnessK.resetZero(); // reset for next += step
+
+    Matrix<double, d * nNodes, d * nNodes> assemblyStiffnessK{};
 
     for (Index b{0}; b < nBars; ++b) {
       assemblyStiffnessK += (C[barEnd[b]] - C[barOrigin[b]]).transpose() *
@@ -291,64 +262,63 @@ int main() {
                             (C[barEnd[b]] - C[barOrigin[b]]);
     }
     // Check the singularity of stiffness matrix K
-
     assert(approximatelyEqualAbsRel(det(assemblyStiffnessK), 0.0));
-    assert(assemblyStiffnessK.isSymmetric());
+    std::cout << det(assemblyStiffnessK) << std::endl;
 
-    // Penalization method on fixed
+    // Penalization method (encastree)
     // Stifness matrix and force adjustment: K' and F'
+    assert(nodeImposed.size() == displacementImposed.size() &&
+           "Size of imposed nodes must be consistent!");
+
+    double penalty{1.0 / 1e-10}; // 1/epsilon
     int diagonalIndex{};
+
+    // Apply penalization for each imposed node.
     for (Index idx = 0; idx < nodeImposed.size(); ++idx) {
       Index n = nodeImposed[idx];
       for (int k = 0; k < d; ++k) {
         diagonalIndex = d * n + k;
         assemblyStiffnessK(diagonalIndex, diagonalIndex) += penalty;
-        residualForce[diagonalIndex] = penalty * displacementImposed[idx][k];
+        forceF[diagonalIndex] = penalty * displacementImposed[idx][k];
       }
     }
 
     // Solve the linear system to find displacement
-    Vector<double> deltaU{solveLinearSystem(assemblyStiffnessK, residualForce)};
+    Vector<double> deltaU{solveLinearSystem(assemblyStiffnessK, forceF)};
     double incrementNorm = magnitude(deltaU);
 
-    nodes += unflatten(deltaU, nNodes, d);
+    // IN RA THÔNG TIN HỘI TỤ GIỐNG CODE 2D
+    std::cout << "Iteration " << iteration << ": |Fk| = " << residualNorm
+              << ": |dx| = " << incrementNorm << std::endl;
+
     totalDispalcement += deltaU;
 
     // Saving the output
     iteration_array.push_back(iteration);
     deltaU_array.push_back(deltaU);
-    incrementNorm_array.push_back(incrementNorm);
-    residualNorm_array.push_back(globalEquilibriumNorm); // Saving global force
 
-    // output to console
-    std::cout << "Iteration " << iteration
-              << ": |Fk| = " << magnitude(globalEquilibrium)
-              << ": |dx| = " << incrementNorm << std::endl;
+    // Calculate the reaction
+    Vector<Vector<double>> reactionR(nNodes);
+    for (Index ii = 0; ii < nNodes; ++ii) {
+      reactionR[ii] = Vector<double>(d);
+      for (Index k = 0; k < d; ++k)
+        reactionR[ii][k] = 0.0;
+    }
+    for (Index idx = 0; idx < nodeImposed.size(); ++idx) {
+      Index n = nodeImposed[idx];
+      for (Index k = 0; k < d; ++k) {
+        diagonalIndex = d * n + k;
+        reactionR[n][k] = penalty * (totalDispalcement[diagonalIndex] -
+                                     displacementImposed[idx][k]);
+      }
+    }
 
-    // Increase the iteration
+    // Update the position
+    nodes += unflatten(deltaU, nNodes, d);
+    // Hardening behavoir(to be implemented)
+
     iteration++;
   }
-
-  // Write final node positions to file
-  std::ofstream nodeFile("report/truss3D_node.dat");
-
-  nodeFile << "# Node positions after deformation (x, y, z)\n";
-  nodeFile << "# Node_ID x y z\n";
-  for (Index n = 0; n < nNodes; ++n) {
-    nodeFile << n << " " << nodes[n][0] << " " << nodes[n][1] << " "
-             << nodes[n][2] << "\n";
-  }
-  nodeFile.close();
-
-  // Write iteration convergence data to report directory
-  std::ofstream plotFile("report/truss3D_plot.dat");
-  plotFile << "# Iteration |dx| |F_global|\n";
-  for (size_t i = 0; i < iteration_array.size(); ++i) {
-    plotFile << iteration_array[i] << " " << incrementNorm_array[i] << " "
-             << residualNorm_array[i] << "\n";
-  }
-  plotFile.close();
-
   std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
   return 0;
 }
