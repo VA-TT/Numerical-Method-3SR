@@ -162,7 +162,7 @@ Thanks to first-order Taylor expansion again, we obtain the development of sum o
   \vec{\mathcal{F}}(\vec{x}+ \delta \vec{x}) = \vec{\mathcal{F}}(\vec{x}) + \left(\nabla\vec{\mathcal{F}}(\vec{x})\right)@\delta \vec{x}  \rightarrow 0
   \label{TaylorK+1}
    \end{equation}
-   where the Jacobian matrix $\nabla\vec{\mathcal{F}}(\vec{x})$ is described in the following euqation using Einsten's sum notation:
+   where the Jacobian matrix $\nabla\vec{\mathcal{F}}(\vec{x})$ is described in the following equation using Einsten's sum notation:
    \begin{equation}
    \nabla\vec{\mathcal{F}}(\vec{x}) = -\dfrac{d\mathcal{A}^i}{dl^i}\left( \vec{e}^i(\vec{x}) \otimes \vec{e}^i(\vec{x}) \right) - \dfrac{\mathcal{A}^i\left(l^i(\vec{x})\right)}{l^i(\vec{x})} \left( \mathbb{I} - \vec{e}^i(\vec{x}) \otimes \vec{e}^i(\vec{x})\right)
   \label{Jacobian}
@@ -230,7 +230,7 @@ Meanwhile, the global stiffness matrix $\underline{\underline{\mathcal{K}}}$ cou
 
 \begin{align}
   \underline{\underline{\mathcal{K}}} &= \sum_{b \in \mathcal{B}} \left( \underline{\underline{C}}^{E(b)} - \underline{\underline{C}}^{O(b)}\right) \underline{\underline{K}}^b \left( \underline{\underline{C}}^{E(b)} - \underline{\underline{C}}^{O(b)}\right) \\
-  \underline{\underline{C^n}} & =
+  \text{where: }\underline{\underline{C^n}} & =
   \left[
   \begin{array}{@{}ccc|ccc|ccc@{}}
     0 & \cdots & 0 & 1 & 0 & 0 & 0 & \cdots & 0 \\
@@ -242,9 +242,14 @@ Meanwhile, the global stiffness matrix $\underline{\underline{\mathcal{K}}}$ cou
   \begin{array}{@{}c@{\ }c@{\ }c@{}}
     \underbrace{\hspace{1.8cm}}_{3(n-1)} \ &
     \underbrace{\hspace{1.3cm}}_{3} \ &
-    \underbrace{\hspace{1.8cm}}_{3(N-n)}
-  \end{array}
+    \underbrace{\hspace{1.8cm}}_{3(N-n)}  \\
+  \end{array} \nonumber
 \end{align}
+    \begin{align}
+    \text{and: } \underline{\underline{K}}^b &= \tilde{\mathcal{A}^b}(l^{b(k)}) \mathbb{I} + \dfrac{1}{l^{b(k)}} \dfrac{d\tilde{\mathcal{A}^b}}{dl} \vec{r}^{b(k)} \otimes \vec{r}^{b(k)};\\
+    \text{denoting }\tilde{\mathcal{A}^b}\left(l^b\right) &= \dfrac{\mathcal{A}^b \left( l^b\right)}{l^b}
+  \label{stifnessMatrix}
+   \end{align}
 Though this method is easily implemented in coding small problem, at the numerical cost owing to storing and calculating all the huge dimension connectivity matrix.
 % when calculating manually by hand, we prefer using the elementary stiffness matrix 
 % \begin{equation}
@@ -256,12 +261,16 @@ Though this method is easily implemented in coding small problem, at the numeric
 % \end{equation}
 At this point, $\underline{\underline{\mathcal{K}}}$ should be singular i.e  $\det(\underline{\underline{\mathcal{K}}})=0$ because the kinematic boundary condition is not yet applied. Two different techniques are usually proposed: the direct method and the approximated method (so-called penalization method).
 The approximated is obtained by adding $1/\epsilon$ to the main diagonal terms of $\underline{\underline{\mathcal{K}}}$ which corresponds to the nodes of $\mathcal{N}_I$:
-   \begin{equation}
-\underline{\underline{\mathcal{K}}}^{\epsilon}_{ii} = \underline{\underline{\mathcal{K}}}_{ii} + \dfrac{1}{\epsilon}; i = 3(n-1) + k; n \in \mathcal{N}_I, k = 1,2,3
-\label{penalizationK}
-\end{equation} 
+   \begin{align}
+\underline{\underline{\mathcal{K}}}^{\epsilon}_{ii} &= \underline{\underline{\mathcal{K}}}_{ii} + \dfrac{1}{\epsilon}; i = 3(n-1) + k; n \in \mathcal{N}_I, k = 1,2,3\\
+f(z) &= \left\{ \begin{array}{rcl}
+\frac{1}{\epsilon} U_k^n & \mbox{for} & i = 3(n-1) + k; n \in \mathcal{N}_I, k = 1,2,3\\ \\
+ \mathcal{F}_i^D & \mbox{if not} \\
+\end{array}\right.
+\label{penalization}
+\end{align} 
 % \subsection{Hardening}
-\subsection{FEM1D}
+\subsection{1D Finite Element Method} \label{sectionFEM1D}
 \begin{figure}[h]
   \centering
   \includegraphics[height=2.5cm]{fem1D.pdf}
@@ -304,13 +313,13 @@ u(x) \approx u^a(x) = U^i N^i;\ v(x) \approx v^a(x) = V^i N^i  \label{Galerkin}
 
 Rewritten \cref{weakformFEM1D} in tensor notation:
 \begin{align}
-  \text{Find $\underline{\mathcal{U}}$ and $\mathcal{R}$ such that:}\\
+  \text{Find $\underline{\mathcal{U}}$ and $\mathcal{R}$ such that:} \nonumber\\
  U^1 &= 0;\\
  \underline{\underline{\mathcal{K}}}\ \underline{\mathcal{U}} + \mathcal{R} &= \underline{\mathcal{F}}
   \label{FEM1D}
 \end{align}
 The boundary condition in this section is applied through direct method, with 2 types of well-known condition: the Dirichlet's condition and Neumann's condition.
-In order to calculate each element of stiffness matrix $\mathcal{K}_{ij} = EA \int_0^l  N_i N_j dx$. The numerical integration scheme is Gaussian quadrature (document distributed during the course) with 2 points, values referencing in \cref{GaussWeight}.
+In order to calculate each element of stiffness matrix $\mathcal{K}_{ij} = EA \int_0^l  N_{i,x} N^{j,x} dx$. The numerical integration scheme is Gaussian quadrature (document distributed during the course) with 2 points, values referencing in \cref{GaussWeight}.
    \begin{equation}
     \int^1_{-1}h(\xi)d\xi = \sum^N_{i=1} h(\xi_i)W_i
 \label{gaussQuadrature}
@@ -348,7 +357,7 @@ $\left\{
 \end{tabular}  \label{GaussWeight}
 \end{table}
 
-\subsection{FEM2D}
+\subsection{2D Finite Element Method}
 \begin{figure}[h]
   \centering
   \includegraphics[height=6cm]{fem2D.pdf}
@@ -364,10 +373,11 @@ $\left\{
 \end{align}
 weak form:
 \begin{align}
-  \text{Find $\vec{u} \in V_0$ and $\vec{\mathcal{R}}$ such that:}\\
-\forall \vec{v} \in V, \int_\Omega (\lambda \text{tr} \epsilon (\vec{u})\text{tr} \epsilon (\vec{v}) + 2\mu\epsilon(\vec{u}) : \epsilon(\vec{v}))ds - \int_{\Gamma_u}\vec{R}\vec{v}dl = \int_\Omega\vec{f}\vec{v}ds + \int_{\Gamma_F}\vec{F}\vec{v}dl;
+  \text{Find $\vec{u} \in V_0$ and $\vec{\mathcal{R}}$ such that:}\nonumber \\
+\forall \vec{v} \in V_0, \int_\Omega (\lambda \text{tr} \epsilon (\vec{u})\text{tr} \epsilon (\vec{v}) + 2\mu\epsilon(\vec{u}) : \epsilon(\vec{v}))ds - \int_{\Gamma_u}\vec{R}\vec{v}dl = \int_\Omega\vec{f}\vec{v}ds + \int_{\Gamma_F}\vec{F}\vec{v}dl;
   \label{FEM2D}
 \end{align}
+This forl could be expressed in the same way as \cref{weakformFEM1Dcompacted} and \cref{FEM1D} and the processing is executed in similar way as in the previous section.
 \section{Validation}
 \subsection{Console}
 The initial position $x_0 $is, inituitively, taken by the initial configuration to assure better convergence and avoid unnecessary numbers of iteration. 
@@ -539,14 +549,14 @@ Though this phenomenon is expected, as in the annexe A of \citep{dalpont2020_non
     \label{solutionFEM1D}
 \end{figure}
 
-\subsection{FEM2D}
+\subsection{2D Finite Element Method}
 In constructing...Stucking at the generation of the mesh.....
 \section{Application Conclusion}
 \subsection{Console}
 The code is able to handle 2D Truss problems with 2 nodes, as a trial solution to the 3D truss problem following.
 \subsection{Truss}
 The code is able to handle any non-linear truss problem, 2D and 3D, including the console problem above. Though the Hardening incremented law should be implemented in the future to wider the range of problem that could be handled.
-\subsection{FEM1D}
+\subsection{1D Finite Element Method}
 The code has been implemented in a way to solve any 1D bar problmem, with whatever the constraint conditions are, both Dirichlet and Neuman's condition. As long as the differential equation satisfied the form $u_{xx} = f(x) + c$ with $f(x)$ is a polynomial function of x, including $cx^0$.
 This leads to the application of distributed, concentrated and/or spatially varying load exhibited on the bar, manipulated by the two function \texttt{rhsFunction() \& applyBC()}.
 Though the numerical cost could be reduced strongly using reference element, element Matrix, ... etc but this initial version is to test out all the functioning of the sub-coded also. Gladly, the solution seems to adapted well with the analytical one as expected.
