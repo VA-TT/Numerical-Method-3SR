@@ -58,7 +58,7 @@ void groundCircle(pair A, real r)
 
 
 // Toạ độ các nút
-real a = 5;
+real a = 10;
 pair pA = (-a,0);
 pair pB = (a, 0);
 pair pC = (-a, 2a);
