@@ -17,8 +17,6 @@ Including:
   * FEM 1D
   * FEM 2D (in construction)
 
-* Python: The translation to Python version of the problems above.
-
 * Report: Report in Latex and Asymptote for the listed problems.
 
 _**NOTE**_: The code is written in C++20 standard
