@@ -527,7 +527,7 @@ Reactions at supports:
 Time elapsed: 0.785562 seconds
 \end{lstlisting}
 
-The code has also been checked with the previous 2D console problem, showing accurate result. After 4 iteration, both the displacement and the sum of external and internal forces (including reaction force) on all the nodes, converged to inferior of $\epsilon$.
+The code has also been checked with the previous 2D console problem, showing accurate result. After the $4^{th}$ iteration, both the displacement and the sum of external and internal forces (including reaction force) on all the nodes, converged to inferior of $\epsilon$.
 Besides, the script verifies the stiffness matrix $\underline{\underline{\mathcal{K}}}$ before applying the kinematic boundary condition (via virtual field constraint) is symmetric and singular ($\det (\underline{\underline{\mathcal{K}}}) = 0$).
 Intuitively, the deformed schematic and the displacement countering the forces applied is in good accordance. The penalization method provided machine-error values of displacement, which is approximately equal to 0 on fixed nodes.
 \begin{figure}[h]
