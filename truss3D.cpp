@@ -101,7 +101,7 @@ int law{1};
 double penalty{1.0 / 1e-18}; // 1/epsilon
 
 // tolerance for Newton's method
-double epsilon{1e-8};
+double epsilon{1e-10};
 int max_iteration{100};
 } // namespace modelParameters
 
@@ -217,7 +217,7 @@ int main() {
     Vector<double> internalresidualForcelatten{
         flatten(internalForceNodes, nNodes, d)};
 
-    // Compute residual force : F = Fext _ Fint
+    // Compute residual force : F = Fext - Fint
     Vector<double> residualForce =
         externalresidualForcelatten - internalresidualForcelatten;
 
