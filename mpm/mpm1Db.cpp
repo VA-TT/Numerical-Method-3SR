@@ -19,31 +19,36 @@ double solution(double x);
 namespace modelParameters {
 // Problem's domain (a,b)
 constexpr double a{0.0};
-constexpr double b{1.0};
+constexpr double b{25.0};
 constexpr double L{b - a};
 constexpr double H{1.0};   // 1D
 constexpr double V{H * L}; // 1D
 
 // Material property
-constexpr double E{4 * constants::pi * constants::pi};
+constexpr double E{100};
 constexpr double rho{1.0}; // gonna change
 constexpr double c{constexpr_sqrt(E / rho)};
 double current_time{0.0};
 constexpr double duration{10.0};
-constexpr double dt{0.01};
+constexpr double dt{0.1};
 constexpr double nSteps{duration / dt};
-constexpr double w{1.0 / L * c};
+
 constexpr double v0{0.1};
+constexpr double b1{constants::pi / (2 * L)};
+constexpr double w1{b1 * c};
 constexpr double x_loc{0.5};
 
 constexpr Index nNodes{2};             // Numbers of nodes
 constexpr Index nElements{nNodes - 1}; // Numbers of elements
 
 // Material Points
-constexpr Index nMPs{1}; // Numbers material points
+constexpr Index nMPs{nElements};             // Numbers material points
+Index pmid = static_cast<Index>(nMPs / 2.0); // Flooring automatically
 double mass_p{rho * V / nMPs};
-double x_p{0.5 * L}; // Location of MP
-double V_p{V / nMPs};
+Vector<double> x_p(nMps);
+{0.5 * L}; // Location of MP
+Vector<double> V_p(nMps);
+{V / nMPs};
 // Initial loading condition
 double v_p{v0};
 double stress_p{0.0}, strain_p{0.0};
@@ -108,6 +113,8 @@ void shapeFunction() {
     double x_i = nodes[i];
     double x_j = nodes[j];
     element[e] = {x_i, x_j};
+    x_p[e] = (x_i + x_j) / 2;
+    V_p[e] = V / nMPs;
     length[e] = constexpr_fabs(x_j - x_i);
 
     // MUST set parameter "x" here to type <<auto>> in order to accept Dual
@@ -145,7 +152,7 @@ int main() {
   Timer t;
   using namespace modelParameters;
 
-  double dt_crit = L / c;
+  double dt_crit = (L / nElements) / c;
   assert((dt_crit / 10.0) >= dt &&
          "Time step isn't satisfied CFL condition (too big)");
   nodes = generateMesh(a, b, nNodes);
@@ -257,8 +264,8 @@ int main() {
     // Update nodal velocity
     for (Index i{0}; i < nNodes; i++) {
       if (m_i[i] > 1e-12) {
-        v_i[i] = mass_p * v_p * N_p[i] / m_i[i];
-        // v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
+        // v_i[i] = mass_p * v_p * N_p[i] / m_i[i];
+        v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
       } else {
         v_i[i] = 0.0;
       }

@@ -17,6 +17,8 @@
 double solution(double x);
 
 namespace modelParameters {
+// Mass tolerance
+double tol = 1e-12;
 // Problem's domain (a,b)
 constexpr double a{0.0};
 constexpr double b{1.0};
@@ -25,7 +27,7 @@ constexpr double H{1.0};   // 1D
 constexpr double V{H * L}; // 1D
 
 // Material property
-constexpr double E{4 * constants::pi * constants::pi};
+constexpr double E{100.0};
 constexpr double rho{1.0}; // gonna change
 constexpr double c{constexpr_sqrt(E / rho)};
 double current_time{0.0};
@@ -36,7 +38,7 @@ constexpr double w{1.0 / L * c};
 constexpr double v0{0.1};
 constexpr double x_loc{0.5};
 
-constexpr Index nNodes{2};             // Numbers of nodes
+constexpr Index nNodes{14};            // Numbers of nodes
 constexpr Index nElements{nNodes - 1}; // Numbers of elements
 
 // Material Points
@@ -257,8 +259,8 @@ int main() {
     // Update nodal velocity
     for (Index i{0}; i < nNodes; i++) {
       if (m_i[i] > 1e-12) {
-        v_i[i] = mass_p * v_p * N_p[i] / m_i[i];
-        // v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
+        // v_i[i] = mass_p * v_p * N_p[i] / m_i[i];
+        v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
       } else {
         v_i[i] = 0.0;
       }
