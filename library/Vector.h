@@ -93,6 +93,17 @@ public:
   // Add element
   void push_back(const T &value) { m_elements.push_back(value); }
 
+  // Access last element
+  T &back() {
+    assert(!m_elements.empty() && "Cannot call back() on empty vector");
+    return m_elements.back();
+  }
+
+  const T &back() const {
+    assert(!m_elements.empty() && "Cannot call back() on empty vector");
+    return m_elements.back();
+  }
+
   // Print
   friend std::ostream &operator<<(std::ostream &os, const Vector<T> &v) {
     os << "[";
