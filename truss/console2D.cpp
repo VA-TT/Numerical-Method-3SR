@@ -1,9 +1,9 @@
-#include "library/DualDiffrentiation.h"
-#include "library/Matrix.h" //Approximative Comparsion
-#include "library/Vector.h"
-#include "library/clock.h" // time-measuring
-#include <fstream>         //working with files
-#include <iomanip>         //tab
+#include "../library/DualDiffrentiation.h"
+#include "../library/Matrix.h" //Approximative Comparsion
+#include "../library/Vector.h"
+#include "../library/clock.h" // time-measuring
+#include <fstream>            //working with files
+#include <iomanip>            //tab
 #include <iostream>
 #include <numbers>     // for std::numbers::pi
 #include <stdexcept>   //throw exception
