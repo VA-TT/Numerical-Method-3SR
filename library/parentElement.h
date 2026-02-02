@@ -70,29 +70,6 @@ auto dN2_deta = [](auto xi, auto eta) { return -0.25 * (1 + xi); };
 auto dN3_deta = [](auto xi, auto eta) { return 0.25 * (1 + xi); };
 auto dN4_deta = [](auto xi, auto eta) { return 0.25 * (1 - xi); };
 
-// Container for shape functions and derivatives
-template <typename T> struct ShapeFunctions2D {
-  using ShapeFunc = std::function<T(T, T)>;
-  Vector<ShapeFunc> N;       // Shape functions
-  Vector<ShapeFunc> dN_dxi;  // Derivatives w.r.t xi
-  Vector<ShapeFunc> dN_deta; // Derivatives w.r.t eta
-
-  ShapeFunctions2D() : N(4), dN_dxi(4), dN_deta(4) {
-    N[0] = N1_2D;
-    N[1] = N2_2D;
-    N[2] = N3_2D;
-    N[3] = N4_2D;
-    dN_dxi[0] = dN1_dxi;
-    dN_dxi[1] = dN2_dxi;
-    dN_dxi[2] = dN3_dxi;
-    dN_dxi[3] = dN4_dxi;
-    dN_deta[0] = dN1_deta;
-    dN_deta[1] = dN2_deta;
-    dN_deta[2] = dN3_deta;
-    dN_deta[3] = dN4_deta;
-  }
-};
-
 // Mapping from parent [-1,1]x[-1,1] to physical coordinates
 // x = sum(N_i * x_i) = N · x_nodes, y = sum(N_i * y_i) = N · y_nodes
 template <typename T>
@@ -219,6 +196,44 @@ double integrationGauss2D_ref(const Vector<double> &x_nodes,
   }
 
   return I;
+}
+
+// Compute derivatives of shape functions in physical coordinates
+template <typename T>
+std::pair<Vector<T>, Vector<T>> dNdxdy(T xi, T eta, const Vector<T> &x_nodes,
+                                       const Vector<T> &y_nodes) {
+  assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
+  assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
+
+  // Compute Jacobian and its inverse
+  Matrix<T, 2, 2> J_inv = Jacobian2D(xi, eta, x_nodes, y_nodes).inverse();
+
+  // Evaluate derivatives in parent coordinates (2x4 matrix)
+  // [dN/dxi ] = [dN1/dxi  dN2/dxi  dN3/dxi  dN4/dxi ]
+  // [dN/deta]   [dN1/deta dN2/deta dN3/deta dN4/deta]
+  Matrix<T, 2, 4> dN_parent;
+  dN_parent(0, 0) = dN1_dxi(xi, eta);
+  dN_parent(0, 1) = dN2_dxi(xi, eta);
+  dN_parent(0, 2) = dN3_dxi(xi, eta);
+  dN_parent(0, 3) = dN4_dxi(xi, eta);
+
+  dN_parent(1, 0) = dN1_deta(xi, eta);
+  dN_parent(1, 1) = dN2_deta(xi, eta);
+  dN_parent(1, 2) = dN3_deta(xi, eta);
+  dN_parent(1, 3) = dN4_deta(xi, eta);
+
+  // Transform to physical coordinates: J_inv * dN_parent = (2x2) * (2x4) =
+  // (2x4) [dN/dx] = J_inv * [dN/dxi ] [dN/dy]           [dN/deta]
+  Matrix<T, 2, 4> dN_physical = J_inv * dN_parent;
+
+  // Extract results
+  Vector<T> dN_dx(4), dN_dy(4);
+  for (int i = 0; i < 4; ++i) {
+    dN_dx[i] = dN_physical(0, i);
+    dN_dy[i] = dN_physical(1, i);
+  }
+
+  return {dN_dx, dN_dy};
 }
 
 #endif
