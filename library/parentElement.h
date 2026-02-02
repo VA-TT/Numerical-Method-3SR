@@ -6,6 +6,8 @@
 #include "gaussQuadrature.h"
 #include <cassert>
 #include <functional>
+#include <iomanip>
+#include <iostream>
 // Range of 1D parent element Sr: [-1,1] -> mapping to [x1,x2] physical element
 // First order polynomial shape function
 auto N1_r = [](auto xi) { return (1 + xi) / 2; };
@@ -221,105 +223,106 @@ double integrationGauss2D_ref(const Vector<double> &x_nodes,
 
 #endif
 
-#include <iomanip>
-#include <iostream>
-int main() {
-  double x = 4.0, x1 = 2.0, x2 = 5.0, xi = 0.0;
-  std::cout << "=== Mapping Tests ===" << '\n';
-  std::cout << "Ref coordinate of x=4: xi = " << parentCoor(x, x1, x2) << '\n';
-  std::cout << "Physical coordinate of xi=0: x = " << physicCoor(xi, x1, x2)
-            << '\n';
-  std::cout << "Jacobian: " << Jacobian(x1, x2) << '\n';
-  std::cout << "Derivatives of N1: dN1 = " << dN1(x1, x2) << '\n';
-  std::cout << "Derivatives of N2: dN2 = " << dN2(x1, x2) << '\n';
+// int main() {
+//   double x = 4.0, x1 = 2.0, x2 = 5.0, xi = 0.0;
+//   std::cout << "=== Mapping Tests ===" << '\n';
+//   std::cout << "Ref coordinate of x=4: xi = " << parentCoor(x, x1, x2) <<
+//   '\n'; std::cout << "Physical coordinate of xi=0: x = " << physicCoor(xi,
+//   x1, x2)
+//             << '\n';
+//   std::cout << "Jacobian: " << Jacobian(x1, x2) << '\n';
+//   std::cout << "Derivatives of N1: dN1 = " << dN1(x1, x2) << '\n';
+//   std::cout << "Derivatives of N2: dN2 = " << dN2(x1, x2) << '\n';
 
-  std::cout << "\n=== Integration Tests ===" << '\n';
-  // Test 1: Integrate N1 over element [x1,x2]
-  // Analytical: int N1 dxi = int (1+xi)/2 dxi from -1 to 1 = [xi/2 +
-  // xi^2/4] = 1 With Jacobian J: Result = J * 1 = 1.5
-  auto f1 = [](double xi) { return N1_r(xi); };
-  double I1 = integrationGauss1D_ref(x1, x2, f1, 2);
-  std::cout << std::fixed << std::setprecision(10);
-  std::cout << "Integral of N1: " << I1 << " (expected: 1.5)" << '\n';
+//   std::cout << "\n=== Integration Tests ===" << '\n';
+//   // Test 1: Integrate N1 over element [x1,x2]
+//   // Analytical: int N1 dxi = int (1+xi)/2 dxi from -1 to 1 = [xi/2 +
+//   // xi^2/4] = 1 With Jacobian J: Result = J * 1 = 1.5
+//   auto f1 = [](double xi) { return N1_r(xi); };
+//   double I1 = integrationGauss1D_ref(x1, x2, f1, 2);
+//   std::cout << std::fixed << std::setprecision(10);
+//   std::cout << "Integral of N1: " << I1 << " (expected: 1.5)" << '\n';
 
-  // Test 2: Integrate N1*N2
-  // Analytical: N1*N2 = (1+xi)/2 * (1-xi)/2 = (1-xi^2)/4
-  // int (1-xi^2)/4 dxi from -1 to 1 = 1/4 * [xi - xi^3/3]|_{-1}^{1}
-  // = 1/4 * [(1 - 1/3) - (-1 + 1/3)] = 1/4 * [2/3 + 2/3] = 1/4 * 4/3 = 1/3
-  // With Jacobian J: Result = J * 1/3 = 1.5/3 = 0.5
-  auto f2 = [](double xi) { return N1_r(xi) * N2_r(xi); };
-  double I2 = integrationGauss1D_ref(x1, x2, f2, 2);
-  std::cout << "Integral of N1*N2: " << I2 << " (expected: 0.5)" << '\n';
+//   // Test 2: Integrate N1*N2
+//   // Analytical: N1*N2 = (1+xi)/2 * (1-xi)/2 = (1-xi^2)/4
+//   // int (1-xi^2)/4 dxi from -1 to 1 = 1/4 * [xi - xi^3/3]|_{-1}^{1}
+//   // = 1/4 * [(1 - 1/3) - (-1 + 1/3)] = 1/4 * [2/3 + 2/3] = 1/4 * 4/3 = 1/3
+//   // With Jacobian J: Result = J * 1/3 = 1.5/3 = 0.5
+//   auto f2 = [](double xi) { return N1_r(xi) * N2_r(xi); };
+//   double I2 = integrationGauss1D_ref(x1, x2, f2, 2);
+//   std::cout << "Integral of N1*N2: " << I2 << " (expected: 0.5)" << '\n';
 
-  std::cout << "\n=== 2D Element Tests ===" << '\n';
-  // Test rectangle element: (0,0), (2,0), (2,1), (0,1)
-  Vector<double> x_nodes = {0.0, 2.0, 2.0, 0.0};
-  Vector<double> y_nodes = {0.0, 0.0, 1.0, 1.0};
+//   std::cout << "\n=== 2D Element Tests ===" << '\n';
+//   // Test rectangle element: (0,0), (2,0), (2,1), (0,1)
+//   Vector<double> x_nodes = {0.0, 2.0, 2.0, 0.0};
+//   Vector<double> y_nodes = {0.0, 0.0, 1.0, 1.0};
 
-  // Test 1: Mapping at center (xi=0, eta=0)
-  auto [x_center, y_center] = physicCoor2D(0.0, 0.0, x_nodes, y_nodes);
-  std::cout << "Center point (xi=0, eta=0): (" << x_center << ", " << y_center
-            << ") - Expected: (1.0, 0.5)" << '\n';
+//   // Test 1: Mapping at center (xi=0, eta=0)
+//   auto [x_center, y_center] = physicCoor2D(0.0, 0.0, x_nodes, y_nodes);
+//   std::cout << "Center point (xi=0, eta=0): (" << x_center << ", " <<
+//   y_center
+//             << ") - Expected: (1.0, 0.5)" << '\n';
 
-  // Test 2: Mapping at corners
-  auto [x1_corner, y1_corner] = physicCoor2D(-1.0, -1.0, x_nodes, y_nodes);
-  std::cout << "Corner 1 (xi=-1, eta=-1): (" << x1_corner << ", " << y1_corner
-            << ") - Expected: (0.0, 0.0)" << '\n';
+//   // Test 2: Mapping at corners
+//   auto [x1_corner, y1_corner] = physicCoor2D(-1.0, -1.0, x_nodes, y_nodes);
+//   std::cout << "Corner 1 (xi=-1, eta=-1): (" << x1_corner << ", " <<
+//   y1_corner
+//             << ") - Expected: (0.0, 0.0)" << '\n';
 
-  auto [x3_corner, y3_corner] = physicCoor2D(1.0, 1.0, x_nodes, y_nodes);
-  std::cout << "Corner 3 (xi=1, eta=1): (" << x3_corner << ", " << y3_corner
-            << ") - Expected: (2.0, 1.0)" << '\n';
+//   auto [x3_corner, y3_corner] = physicCoor2D(1.0, 1.0, x_nodes, y_nodes);
+//   std::cout << "Corner 3 (xi=1, eta=1): (" << x3_corner << ", " << y3_corner
+//             << ") - Expected: (2.0, 1.0)" << '\n';
 
-  // Test 3: Jacobian at center
-  Matrix<double, 2, 2> J_center = Jacobian2D(0.0, 0.0, x_nodes, y_nodes);
-  std::cout << "Jacobian at center:\n";
-  std::cout << "  [" << J_center(0, 0) << ", " << J_center(0, 1) << "]\n";
-  std::cout << "  [" << J_center(1, 0) << ", " << J_center(1, 1) << "]\n";
-  std::cout << "  det(J) = " << det(J_center) << " - Expected: 0.5" << '\n';
+//   // Test 3: Jacobian at center
+//   Matrix<double, 2, 2> J_center = Jacobian2D(0.0, 0.0, x_nodes, y_nodes);
+//   std::cout << "Jacobian at center:\n";
+//   std::cout << "  [" << J_center(0, 0) << ", " << J_center(0, 1) << "]\n";
+//   std::cout << "  [" << J_center(1, 0) << ", " << J_center(1, 1) << "]\n";
+//   std::cout << "  det(J) = " << det(J_center) << " - Expected: 0.5" << '\n';
 
-  // Test 4: Non-rectangular element (parallelogram)
-  Vector<double> x_para = {0.0, 2.0, 3.0, 1.0};
-  Vector<double> y_para = {0.0, 0.0, 1.0, 1.0};
-  auto [x_para_center, y_para_center] = physicCoor2D(0.0, 0.0, x_para, y_para);
-  Matrix<double, 2, 2> J_para = Jacobian2D(0.0, 0.0, x_para, y_para);
-  std::cout << "\nParallelogram center: (" << x_para_center << ", "
-            << y_para_center << ") - Expected: (1.5, 0.5)" << '\n';
-  std::cout << "Parallelogram det(J) = " << det(J_para) << " - Expected: 0.5"
-            << '\n';
+//   // Test 4: Non-rectangular element (parallelogram)
+//   Vector<double> x_para = {0.0, 2.0, 3.0, 1.0};
+//   Vector<double> y_para = {0.0, 0.0, 1.0, 1.0};
+//   auto [x_para_center, y_para_center] = physicCoor2D(0.0, 0.0, x_para,
+//   y_para); Matrix<double, 2, 2> J_para = Jacobian2D(0.0, 0.0, x_para,
+//   y_para); std::cout << "\nParallelogram center: (" << x_para_center << ", "
+//             << y_para_center << ") - Expected: (1.5, 0.5)" << '\n';
+//   std::cout << "Parallelogram det(J) = " << det(J_para) << " - Expected: 0.5"
+//             << '\n';
 
-  // Test 5: Inverse mapping (physical -> parent)
-  std::cout << "\n=== Inverse Mapping Tests ===" << '\n';
-  auto [xi_inv, eta_inv] = parentCoor2D(1.0, 0.5, x_nodes, y_nodes);
-  std::cout << "Inverse of (1.0, 0.5): (xi=" << xi_inv << ", eta=" << eta_inv
-            << ") - Expected: (0.0, 0.0)" << '\n';
+//   // Test 5: Inverse mapping (physical -> parent)
+//   std::cout << "\n=== Inverse Mapping Tests ===" << '\n';
+//   auto [xi_inv, eta_inv] = parentCoor2D(1.0, 0.5, x_nodes, y_nodes);
+//   std::cout << "Inverse of (1.0, 0.5): (xi=" << xi_inv << ", eta=" << eta_inv
+//             << ") - Expected: (0.0, 0.0)" << '\n';
 
-  auto [xi_corner, eta_corner] = parentCoor2D(2.0, 0.0, x_nodes, y_nodes);
-  std::cout << "Inverse of (2.0, 0.0): (xi=" << xi_corner
-            << ", eta=" << eta_corner << ") - Expected: (1.0, -1.0)" << '\n';
+//   auto [xi_corner, eta_corner] = parentCoor2D(2.0, 0.0, x_nodes, y_nodes);
+//   std::cout << "Inverse of (2.0, 0.0): (xi=" << xi_corner
+//             << ", eta=" << eta_corner << ") - Expected: (1.0, -1.0)" << '\n';
 
-  // Test 6: 2D Integration - Area of element
-  // For rectangle [0,2]x[0,1]: Area = 2.0
-  std::cout << "\n=== 2D Integration Tests ===" << '\n';
-  auto f_const = [](double xi, double eta) { return 1.0; };
-  double area = integrationGauss2D_ref(x_nodes, y_nodes, f_const, 2);
-  std::cout << "Area of rectangle element: " << area << " - Expected: 2.0"
-            << '\n';
+//   // Test 6: 2D Integration - Area of element
+//   // For rectangle [0,2]x[0,1]: Area = 2.0
+//   std::cout << "\n=== 2D Integration Tests ===" << '\n';
+//   auto f_const = [](double xi, double eta) { return 1.0; };
+//   double area = integrationGauss2D_ref(x_nodes, y_nodes, f_const, 2);
+//   std::cout << "Area of rectangle element: " << area << " - Expected: 2.0"
+//             << '\n';
 
-  // Integrate x over element: int x dA = x_centroid * Area = 1.0 * 2.0 = 2.0
-  auto f_x = [&](double xi, double eta) {
-    auto [x_val, y_val] = physicCoor2D(xi, eta, x_nodes, y_nodes);
-    return x_val;
-  };
-  double int_x = integrationGauss2D_ref(x_nodes, y_nodes, f_x, 2);
-  std::cout << "Integral of x over element: " << int_x << " - Expected: 2.0"
-            << '\n';
+//   // Integrate x over element: int x dA = x_centroid * Area = 1.0 * 2.0 = 2.0
+//   auto f_x = [&](double xi, double eta) {
+//     auto [x_val, y_val] = physicCoor2D(xi, eta, x_nodes, y_nodes);
+//     return x_val;
+//   };
+//   double int_x = integrationGauss2D_ref(x_nodes, y_nodes, f_x, 2);
+//   std::cout << "Integral of x over element: " << int_x << " - Expected: 2.0"
+//             << '\n';
 
-  // Integrate y over element: int y dA = y_centroid * Area = 0.5 * 2.0 = 1.0
-  auto f_y = [&](double xi, double eta) {
-    auto [x_val, y_val] = physicCoor2D(xi, eta, x_nodes, y_nodes);
-    return y_val;
-  };
-  double int_y = integrationGauss2D_ref(x_nodes, y_nodes, f_y, 2);
-  std::cout << "Integral of y over element: " << int_y << " - Expected: 1.0"
-            << '\n';
-}
+//   // Integrate y over element: int y dA = y_centroid * Area = 0.5 * 2.0 = 1.0
+//   auto f_y = [&](double xi, double eta) {
+//     auto [x_val, y_val] = physicCoor2D(xi, eta, x_nodes, y_nodes);
+//     return y_val;
+//   };
+//   double int_y = integrationGauss2D_ref(x_nodes, y_nodes, f_y, 2);
+//   std::cout << "Integral of y over element: " << int_y << " - Expected: 1.0"
+//             << '\n';
+// }
