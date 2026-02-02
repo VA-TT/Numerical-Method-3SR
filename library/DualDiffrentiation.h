@@ -106,7 +106,7 @@ T automaticDiff(std::function<Dual(Dual)> func, T x0) {
 // Compute gradient of a scalar function f(x,y) using forward-mode Dual.
 // The callable `func` must accept two Dual arguments and return a Dual.
 template <typename Func>
-std::pair<double, double> gradient2(Func func, double x0, double y0) {
+std::pair<double, double> gradient2D(Func func, double x0, double y0) {
   // partial w.r.t x: seed x with derivative 1, y with 0
   Dual x_dx{x0, 1.0};
   Dual y_dx{y0, 0.0};
