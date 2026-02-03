@@ -229,12 +229,6 @@ int main() {
 
   // Calculate reaction forces using helper function
   calculateReactions(K_original, F_original, U);
-  // Compute internal axial force at x=0 (from first element) and print
-  double N0 = 0.0;
-  if (length.size() > 0) {
-    // axial force N = EA * du/dx approximated by linear element slope
-    N0 = EA * (U[1] - U[0]) / length[0];
-  }
 
   std::cout << "Reaction force vector R: \n" << Vector<double>(R) << std::endl;
 

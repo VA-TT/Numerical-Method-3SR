@@ -1,3 +1,6 @@
+#ifndef DISCRETIZING_RECTANGULAR_MESH_H
+#define DISCRETIZING_RECTANGULAR_MESH_H
+
 #include "Vector.h"
 #include "parentElement.h"
 #include <cassert>
@@ -9,8 +12,8 @@ private:
   T m_length{};
   Index m_nNodes{}, m_nElements{};
   Vector<T> m_nodes{};
+  Vector<T> m_nodes_initial{}; // Store initial configuration for reset
   Vector<Vector<Index>> m_connectivity{}; // [node_i, node_j]
-  Vector<Vector<T>> m_elements{};         // [xi, xj]
 
 public:
   // Constructor
@@ -21,16 +24,18 @@ public:
 
     // Resize vectors before using them
     m_nodes.resize(m_nNodes);
+    m_nodes_initial.resize(m_nNodes);
     m_connectivity.resize(m_nElements);
-    m_elements.resize(m_nElements);
 
     T lx{m_length / m_nElements};
     for (Index i{0}; i < m_nNodes; ++i) {
       m_nodes[i] = lx * i; // Coordinates of nodes
     }
+    // Copy to initial configuration
+    m_nodes_initial = m_nodes;
+
     for (Index e{0}; e < m_nElements; ++e) {
-      m_connectivity[e] = {e, e + 1};               // Node-index of elements
-      m_elements[e] = {m_nodes[e], m_nodes[e + 1]}; // Coordinates of elements
+      m_connectivity[e] = {e, e + 1}; // Node indices of elements
     }
   };
   // Other defaults
@@ -45,13 +50,22 @@ public:
   Index getNumNodes() const { return m_nNodes; }
   Index getNumElements() const { return m_nElements; }
   const Vector<T> &nodeCoords() const { return m_nodes; }
+  const Vector<Vector<Index>> &getConnectivity() const {
+    return m_connectivity;
+  }
+
   T getLengthEle(Index e) const {
     assert(e >= 0 && e < m_nElements && "Invalid element ID");
-    return std::abs(m_elements[e][0] - m_elements[e][1]);
-  };
+    Index n1 = m_connectivity[e][0];
+    Index n2 = m_connectivity[e][1];
+    return std::abs(m_nodes[n2] - m_nodes[n1]);
+  }
+
   std::pair<T, T> getElementNodes(Index e) const {
     assert(e >= 0 && e < m_nElements && "Invalid element ID");
-    return {m_nodes[e], m_nodes[e + 1]};
+    Index n1 = m_connectivity[e][0];
+    Index n2 = m_connectivity[e][1];
+    return {m_nodes[n1], m_nodes[n2]};
   }
   // Print mesh info
   void print() const {
@@ -77,10 +91,30 @@ public:
   void setLength(T length) { m_length = length; }
   void regenerateMesh() { *this = Mesh1D(m_length, m_nNodes); }
 
+  // Update mesh for time-stepping (e.g., Updated Lagrangian FEM)
+  void updateNodePosition(Index nodeID, T new_x) {
+    assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
+    m_nodes[nodeID] = new_x;
+  }
+
+  void updateAllNodes(const Vector<T> &new_positions) {
+    assert(new_positions.size() == m_nNodes && "Size mismatch");
+    m_nodes = new_positions;
+  }
+
+  // Reset to initial configuration
+  void resetMesh() { m_nodes = m_nodes_initial; }
+
+  const Vector<T> &getInitialNodes() const { return m_nodes_initial; }
+
   // MPM helper function
   Index findCageID(T x) const {
     for (Index e{0}; e < m_nElements; ++e) {
-      if (m_elements[e][0] <= x && m_elements[e][1] >= x)
+      Index n1 = m_connectivity[e][0];
+      Index n2 = m_connectivity[e][1];
+      T x1 = m_nodes[n1];
+      T x2 = m_nodes[n2];
+      if (x1 <= x && x2 >= x)
         return e;
     }
     return -1; // Not found (outside domain)
@@ -92,9 +126,12 @@ private:
   T m_length{}, m_height{};
   Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{};
   Vector<std::pair<T, T>> m_nodes{}; // All node coordinates as (x, y) pairs
+  Vector<std::pair<T, T>> m_nodes_initial{}; // Initial configuration for reset
   Vector<Vector<Index>> m_connectivity{};
-  Vector<T> m_x_coords; // Node x-coordinates vector
-  Vector<T> m_y_coords; // Node y-coordinates vector
+  Vector<T> m_x_coords;         // Node x-coordinates vector
+  Vector<T> m_y_coords;         // Node y-coordinates vector
+  Vector<T> m_x_coords_initial; // Initial x-coordinates
+  Vector<T> m_y_coords_initial; // Initial y-coordinates
 
 public:
   // Constructor
@@ -106,9 +143,12 @@ public:
 
     // Resize vectors before using them
     m_nodes.resize(m_nNodes);
+    m_nodes_initial.resize(m_nNodes);
     m_connectivity.resize(m_nElements);
     m_x_coords.resize(m_nNodes);
     m_y_coords.resize(m_nNodes);
+    m_x_coords_initial.resize(m_nNodes);
+    m_y_coords_initial.resize(m_nNodes);
 
     T dx = length / (nx - 1);
     T dy = height / (ny - 1);
@@ -126,9 +166,14 @@ public:
         T y = dy * j;
         m_x_coords[nodeID] = x;
         m_y_coords[nodeID] = y;
-        m_nodes[nodeID] = {x, y}; // Store as pair
+        m_nodes[nodeID] = {x, y};
       }
     }
+    // Copy to initial configuration (more efficient than per-element
+    // assignment)
+    m_x_coords_initial = m_x_coords;
+    m_y_coords_initial = m_y_coords;
+    m_nodes_initial = m_nodes;
 
     // Generate connectivity for Q4 elements
     // Element node ordering (counterclockwise from bottom-left):
@@ -165,6 +210,7 @@ public:
   const Vector<std::pair<T, T>> &getNodes() const { return m_nodes; }
   const Vector<T> &getXCoords() const { return m_x_coords; }
   const Vector<T> &getYCoords() const { return m_y_coords; }
+
   // Get element connectivity
   const Vector<Index> &getConnectivity(Index elemID) const {
     assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
@@ -172,7 +218,7 @@ public:
   }
 
   // Get node coordinates by ID
-  std::pair<T, T> getNode(Index nodeID) const {
+  std::pair<T, T> getNodeCoor(Index nodeID) const {
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
     return {m_x_coords[nodeID], m_y_coords[nodeID]};
   }
@@ -208,6 +254,46 @@ public:
   void setHeight(T height) { m_height = height; }
   void regenerateMesh() { *this = Mesh2D(m_length, m_height, m_nx, m_ny); }
 
+  // Update mesh for time-stepping (e.g., Updated Lagrangian FEM)
+  void updateNodePosition(Index nodeID, T new_x, T new_y) {
+    assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
+    m_x_coords[nodeID] = new_x;
+    m_y_coords[nodeID] = new_y;
+    m_nodes[nodeID] = {new_x, new_y};
+  }
+
+  void updateAllNodes(const Vector<T> &new_x, const Vector<T> &new_y) {
+    assert(new_x.size() == m_nNodes && new_y.size() == m_nNodes &&
+           "Size mismatch");
+    m_x_coords = new_x;
+    m_y_coords = new_y;
+    for (Index i{0}; i < m_nNodes; ++i) {
+      m_nodes[i] = {new_x[i], new_y[i]};
+    }
+  }
+
+  void updateAllNodes(const Vector<std::pair<T, T>> &new_positions) {
+    assert(new_positions.size() == m_nNodes && "Size mismatch");
+    m_nodes = new_positions;
+    for (Index i{0}; i < m_nNodes; ++i) {
+      m_x_coords[i] = new_positions[i].first;
+      m_y_coords[i] = new_positions[i].second;
+    }
+  }
+
+  // Reset to initial configuration
+  void resetMesh() {
+    m_nodes = m_nodes_initial;
+    m_x_coords = m_x_coords_initial;
+    m_y_coords = m_y_coords_initial;
+  }
+
+  const Vector<std::pair<T, T>> &getInitialNodes() const {
+    return m_nodes_initial;
+  }
+  const Vector<T> &getInitialXCoords() const { return m_x_coords_initial; }
+  const Vector<T> &getInitialYCoords() const { return m_y_coords_initial; }
+
   // MPM helper function
   bool isPointInElement(T x, T y, Index e) const {
     assert(e >= 0 && e < m_nElements && "Invalid element ID");
@@ -236,3 +322,5 @@ public:
   }
 };
 //////// WHAT HAPPENS IF THE MPs IS PERFECTLY LANDS ON THE NODE? ////////
+
+#endif

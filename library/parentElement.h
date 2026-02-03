@@ -1,5 +1,5 @@
-#ifndef PARENT_ELEMENT_SHAPE_FUNCTION
-#define PARENT_ELEMENT_SHAPE_FUNCTION
+#ifndef PARENT_ELEMENT_SHAPE_FUNCTION_H
+#define PARENT_ELEMENT_SHAPE_FUNCTION_H
 #include "DualDiffrentiation.h"
 #include "Matrix.h"
 #include "Vector.h"
@@ -9,28 +9,40 @@
 #include <iomanip>
 #include <iostream>
 // Range of 1D parent element Sr: [-1,1] -> mapping to [x1,x2] physical element
-// First order polynomial shape function
+// First order polynomial shape function using Lagrange's basis in range [-1,1]
 auto N1_r = [](auto xi) { return (1 + xi) / 2; };
-auto N2_r = [](auto xi) {
-  return (1 - xi) / 2;
-}; // Lagrange basis for an element [-1,1]
+auto N2_r = [](auto xi) { return (1 - xi) / 2; };
 
 // Discretizing x = phi(xi) = x1 N1(xi) + x2 N2(xi) = J*xi + M = xi *
 // (x2-x1)/2 + (x2+x1)/2
 
 // Jacobian: J = dx/d(xi) = (x2-x1)/2
-template <typename T> T Jacobian(T x1, T x2) { return (x2 - x1) / 2; }
-template <typename T> T midPoint(T x1, T x2) { return (x2 + x1) / 2; }
+template <typename T> T Jacobian(T x1, T x2) {
+  assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
+  return (x2 - x1) / 2;
+}
+template <typename T> T midPoint(T x1, T x2) {
+  assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
+  return (x2 + x1) / 2;
+}
 
 // Mapping deriviation: dN/dx = dN/d(xi) * d(xi)/dx = dN/d(xi) * 1/J
-template <typename T> T dN1(T x1, T x2) { return 0.5 / Jacobian(x1, x2); }
-template <typename T> T dN2(T x1, T x2) { return -0.5 / Jacobian(x1, x2); }
+template <typename T> T dN1_dx(T x1, T x2) {
+  assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
+  return 0.5 / Jacobian(x1, x2);
+}
+template <typename T> T dN2_dx(T x1, T x2) {
+  assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
+  return -0.5 / Jacobian(x1, x2);
+}
 
 // Function Phi(xi) used to map
 template <typename T> T physicCoor(T xi, T x1, T x2) {
+  assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
   return N1_r(xi) * x1 + N2_r(xi) * x2;
 }
 template <typename T> T parentCoor(T x, T x1, T x2) {
+  assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
   return (x - midPoint(x1, x2)) / Jacobian(x1, x2);
 }
 
@@ -51,7 +63,11 @@ double integrationGauss1D_ref(double x1, double x2,
 }
 
 //  Q4 2D rectangle parent element: [-1,-1] to [1,1]
-// Bilinear shape functions (4-node quadrilateral)
+// Element node ordering (counterclockwise from bottom-left):
+//   (-1,1) n4 ------ n3 (1,1)
+//          |          |
+//          |          |
+//  (-1,-1) n1 ------ n2 (1,-1)
 // Use auto parameters to accept both double and Dual types
 auto N1_2D = [](auto xi, auto eta) { return 0.25 * (1 - xi) * (1 - eta); };
 auto N2_2D = [](auto xi, auto eta) { return 0.25 * (1 + xi) * (1 - eta); };
@@ -73,8 +89,8 @@ auto dN4_deta = [](auto xi, auto eta) { return 0.25 * (1 - xi); };
 // Mapping from parent [-1,1]x[-1,1] to physical coordinates
 // x = sum(N_i * x_i) = N · x_nodes, y = sum(N_i * y_i) = N · y_nodes
 template <typename T>
-std::pair<T, T> physicCoor2D(T xi, T eta, const Vector<T> &x_nodes,
-                             const Vector<T> &y_nodes) {
+std::pair<T, T> physicCoor(T xi, T eta, const Vector<T> &x_nodes,
+                           const Vector<T> &y_nodes) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 
@@ -93,8 +109,8 @@ std::pair<T, T> physicCoor2D(T xi, T eta, const Vector<T> &x_nodes,
 // Jacobian matrix for 2D element: J = [dx/dxi  dx/deta]
 //                                     [dy/dxi  dy/deta]
 template <typename T>
-Matrix<T, 2, 2> Jacobian2D(T xi, T eta, const Vector<T> &x_nodes,
-                           const Vector<T> &y_nodes) {
+Matrix<T, 2, 2> Jacobian(T xi, T eta, const Vector<T> &x_nodes,
+                         const Vector<T> &y_nodes) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 
@@ -120,18 +136,17 @@ Matrix<T, 2, 2> Jacobian2D(T xi, T eta, const Vector<T> &x_nodes,
   J(1, 1) = dotProduct(dN_deta, y_nodes); // dy/deta
 
   // Check for non-singular Jacobian
-  assert(approximatelyEqualAbsRel(det(J), 0.0) == false &&
-         "Jacobian determinant is zero - singular mapping detected!");
-
+  assert(det(J) > 0.0 &&
+         "Negative Jacobian - element is inverted or has wrong node ordering!");
   return J;
 }
 
 // Inverse mapping: (x,y) -> (xi,eta) using Newton-Raphson
-// Solves: x = physicCoor2D_x(xi,eta), y = physicCoor2D_y(xi,eta)
+// Solves: x = physicCoor_x(xi,eta), y = physicCoor_y(xi,eta)
 template <typename T>
-std::pair<T, T> parentCoor2D(T x, T y, const Vector<T> &x_nodes,
-                             const Vector<T> &y_nodes, int maxIter = 20,
-                             T tol = 1e-10) {
+std::pair<T, T> parentCoor(T x, T y, const Vector<T> &x_nodes,
+                           const Vector<T> &y_nodes, int maxIter = 20,
+                           T tol = 1e-10) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 
@@ -140,7 +155,7 @@ std::pair<T, T> parentCoor2D(T x, T y, const Vector<T> &x_nodes,
 
   for (int iter = 0; iter < maxIter; ++iter) {
     // Compute residual: R = [x - x(xi,eta), y - y(xi,eta)]
-    auto [x_curr, y_curr] = physicCoor2D(xi, eta, x_nodes, y_nodes);
+    auto [x_curr, y_curr] = physicCoor(xi, eta, x_nodes, y_nodes);
     T Rx = x - x_curr;
     T Ry = y - y_curr;
 
@@ -150,7 +165,7 @@ std::pair<T, T> parentCoor2D(T x, T y, const Vector<T> &x_nodes,
     }
 
     // Compute Jacobian
-    Matrix<T, 2, 2> J = Jacobian2D(xi, eta, x_nodes, y_nodes);
+    Matrix<T, 2, 2> J = Jacobian(xi, eta, x_nodes, y_nodes);
 
     // Solve J * delta = R for delta = [dxi, deta]
     T detJ = det(J);
@@ -169,10 +184,10 @@ std::pair<T, T> parentCoor2D(T x, T y, const Vector<T> &x_nodes,
 
 // 2D Gauss quadrature integration on reference element [-1,1]x[-1,1]
 // Computes: int_{-1}^{1} int_{-1}^{1} f(xi,eta) * det(J) dxi deta
-double integrationGauss2D_ref(const Vector<double> &x_nodes,
-                              const Vector<double> &y_nodes,
-                              std::function<double(double, double)> f_xi_eta,
-                              int n = 2) {
+double integrationGauss_ref(const Vector<double> &x_nodes,
+                            const Vector<double> &y_nodes,
+                            std::function<double(double, double)> f_xi_eta,
+                            int n = 2) {
   using namespace gaussQuadrature;
 
   const double *xi_ptr = nullptr;
@@ -188,7 +203,7 @@ double integrationGauss2D_ref(const Vector<double> &x_nodes,
       double eta = xi_ptr[j];
 
       // Compute Jacobian determinant at (xi, eta)
-      Matrix<double, 2, 2> J = Jacobian2D(xi, eta, x_nodes, y_nodes);
+      Matrix<double, 2, 2> J = Jacobian(xi, eta, x_nodes, y_nodes);
 
       // Accumulate weighted sum
       I += w_ptr[i] * w_ptr[j] * f_xi_eta(xi, eta) * det(J);
@@ -206,7 +221,7 @@ std::pair<Vector<T>, Vector<T>> dNdxdy(T xi, T eta, const Vector<T> &x_nodes,
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 
   // Compute Jacobian and its inverse
-  Matrix<T, 2, 2> J_inv = Jacobian2D(xi, eta, x_nodes, y_nodes).inverse();
+  Matrix<T, 2, 2> J_inv = Jacobian(xi, eta, x_nodes, y_nodes).inverse();
 
   // Evaluate derivatives in parent coordinates (2x4 matrix)
   // [dN/dxi ] = [dN1/dxi  dN2/dxi  dN3/dxi  dN4/dxi ]
@@ -246,8 +261,8 @@ std::pair<Vector<T>, Vector<T>> dNdxdy(T xi, T eta, const Vector<T> &x_nodes,
 //   x1, x2)
 //             << '\n';
 //   std::cout << "Jacobian: " << Jacobian(x1, x2) << '\n';
-//   std::cout << "Derivatives of N1: dN1 = " << dN1(x1, x2) << '\n';
-//   std::cout << "Derivatives of N2: dN2 = " << dN2(x1, x2) << '\n';
+//   std::cout << "Derivatives of N1: dN1_dx = " << dN1(x1, x2) << '\n';
+//   std::cout << "Derivatives of N2: dN2_dx = " << dN2(x1, x2) << '\n';
 
 //   std::cout << "\n=== Integration Tests ===" << '\n';
 //   // Test 1: Integrate N1 over element [x1,x2]
