@@ -258,7 +258,7 @@ int main() {
     for (Index i{0}; i < nNodes; i++) {
       if (m_i[i] > 1e-12) {
         v_i[i] = mass_p * v_p * N_p[i] / m_i[i];
-        // v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
+        v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
       } else {
         v_i[i] = 0.0;
       }

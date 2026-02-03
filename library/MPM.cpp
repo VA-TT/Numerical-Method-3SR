@@ -1,5 +1,5 @@
-#ifndef MATERIAL_POINT_METHOD_H
-#define MATERIAL_POINT_METHOD_H
+#ifndef FINITE_ELEMENT_METHOD_H
+#define FINITE_ELEMENT_METHOD_H
 
 #include "Matrix.h"
 #include "Mesh.h"
@@ -19,11 +19,17 @@
 //    - Dirichlet: u(x) = prescribed value (essential BC)
 //    - Neumann: EA * u'(x) = prescribed force (natural BC)
 
-template <typename T, Index nNodes> class FEM1D {
+template <typename T, Index nNodes> class MPM1D {
 private:
   // Physical properties
-  T m_EA{10.0};    /// Axial stiffness
-  T m_length{1.0}; /// Domain length
+  T m_EA{10.0};      // Axial stiffness
+  T m_length{1.0};   // Domain length
+  T m_V{1.0};        // Volume
+  T m_rho{1000};     // Density
+  T m_stress{0.0};   // Strain
+  T m_strain{0.0};   // Stress
+  T m_velocity{0.0}; // Velocity
+  T m_position{0.0}; // Velocity
 
   // Mesh
   Mesh1D<T> m_mesh{};
