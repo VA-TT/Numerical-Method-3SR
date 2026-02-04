@@ -19,51 +19,74 @@
 //    - Dirichlet: u(x) = prescribed value (essential BC)
 //    - Neumann: EA * u'(x) = prescribed force (natural BC)
 
-template <typename T, Index nNodes, Index nMPs> class MPM1D {
+template <typename T, Index nNodes, Index nMPperEle> class MPM1D {
 private:
   // Physical properties
-  T m_EA{10.0};    // Axial stiffness
+  T m_E{10.0};     // Module Young
   T m_length{1.0}; // Domain length
-  T m_V{1.0};      // Volume
+  T m_volume{1.0}; // Volume
   T m_rho{1000};   // Density
 
   // Simulation properties
-  T m_time{0.0};     // Current time
-  T m_dt{0.0};       // Time step
-  T m_duration{0.0}; // Duration of simulation
-  T m_xloc{0.0};     // Position of surveying
+  T m_currentTime{0.0}; // Current time
+  T m_dt{0.0};          // Time step
+  T m_duration{0.0};    // Duration of simulation
+  Inden m_nSteps{0.0};  // Steps of simulation
+  T m_xloc{0.0};        // Position of surveying
+  T m_v0{0.0};          // Position of surveying
 
   //  Mesh
   Mesh1D<T> m_mesh{};
 
-  // Nodes i
-  Vector<T> mass_i(nNodes);
-  Vector<T> velocity_i(nNodes);
-  Vector<T> momentum_i(nNodes);
+  // Nodes n
+  Vector<T> mass_n(nNodes);
+  Vector<T> position_n(nNodes);
+  Vector<T> velocity_n(nNodes);
+  Vector<T> momentum_n(nNodes);
   // Nodal external forces
-  Vector<double> f_ext_i(nNodes), f_int_i(nNodes), f_total_i(nNodes);
-  // Material Points p
-  Index NumMPs{0.0};                  // Np
-  Vector<T> velocity_p(nNodes);       // Velocity
-  Vector<T> position_p(nNodes);       // Position
-  Vector<T> momentum_p(nNodes);       // Momentum
-  Vector<T> N_p(nNodes), B_p(nNodes); // Shape function
-  Vector<T> strain_p(nMPs), strain_rate_p(nMPs), dStrain_p(nMPs); // Stress
+  Vector<double> f_ext_n(nNodes), f_int_n(nNodes), f_total_n(nNodes);
 
-  // Distributed force: f(x)
-  std::function<T(T)> m_rhsFunction;
+  // Material Points p
+  Vector<T> volume_p((nNodes - 1) * nMPperEle);   // Volume
+  Vector<T> mass_p((nNodes - 1) * nMPperEle);     // Mass
+  Vector<T> position_p((nNodes - 1) * nMPperEle); // Position
+  Vector<T> velocity_p((nNodes - 1) * nMPperEle); // Velocity
+  Vector<T> momentum_p((nNodes - 1) * nMPperEle); // Momentum
+  Vector<T> N_p((nNodes - 1) * nMPperEle),
+      B_p((nNodes - 1) * nMPperEle); // Shape function
+  Vector<T> stress_p((nNodes - 1) * nMPperEle),
+      strain_p((nNodes - 1) * nMPperEle),
+      strain_rate_p((nNodes - 1) * nMPperEle),
+      dStrain_p((nNodes - 1) * nMPperEle); // Stress + strain
 
   // Analytical solution (if available)
   std::function<T(T)> m_analyticSolution;
 
 public:
   // Constructor
-  MPM1D(T EA, T rho, T length)
-      : m_EA{EA}, m_length{length}, m_mass_p{length * rho},
-        m_mesh{Mesh1D<T>{length, nNodes}} {
-    // Default distributed load: f(x) = 0
-    m_rhsFunction = [](T x) { return T(0); };
+  MPM1D(T E, T rho, T length, T v0, T dt, T duration, T xloc)
+      : m_E{E}, m_rho{rho}, m_length{length}, m_v0{v0}, m_dt{dt},
+        m_duration{duration}, m_xloc{xloc} {
+    // Check critical time
+    double c{std::sqrt{E / rho}};
+    double dt_crit{m_length / c};
+    assert((dt_crit / 10.0) >= dt &&
+           "Time step isn't satisfied CFL condition (too big)");
+    m_nSteps = duration / dt;
+
+    // System set up
+    m_volume = length * 1.0 * 1.0 * rho; // 1D: B = H = 1.0
+
+    // Set up mesh
+    m_mesh = Mesh1D<T>{length, nNodes, nMPperEle};
     m_mesh.print();
+
+    // Set up MPs
+    Index nMPs = m_mesh.getNumMPs;
+    volume_p = Vector<T>(nMPs, m_volume / nMPs);
+    mass_p = rho * volume_p;
+    velocity_p = Vector<T>(nMPs, v0);
+    momentum_p = mass_p * v0;
   };
 
   // Other defaults
@@ -75,191 +98,75 @@ public:
   ~MPM1D() = default;
 
   // Getters
-  T getEA() const { return m_EA; }
+  T getE() const { return m_E; }
+  T getRho() const { return m_rho; }
   T getLength() const { return m_length; }
+  T getVolume() const { return m_volume; }
+  T getCurrentTime() const { return m_currentTime; }
+  T getTimeStep() const { return m_dt; }
+  T getDuration() const { return m_duration; }
+  T getNumSteps() const { return m_nSteps; }
+  T getSurLoc() const { return m_xloc; }
+  T getIniVelo() const { return m_v0; }
+
+  const Mesh1D<T> &getMesh() const { return m_mesh; }
   Index getNumNodes() const { return m_mesh.getNumNodes(); }
   Index getNumElements() const { return m_mesh.getNumElements(); }
-  Index getNumMps() const { return m_NumMPs; }
-  const Mesh1D<T> &getMesh() const { return m_mesh; }
-  const Matrix<T, nNodes, nNodes> &getK() const { return m_K; }
-  const Matrix<T, nNodes, 1> &getU() const { return m_U; }
-  const Matrix<T, nNodes, 1> &getF() const { return m_F; }
-  const Matrix<T, nNodes, 1> &getR() const { return m_R; }
-  T getDisplacement(Index node) const {
-    assert(node >= 0 && node < nNodes && "Invalid node index");
-    return m_U(node, 0);
-  }
+  Index getNumMps() const { return m_mesh.getNumMPs(); }
+
+  getNodalMass(Index i) { return mass_n[i]; }
+  getNodalVelocity(Index i) { return velocity_n[i]; }
+  getNodalMomentum(Index i) { return momentum_n[i]; }
+  getNodalExtForce(Index i) { return f_ext_n[i]; }
+  getNodalIntForce(Index i) { return f_int_n[i]; }
+  getNodalTotalForce(Index i) { return f_total_n[i]; }
+
+  getMPvolume(Index p) { return volume_p[p]; }
+  getMPmass(Index p) { return mass_p[p]; }
+  getMPvelocity(Index p) { return velocity_p[p]; }
+  getMPposition(Index p) { return position_p[p]; }
+  getMPmomentum(Index p) { return momentum_p[p]; }
+  getMPstrain(Index p) { return strain_p[p]; }
+  getMPstrainRate(Index p) { return strain_rate_p[p]; }
+  getMPdStrain(Index p) { return dStrain_p[p]; }
+  getMPstress(Index p) { return stress[p]; }
+  getMPtotalForce(Index p) { return f_total_n[p]; }
 
   // Setters
-  void setEA(T EA) { m_EA = EA; }
-  void setDistributedLoad(std::function<T(T)> f) {
-    m_rhsFunction = f;
-  } // f(x) != const
-  void setDistributedLoad(T constant_load) {
-    m_rhsFunction = [constant_load](T x) {
-      return constant_load;
-    }; // f(x) = const
-  }
+  void setE(T E) { m_E = E; }
   void setAnalyticSolution(std::function<T(T)> sol) {
     m_analyticSolution = sol;
   }
 
-  // MPM Assembly
-  void assembleKF() {
-    // Building global matrix via stiffness matrix: need connectitivty matrix
-    // C in order to assemble (2x2) into (nNodes x nNodes)
-    // Avoiding use of connectivity matrix C for efficiency
-    m_K.resetZero();
-    m_F.resetZero();
-    for (Index e{0}; e < m_mesh.getNumElements(); ++e) {
-      // Elementary stiffness matrix assembly
-      T h = m_mesh.getLengthEle(e);
-      T k = m_EA / h;
-      m_K(e, e) += k;
-      m_K(e, e + 1) += -k;
-      m_K(e + 1, e) += -k;
-      m_K(e + 1, e + 1) += k;
+  void p2n() {}
 
-      // Elementary force matrix assembly: F_e = int_element N^T * f(x) dx
-      auto [x1, x2] = m_mesh.getElementNodes(e);
-      auto integrand0 = [=, this](T xi) {
-        return m_rhsFunction(physicCoor(xi, x1, x2)) * N1_r(xi);
-      };
-      auto integrand1 = [=, this](T xi) {
-        return m_rhsFunction(physicCoor(xi, x1, x2)) * N2_r(xi);
-      };
-      m_F[e] += integrationGauss1D_ref(x1, x2, integrand0, 2);
-      m_F[e + 1] += integrationGauss1D_ref(x1, x2, integrand1, 2);
-    }
-    // K is singular before BC applied (no constraints)
-  }
+  void computeNodalForce() {}
 
-  // Boundary Conditions
-  void applyNeumanCondition(Index node, T value) {
-    // Neumann's condition: EA * u'(x) = value
-    assert(node >= 0 && node < nNodes && "Invalid node index");
-    m_F[node] += value;
-  }
+  void applyBC() {}
 
-  // Essential BC: at least 1 condition required
-  void applyDirichletCondition(Index node, T value) {
-    // Back up to calculate reactions later
-    m_K_original = m_K;
-    m_F_original = m_F;
+  void n2p() {}
 
-    // Direct/Elimination method
-    m_F[node] = value;
-    for (Index i = 0; i < nNodes; ++i) {
-      if (i == node)
-        continue;
-      m_F[i] -= value * m_K(i, node);
-    }
-    for (Index i = 0; i < nNodes; ++i) {
-      m_K(i, node) = 0.0;
-    }
-    for (Index j = 0; j < nNodes; ++j) {
-      m_K(node, j) = 0.0;
-    }
-    m_K(node, node) = 1.0;
-  }
-
-  // Solve
-  void solveMPM() {
-    m_U = solveLinearSystem(m_K, m_F);
-    std::cout << "Displacement vector U:\n";
-    for (Index i = 0; i < nNodes; ++i) {
-      std::cout << "  u[" << i << "] = " << std::fixed << std::setprecision(6)
-                << m_U(i, 0) << '\n';
+  void timeIntegration() {
+    for (Index step{0}; step < nSteps; step++) {
+      m_currentTime = step * m_dt;
+      times.push_back(current_time);
+      p2n();
+      computeNodalForce();
+      applyBC();
+      n2p();
     }
   }
 
-  // Post-processing
-  void calculateReaction() {
-    // Compute reaction vector R = K_original * U - F_original
-    m_R = -(m_F_original - m_K_original * m_U);
-    std::cout << "Reaction force vector R: \n" << Vector<T>(m_R) << std::endl;
-  }
+  void compareAnalytic() {}
 
-  void compareAnalytic() {
-    if (!m_analyticSolution) {
-      std::cout << "\nNo analytical solution provided.\n";
-      return;
-    }
-
-    std::cout << "\n=== Comparison with Analytical Solution ===\n";
-    std::cout << std::setw(8) << "Node" << std::setw(12) << "x" << std::setw(15)
-              << "u_MPM" << std::setw(15) << "u_Exact" << std::setw(15)
-              << "Error" << '\n';
-    std::cout << std::string(65, '-') << '\n';
-
-    T max_error = 0.0;
-    T sum_sq_error = 0.0;
-
-    for (Index i = 0; i < nNodes; ++i) {
-      T x = m_mesh.nodeCoords()[i];
-      T u_MPM = m_U(i, 0);
-      T u_exact = m_analyticSolution(x);
-      T error = std::abs(u_MPM - u_exact);
-
-      max_error = std::max(max_error, error);
-      sum_sq_error += error * error;
-
-      std::cout << std::setw(8) << i << std::setw(12) << std::fixed
-                << std::setprecision(4) << x << std::setw(15)
-                << std::setprecision(6) << u_MPM << std::setw(15) << u_exact
-                << std::setw(15) << std::scientific << error << '\n';
-    }
-
-    T rms_error = std::sqrt(sum_sq_error / nNodes);
-    std::cout << "\nMax Error: " << std::scientific << max_error << '\n';
-    std::cout << "RMS Error: " << rms_error << '\n';
-  }
-
-  void exportResult(const std::string &filename = "MPM1D_results.txt") {
-    std::cout << "\n=== Exporting Results ===\n";
-
-    // Compute element axial forces: N_e = EA * (u[j] - u[i]) / h_e
-    // Store element forces, then assign to nodes
-    Vector<T> element_forces(m_mesh.getNumElements());
-    for (Index e = 0; e < m_mesh.getNumElements(); ++e) {
-      T h = m_mesh.getLengthEle(e);
-      element_forces[e] = m_EA * (m_U[e + 1] - m_U[e]) / h;
-    }
-
-    // Assign element forces to nodes
-    Vector<T> axial_force(nNodes);
-    axial_force[0] = element_forces[0]; // First node: force from first element
-    for (Index i = 1; i < nNodes - 1; ++i) {
-      // Internal nodes: average of adjacent elements (equilibrium)
-      axial_force[i] = 0.5 * (element_forces[i - 1] + element_forces[i]);
-    }
-    axial_force[nNodes - 1] =
-        element_forces[m_mesh.getNumElements() - 1]; // Last node: last element
-
-    // Export to file
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-      std::cerr << "Error: Cannot open file " << filename << '\n';
-      return;
-    }
-
-    file << "# MPM 1D Results\n";
-    file << "# EA = " << m_EA << ", L = " << m_length << '\n';
-    file << "# Nodes = " << nNodes << ", Elements = " << nNodes - 1 << '\n';
-    file << "# Columns: Node, x, u(x), N(x)\n";
-    file << std::setw(8) << "Node" << std::setw(15) << "x" << std::setw(18)
-         << "u(x)" << std::setw(18) << "N(x)" << '\n';
-
-    for (Index i = 0; i < nNodes; ++i) {
-      T x = m_mesh.nodeCoords()[i];
-      file << std::setw(8) << i << std::setw(15) << std::fixed
-           << std::setprecision(6) << x << std::setw(18) << std::setprecision(8)
-           << m_U[i] << std::setw(18) << axial_force[i] << '\n';
-    }
-
-    file.close();
-    std::cout << "Results exported to: " << filename << '\n';
-  }
+  void exportResult(const std::string &filename = "MPM1D_results.txt") {}
 };
 
 #endif // MPM_H
+
+#include "../library/clock.h"
+#include <iostream>
+int main() {
+  Timer t;
+  std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
+}

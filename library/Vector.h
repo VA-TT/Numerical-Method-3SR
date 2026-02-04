@@ -239,6 +239,19 @@ Vector<T> crossProduct2(const Vector<T> &v1, const Vector<T> &v2) {
   return result;
 }
 
+// Hadamard product (element-wise multiplication)
+template <typename T>
+Vector<T> hadamardProduct(const Vector<T> &v1, const Vector<T> &v2) {
+  if (v1.size() != v2.size())
+    throw std::invalid_argument(
+        "Vectors must have the same dimension for Hadamard product.");
+
+  Vector<T> result(v1.size());
+  for (Index i = 0; i < v1.size(); ++i)
+    result[i] = v1[i] * v2[i];
+  return result;
+}
+
 // Vector magnitude/norm
 template <typename T> T magnitude(const Vector<T> &v) {
   return std::sqrt(dotProduct(v, v));

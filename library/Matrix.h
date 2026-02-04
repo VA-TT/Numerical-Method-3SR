@@ -684,4 +684,15 @@ Matrix<T, R1 * R2, C1 * C2> tensorProduct(const Matrix<T, R1, C1> &A,
   return result;
 }
 
+// Hadamard product (element-wise multiplication) for matrices
+template <typename T, Index nRows, Index nCols>
+Matrix<T, nRows, nCols> hadamardProduct(const Matrix<T, nRows, nCols> &A,
+                                        const Matrix<T, nRows, nCols> &B) {
+  Matrix<T, nRows, nCols> result{};
+  for (Index i = 0; i < nRows * nCols; ++i) {
+    result[i] = A[i] * B[i];
+  }
+  return result;
+}
+
 #endif
