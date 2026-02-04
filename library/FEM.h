@@ -1,5 +1,6 @@
-#ifndef MATERIAL_POINT_METHOD_H
-#define MATERIAL_POINT_METHOD_H
+
+#ifndef FINITE_ELEMENT_METHOD_H
+#define FINITE_ELEMENT_METHOD_H
 
 #include "Matrix.h"
 #include "Mesh.h"

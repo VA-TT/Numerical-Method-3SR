@@ -1,5 +1,5 @@
-#ifndef FINITE_ELEMENT_METHOD_H
-#define FINITE_ELEMENT_METHOD_H
+#ifndef MATERIAL_POINT_METHOD_H
+#define MATERIAL_POINT_METHOD_H
 
 #include "Matrix.h"
 #include "Mesh.h"
@@ -30,6 +30,9 @@ private:
   T m_strain{0.0};   // Stress
   T m_velocity{0.0}; // Velocity
   T m_position{0.0}; // Velocity
+  T m_time{0.0};     // Current time
+  T m_dt{0.0};       // Time step
+  T m_duration{0.0}; // Duration of simulation
 
   // Mesh
   Mesh1D<T> m_mesh{};

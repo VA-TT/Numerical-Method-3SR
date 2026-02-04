@@ -10,7 +10,7 @@ int main() {
   // Create FEM problem: EA=10, L=1, 6 nodes
   // f = 5 kN, F = 10 kN at x=1
   // Expected: R=-15 kN, u(x)=1.5x-0.25x^2, N(x)=15-5x
-  FEM1D<double, 6> beam(10.0, 1.0);
+  FEM1D<double, 6> beam(10.0, 1.0); // syntax: FEM1D<type, nNodes> object(EA, L)
 
   // Set distributed load: f(x) = 5 (constant)
   beam.setDistributedLoad(5.0);
@@ -22,10 +22,11 @@ int main() {
   beam.assembleKF();
 
   // Apply boundary conditions
+  // IMPORTANT: Apply Neumann BC FIRST, then Dirichlet BC)
   Index first_node = 0;
   Index last_node = beam.getNumNodes() - 1;
+  beam.applyNeumanCondition(last_node, 10.0);    // N(L) = F = 10
   beam.applyDirichletCondition(first_node, 0.0); // u(0) = 0
-  beam.applyNeumanCondition(last_node, 10.0);    // EA*u'(L) = 10
 
   // Solve
   beam.solveFEM();
