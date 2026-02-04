@@ -10,15 +10,17 @@
 template <typename T> class Mesh1D {
 private:
   T m_length{};
-  Index m_nNodes{}, m_nElements{};
+  Index m_nNodes{}, m_nElements{}, m_nMPperEle{}, nMPs{};
   Vector<T> m_nodes{};
+  Vector<T> m_MPs{};
   Vector<T> m_nodes_initial{}; // Store initial configuration for reset
   Vector<Vector<Index>> m_connectivity{}; // [node_i, node_j]
 
 public:
   // Constructor
-  Mesh1D(T length, Index nNodes)
-      : m_length{length}, m_nNodes{nNodes}, m_nElements{nNodes - 1} {
+  Mesh1D(T length, Index nNodes, Index nMPperEle = 0)
+      : m_length{length}, m_nNodes{nNodes}, m_nElements{nNodes - 1},
+        m_nMPperEle{nMPperEle}, nMPs{nMPperEle * (nNodes - 1)} {
     assert(m_nElements > 0 && "Number of elements must be positive");
     assert(length > 0 && "Domain length must be positive");
 
@@ -37,6 +39,19 @@ public:
     for (Index e{0}; e < m_nElements; ++e) {
       m_connectivity[e] = {e, e + 1}; // Node indices of elements
     }
+
+    // Initialize Material Points (MPs) if needed
+    if (m_nMPperEle > 0) {
+      m_MPs.reserve(nMPs);
+      Index mpID{0};
+      for (Index e{0}; e < m_nElements; ++e) {
+        T x_start = m_nodes[e];
+        T le = getLengthEle(e);
+        for (Index p{0}; p < m_nMPperEle; ++p) {
+          m_MPs.push_back(x_start + (p + 1) * le / (m_nMPperEle + 1));
+        }
+      }
+    }
   };
   // Other defaults
   Mesh1D() = default;
@@ -49,7 +64,9 @@ public:
   // Getter
   Index getNumNodes() const { return m_nNodes; }
   Index getNumElements() const { return m_nElements; }
+  Index getNumMPs() const { return nMPs; }
   const Vector<T> &nodeCoords() const { return m_nodes; }
+  const Vector<T> &getMPCoords() const { return m_MPs; }
   const Vector<Vector<Index>> &getConnectivity() const {
     return m_connectivity;
   }
@@ -80,16 +97,22 @@ public:
     }
   }
   // Setter
+  void regenerateMesh() { *this = Mesh1D(m_length, m_nNodes, m_nMPperEle); }
   void setNumElements(Index number) {
     m_nElements = number;
     m_nNodes = number + 1;
+    regenerateMesh();
   }
   void setNumNodes(Index number) {
     m_nNodes = number;
     m_nElements = number - 1;
+    regenerateMesh();
+  }
+  void setNumMPs(Index number) {
+    m_nMPperEle = number;
+    regenerateMesh();
   }
   void setLength(T length) { m_length = length; }
-  void regenerateMesh() { *this = Mesh1D(m_length, m_nNodes); }
 
   // Update mesh for time-stepping (e.g., Updated Lagrangian FEM)
   void updateNodePosition(Index nodeID, T new_x) {
@@ -124,9 +147,10 @@ public:
 template <typename T> class Mesh2D {
 private:
   T m_length{}, m_height{};
-  Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{};
+  Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{}, m_nMPperEle{}, nMPs{};
   Vector<std::pair<T, T>> m_nodes{}; // All node coordinates as (x, y) pairs
   Vector<std::pair<T, T>> m_nodes_initial{}; // Initial configuration for reset
+  Vector<std::pair<T, T>> m_MPs{};           // Material Points coordinates
   Vector<Vector<Index>> m_connectivity{};
   Vector<T> m_x_coords;         // Node x-coordinates vector
   Vector<T> m_y_coords;         // Node y-coordinates vector
@@ -135,9 +159,10 @@ private:
 
 public:
   // Constructor
-  Mesh2D(T length, T height, Index nx, Index ny)
+  Mesh2D(T length, T height, Index nx, Index ny, Index nMPperEle = 0)
       : m_length{length}, m_height{height}, m_nx{nx}, m_ny{ny},
-        m_nNodes{nx * ny}, m_nElements{(nx - 1) * (ny - 1)} {
+        m_nNodes{nx * ny}, m_nElements{(nx - 1) * (ny - 1)},
+        m_nMPperEle{nMPperEle}, nMPs{nMPperEle * nMPperEle * m_nElements} {
     assert(nx > 1 && ny > 1 && "Need at least 2 nodes in each direction");
     assert(length > 0 && height > 0 && "Domain dimensions must be positive");
 
@@ -193,6 +218,33 @@ public:
         ++elemID;
       }
     }
+
+    // Initialize Material Points (MPs) if needed
+    if (m_nMPperEle > 0) {
+      m_MPs.resize(nMPs);
+      Index mpID{0};
+      for (Index e{0}; e < m_nElements; ++e) {
+        // Get element corner coordinates
+        const auto &conn = m_connectivity[e];
+        T x_min = m_x_coords[conn[0]];
+        T x_max = m_x_coords[conn[1]];
+        T y_min = m_y_coords[conn[0]];
+        T y_max = m_y_coords[conn[3]];
+
+        T dx = (x_max - x_min) / (m_nMPperEle + 1);
+        T dy = (y_max - y_min) / (m_nMPperEle + 1);
+
+        // Distribute MPs uniformly in 2D grid within element
+        for (Index j{0}; j < m_nMPperEle; ++j) {
+          for (Index i{0}; i < m_nMPperEle; ++i) {
+            T x = x_min + (i + 1) * dx;
+            T y = y_min + (j + 1) * dy;
+            m_MPs[mpID] = {x, y};
+            ++mpID;
+          }
+        }
+      }
+    }
   };
   // Other defaults
   Mesh2D() = default;
@@ -205,9 +257,11 @@ public:
   // Getter
   Index getNumNodes() const { return m_nNodes; }
   Index getNumElements() const { return m_nElements; }
+  Index getNumMPs() const { return nMPs; }
   Index nx() const { return m_nx; }
   Index ny() const { return m_ny; }
   const Vector<std::pair<T, T>> &getNodes() const { return m_nodes; }
+  const Vector<std::pair<T, T>> &getMPCoords() const { return m_MPs; }
   const Vector<T> &getXCoords() const { return m_x_coords; }
   const Vector<T> &getYCoords() const { return m_y_coords; }
 
@@ -248,11 +302,25 @@ public:
     }
   }
   // Setter
-  void setXnodes(Index nx) { m_nx = nx; }
-  void setYnodes(Index ny) { m_ny = ny; }
-  void setLength(T length) { m_length = length; }
-  void setHeight(T height) { m_height = height; }
-  void regenerateMesh() { *this = Mesh2D(m_length, m_height, m_nx, m_ny); }
+  void setXnodes(Index nx) {
+    m_nx = nx;
+    regenerateMesh();
+  }
+  void setYnodes(Index ny) {
+    m_ny = ny;
+    regenerateMesh();
+  }
+  void setLength(T length) {
+    m_length = length;
+    regenerateMesh();
+  }
+  void setHeight(T height) {
+    m_height = height;
+    regenerateMesh();
+  }
+  void regenerateMesh() {
+    *this = Mesh2D(m_length, m_height, m_nx, m_ny, m_nMPperEle);
+  }
 
   // Update mesh for time-stepping (e.g., Updated Lagrangian FEM)
   void updateNodePosition(Index nodeID, T new_x, T new_y) {
@@ -303,7 +371,7 @@ public:
       x_nodes[i] = m_x_coords[localNodes[i]];
       y_nodes[i] = m_y_coords[localNodes[i]];
     }
-    auto [xi, eta] = parentCoor2D(x, y, x_nodes, y_nodes);
+    auto [xi, eta] = parentCoor(x, y, x_nodes, y_nodes);
     return (xi >= -1.0 && xi <= 1.0 && eta >= -1.0 && eta <= 1.0);
   }
   Index findCageID(T x, T y, Index lastElement = -1) const {

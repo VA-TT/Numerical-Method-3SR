@@ -86,9 +86,11 @@ public:
   auto begin() const { return m_elements.begin(); }
   auto end() const { return m_elements.end(); }
 
-  // Resize vector
+  // Resize + Reserve vector
   void resize(std::size_t n) { m_elements.resize(n); }
   void resize(std::size_t n, const T &value) { m_elements.resize(n, value); }
+  void reserve(std::size_t n) { m_elements.reserve(n); }
+  void reserve(std::size_t n, const T &value) { m_elements.reserve(n, value); }
 
   // Add element
   void push_back(const T &value) { m_elements.push_back(value); }

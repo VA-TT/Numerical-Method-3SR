@@ -19,29 +19,36 @@
 //    - Dirichlet: u(x) = prescribed value (essential BC)
 //    - Neumann: EA * u'(x) = prescribed force (natural BC)
 
-template <typename T, Index nNodes> class MPM1D {
+template <typename T, Index nNodes, Index nMPs> class MPM1D {
 private:
   // Physical properties
-  T m_EA{10.0};      // Axial stiffness
-  T m_length{1.0};   // Domain length
-  T m_V{1.0};        // Volume
-  T m_rho{1000};     // Density
-  T m_stress{0.0};   // Strain
-  T m_strain{0.0};   // Stress
-  T m_velocity{0.0}; // Velocity
-  T m_position{0.0}; // Velocity
+  T m_EA{10.0};    // Axial stiffness
+  T m_length{1.0}; // Domain length
+  T m_V{1.0};      // Volume
+  T m_rho{1000};   // Density
+
+  // Simulation properties
   T m_time{0.0};     // Current time
   T m_dt{0.0};       // Time step
   T m_duration{0.0}; // Duration of simulation
+  T m_xloc{0.0};     // Position of surveying
 
-  // Mesh
+  //  Mesh
   Mesh1D<T> m_mesh{};
 
-  // FEM matrices
-  Matrix<T, nNodes, nNodes> m_K{}, m_K_original{};
-  Matrix<T, nNodes, 1> m_U{};
-  Matrix<T, nNodes, 1> m_F{}, m_F_original{};
-  Matrix<T, nNodes, 1> m_R{};
+  // Nodes i
+  Vector<T> mass_i(nNodes);
+  Vector<T> velocity_i(nNodes);
+  Vector<T> momentum_i(nNodes);
+  // Nodal external forces
+  Vector<double> f_ext_i(nNodes), f_int_i(nNodes), f_total_i(nNodes);
+  // Material Points p
+  Index NumMPs{0.0};                  // Np
+  Vector<T> velocity_p(nNodes);       // Velocity
+  Vector<T> position_p(nNodes);       // Position
+  Vector<T> momentum_p(nNodes);       // Momentum
+  Vector<T> N_p(nNodes), B_p(nNodes); // Shape function
+  Vector<T> strain_p(nMPs), strain_rate_p(nMPs), dStrain_p(nMPs); // Stress
 
   // Distributed force: f(x)
   std::function<T(T)> m_rhsFunction;
@@ -51,26 +58,28 @@ private:
 
 public:
   // Constructor
-  FEM1D(T EA, T length)
-      : m_EA{EA}, m_length{length}, m_mesh{Mesh1D<T>{length, nNodes}} {
+  MPM1D(T EA, T rho, T length)
+      : m_EA{EA}, m_length{length}, m_mass_p{length * rho},
+        m_mesh{Mesh1D<T>{length, nNodes}} {
     // Default distributed load: f(x) = 0
     m_rhsFunction = [](T x) { return T(0); };
     m_mesh.print();
   };
 
   // Other defaults
-  FEM1D() = default;
-  FEM1D(const FEM1D &) = default;
-  FEM1D(FEM1D &&) = default;
-  FEM1D &operator=(const FEM1D &) = default;
-  FEM1D &operator=(FEM1D &&) = default;
-  ~FEM1D() = default;
+  MPM1D() = default;
+  MPM1D(const MPM1D &) = default;
+  MPM1D(MPM1D &&) = default;
+  MPM1D &operator=(const MPM1D &) = default;
+  MPM1D &operator=(MPM1D &&) = default;
+  ~MPM1D() = default;
 
   // Getters
   T getEA() const { return m_EA; }
   T getLength() const { return m_length; }
   Index getNumNodes() const { return m_mesh.getNumNodes(); }
   Index getNumElements() const { return m_mesh.getNumElements(); }
+  Index getNumMps() const { return m_NumMPs; }
   const Mesh1D<T> &getMesh() const { return m_mesh; }
   const Matrix<T, nNodes, nNodes> &getK() const { return m_K; }
   const Matrix<T, nNodes, 1> &getU() const { return m_U; }
@@ -95,7 +104,7 @@ public:
     m_analyticSolution = sol;
   }
 
-  // FEM Assembly
+  // MPM Assembly
   void assembleKF() {
     // Building global matrix via stiffness matrix: need connectitivty matrix
     // C in order to assemble (2x2) into (nNodes x nNodes)
@@ -155,7 +164,7 @@ public:
   }
 
   // Solve
-  void solveFEM() {
+  void solveMPM() {
     m_U = solveLinearSystem(m_K, m_F);
     std::cout << "Displacement vector U:\n";
     for (Index i = 0; i < nNodes; ++i) {
@@ -179,7 +188,7 @@ public:
 
     std::cout << "\n=== Comparison with Analytical Solution ===\n";
     std::cout << std::setw(8) << "Node" << std::setw(12) << "x" << std::setw(15)
-              << "u_FEM" << std::setw(15) << "u_Exact" << std::setw(15)
+              << "u_MPM" << std::setw(15) << "u_Exact" << std::setw(15)
               << "Error" << '\n';
     std::cout << std::string(65, '-') << '\n';
 
@@ -188,16 +197,16 @@ public:
 
     for (Index i = 0; i < nNodes; ++i) {
       T x = m_mesh.nodeCoords()[i];
-      T u_fem = m_U(i, 0);
+      T u_MPM = m_U(i, 0);
       T u_exact = m_analyticSolution(x);
-      T error = std::abs(u_fem - u_exact);
+      T error = std::abs(u_MPM - u_exact);
 
       max_error = std::max(max_error, error);
       sum_sq_error += error * error;
 
       std::cout << std::setw(8) << i << std::setw(12) << std::fixed
                 << std::setprecision(4) << x << std::setw(15)
-                << std::setprecision(6) << u_fem << std::setw(15) << u_exact
+                << std::setprecision(6) << u_MPM << std::setw(15) << u_exact
                 << std::setw(15) << std::scientific << error << '\n';
     }
 
@@ -206,7 +215,7 @@ public:
     std::cout << "RMS Error: " << rms_error << '\n';
   }
 
-  void exportResult(const std::string &filename = "fem1D_results.txt") {
+  void exportResult(const std::string &filename = "MPM1D_results.txt") {
     std::cout << "\n=== Exporting Results ===\n";
 
     // Compute element axial forces: N_e = EA * (u[j] - u[i]) / h_e
@@ -234,7 +243,7 @@ public:
       return;
     }
 
-    file << "# FEM 1D Results\n";
+    file << "# MPM 1D Results\n";
     file << "# EA = " << m_EA << ", L = " << m_length << '\n';
     file << "# Nodes = " << nNodes << ", Elements = " << nNodes - 1 << '\n';
     file << "# Columns: Node, x, u(x), N(x)\n";
@@ -253,4 +262,4 @@ public:
   }
 };
 
-#endif // FEM_H
+#endif // MPM_H
