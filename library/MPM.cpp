@@ -138,13 +138,100 @@ public:
     m_analyticSolution = sol;
   }
 
-  void p2n() {}
+  void p2n() {
+    // Recalculate shape functions at material point's current position N_p[i] =
+    // N_i(x_p) (from MPM) (TODO: should check which element contains x_p)
+    for (Index i{0}; i < nNodes; i++) {
+      N_p[i] = N[i][0](x_p); // only 1 element (number 0)
+      B_p[i] = B[i][0](x_p);
+    }
 
-  void computeNodalForce() {}
+    // Reset nodal masses and momentum to zero
+    for (Index i{0}; i < nNodes; i++) {
+      m_i[i] = mv_i[i] = 0.0;
+    }
 
-  void applyBC() {}
+    // Accumulate mass and momentum from all material points
+    // For each particle p, accumulate its contribution to all nodes i
+    for (Index p{0}; p < nMPs; p++) {
+      // Note: Currently only 1 particle at x_p_current
+      // N_p[i] = shape function value of node i at particle p's position
+      for (Index i{0}; i < nNodes; i++) {
+        m_i[i] += N_p[i] * mass_p;        // m_i = Σ_p N_i(x_p) * mass_p
+        mv_i[i] += N_p[i] * mass_p * v_p; // mv_i = Σ_p N_i(x_p) * mass_p * v_p
+      }
+    }
+  }
 
-  void n2p() {}
+  void computeNodalForce() { // f_i,ext = b_i + t_i (body force + nodal force)
+    f_ext_i.resetZero();
+    // f_i,int = V_p*B_i(x_p)*stress_p (body force + nodal force)
+    f_int_i.resetZero();
+    for (Index p{0}; p < nMPs; p++) {
+      for (Index i{0}; i < nNodes; i++) {
+        f_int_i[i] += -B_p[i] * V_p *
+                      modelParameters::stress_p; // m_i = Σ_p N_i(x_p) * mass_p
+      }
+    }
+    f_total_i = f_int_i + f_ext_i; // Unbalanced at this point}
+  }
+
+  void applyBC() {
+    mv_i[0] = 0;      // v[0] = 0
+    f_total_i[0] = 0; // a[0] = 0}
+                      // Update nodal momentum
+    mv_i += f_total_i * dt;
+
+    void n2p() { // Update particle velocity: v_p^{n+1} = v_p^n + Δt * Σ_i
+                 // N_i(x_p) * a_i
+      // where a_i = f_i / m_i
+      // Update particle position: x_p^{n+1} = x_p^n + Δt * Σ_i N_i(x_p) *
+      // v_i^{n+1} where v_i^{n+1} = mv_i^{n+1} / m_i
+      for (Index i{0}; i < nNodes; i++) {
+        v_p += N_p[i] * (f_total_i[i] / m_i[i]) * dt;
+        x_p += N_p[i] * (mv_i[i] / m_i[i]) * dt;
+      }
+
+      // Check for NaN or out of bounds
+      if (std::isnan(x_p) || std::isnan(v_p)) {
+        std::cerr << "ERROR at step " << step << ": NaN detected!\n";
+        std::cerr << "  x_p = " << x_p << ", v_p = " << v_p << "\n";
+        std::cerr << "  m_i = " << m_i << "\n";
+        std::cerr << "  N_p = " << N_p << "\n";
+        break;
+      }
+
+      if (x_p < a || x_p > b) {
+        std::cerr << "WARNING at step " << step
+                  << ": Particle out of domain!\n";
+        std::cerr << "  x_p = " << x_p << " (domain: [" << a << ", " << b
+                  << "])\n";
+      }
+
+      // Update particle momentum
+      mv_p = mass_p * v_p;
+      // Update nodal velocity
+      for (Index i{0}; i < nNodes; i++) {
+        if (m_i[i] > 1e-12) {
+          v_i[i] = mass_p * v_p * N_p[i] / m_i[i];
+          v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
+        } else {
+          v_i[i] = 0.0;
+        }
+      }
+      // Apply BC
+      v_i[0] = 0;
+
+      // Compute strain rate and stress
+      strain_rate_p = 0.0; // Reset strain rate
+      for (Index i{0}; i < nNodes; i++) {
+        strain_rate_p += B_p[i] * v_i[i]; // Mapping strain rate from the node
+      }
+      dStrain_p = strain_rate_p * dt;
+      stress_p += E * dStrain_p; // Elastic
+    }
+    std::cout << "Mapped mass to nodes (last step): " << m_i << '\n';
+  }
 
   void timeIntegration() {
     for (Index step{0}; step < nSteps; step++) {
@@ -157,9 +244,39 @@ public:
     }
   }
 
-  void compareAnalytic() {}
+  void compareAnalytic() {
+    std::cout << "\nComparison at t=0:\n";
+    std::cout << "  Position: analytical=" << positions[0]
+              << ", MPM=" << positions_mpm[0]
+              << ", error=" << constexpr_fabs(positions[0] - positions_mpm[0])
+              << "\n";
+    std::cout << "  Velocity: analytical=" << velocities[0]
+              << ", MPM=" << velocities_mpm[0]
+              << ", error=" << constexpr_fabs(velocities[0] - velocities_mpm[0])
+              << "\n";
+    std::cout << "\nComparison at final time:\n";
+    std::cout << "  Position: analytical=" << positions.back()
+              << ", MPM=" << positions_mpm.back() << ", error="
+              << constexpr_fabs(positions.back() - positions_mpm.back())
+              << "\n";
+    std::cout << "  Velocity: analytical=" << velocities.back()
+              << ", MPM=" << velocities_mpm.back() << ", error="
+              << constexpr_fabs(velocities.back() - velocities_mpm.back())
+              << "\n";
+  }
 
-  void exportResult(const std::string &filename = "MPM1D_results.txt") {}
+  void exportResult(
+      std::ofstream txtFile("mpm1D.txt");
+      txtFile << std::fixed << std::setprecision(6);
+      txtFile << "#Time \t x_analytical \t v_analytical \t x_MPM \t v_MPM \t "
+                 "error_x \t error_v\n";
+      for (Index i = 0; i < nSteps; ++i) {
+        double error_x = constexpr_fabs(positions[i] - positions_mpm[i]);
+        double error_v = constexpr_fabs(velocities[i] - velocities_mpm[i]);
+        txtFile << times[i] << " \t " << positions[i] << " \t " << velocities[i]
+                << " \t " << positions_mpm[i] << " \t " << velocities_mpm[i]
+                << " \t " << error_x << " \t " << error_v << "\n";
+      } txtFile.close();) {}
 };
 
 #endif // MPM_H
@@ -168,5 +285,7 @@ public:
 #include <iostream>
 int main() {
   Timer t;
+  double E = 4 * constants::pi * constants::pi;
+  MPM1D<double, 2, 1> beam1D(E, 1.0, 1.0, 0.1, 0.01, 10.0, 0.5);
   std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
 }
