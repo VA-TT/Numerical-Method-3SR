@@ -31,12 +31,16 @@ private:
   T m_currentTime{0.0}; // Current time
   T m_dt{0.0};          // Time step
   T m_duration{0.0};    // Duration of simulation
-  Inden m_nSteps{0.0};  // Steps of simulation
+  Index m_nSteps{0.0};  // Steps of simulation
   T m_xloc{0.0};        // Position of surveying
-  T m_v0{0.0};          // Position of surveying
+  T m_v0{0.0};          // Initial velocity
+
+  // Analytical solution (if available)
+  std::function<T(T)> m_analyticSolution;
 
   //  Mesh
   Mesh1D<T> m_mesh{};
+  Index m_nMPs{};
 
   // Nodes n
   Vector<T> mass_n(nNodes);
@@ -79,14 +83,8 @@ public:
 
     // Set up mesh
     m_mesh = Mesh1D<T>{length, nNodes, nMPperEle};
+    m_nMPs = m_mesh.getNumMPs();
     m_mesh.print();
-
-    // Set up MPs
-    Index nMPs = m_mesh.getNumMPs;
-    volume_p = Vector<T>(nMPs, m_volume / nMPs);
-    mass_p = rho * volume_p;
-    velocity_p = Vector<T>(nMPs, v0);
-    momentum_p = mass_p * v0;
   };
 
   // Other defaults
@@ -106,7 +104,7 @@ public:
   T getTimeStep() const { return m_dt; }
   T getDuration() const { return m_duration; }
   T getNumSteps() const { return m_nSteps; }
-  T getSurLoc() const { return m_xloc; }
+  T getXloc() const { return m_xloc; }
   T getIniVelo() const { return m_v0; }
 
   const Mesh1D<T> &getMesh() const { return m_mesh; }
@@ -114,23 +112,23 @@ public:
   Index getNumElements() const { return m_mesh.getNumElements(); }
   Index getNumMps() const { return m_mesh.getNumMPs(); }
 
-  getNodalMass(Index i) { return mass_n[i]; }
-  getNodalVelocity(Index i) { return velocity_n[i]; }
-  getNodalMomentum(Index i) { return momentum_n[i]; }
-  getNodalExtForce(Index i) { return f_ext_n[i]; }
-  getNodalIntForce(Index i) { return f_int_n[i]; }
-  getNodalTotalForce(Index i) { return f_total_n[i]; }
+  Vector<T> getNodalMass(Index i) { return mass_n[i]; }
+  Vector<T> getNodalVelocity(Index i) { return velocity_n[i]; }
+  Vector<T> getNodalMomentum(Index i) { return momentum_n[i]; }
+  Vector<T> getNodalExtForce(Index i) { return f_ext_n[i]; }
+  Vector<T> getNodalIntForce(Index i) { return f_int_n[i]; }
+  Vector<T> getNodalTotalForce(Index i) { return f_total_n[i]; }
 
-  getMPvolume(Index p) { return volume_p[p]; }
-  getMPmass(Index p) { return mass_p[p]; }
-  getMPvelocity(Index p) { return velocity_p[p]; }
-  getMPposition(Index p) { return position_p[p]; }
-  getMPmomentum(Index p) { return momentum_p[p]; }
-  getMPstrain(Index p) { return strain_p[p]; }
-  getMPstrainRate(Index p) { return strain_rate_p[p]; }
-  getMPdStrain(Index p) { return dStrain_p[p]; }
-  getMPstress(Index p) { return stress[p]; }
-  getMPtotalForce(Index p) { return f_total_n[p]; }
+  Vector<T> getMPvolume(Index p) { return volume_p[p]; }
+  Vector<T> getMPmass(Index p) { return mass_p[p]; }
+  Vector<T> getMPvelocity(Index p) { return velocity_p[p]; }
+  Vector<T> getMPposition(Index p) { return position_p[p]; }
+  Vector<T> getMPmomentum(Index p) { return momentum_p[p]; }
+  Vector<T> getMPstrain(Index p) { return strain_p[p]; }
+  Vector<T> getMPstrainRate(Index p) { return strain_rate_p[p]; }
+  Vector<T> getMPdStrain(Index p) { return dStrain_p[p]; }
+  Vector<T> getMPstress(Index p) { return stress[p]; }
+  Vector<T> getMPtotalForce(Index p) { return f_total_n[p]; }
 
   // Setters
   void setE(T E) { m_E = E; }
@@ -138,27 +136,18 @@ public:
     m_analyticSolution = sol;
   }
 
+  void setupMP() {                               // Set up MPs
+    volume_p = Vector<T>(nMPs, m_volume / nMPs); // m_volume might change
+    velocity_p = Vector<T>(nMPs, m_v0);
+    momentum_p = mass_p * m_v0;
+  }
+
   void p2n() {
-    // Recalculate shape functions at material point's current position N_p[i] =
-    // N_i(x_p) (from MPM) (TODO: should check which element contains x_p)
-    for (Index i{0}; i < nNodes; i++) {
-      N_p[i] = N[i][0](x_p); // only 1 element (number 0)
-      B_p[i] = B[i][0](x_p);
-    }
-
-    // Reset nodal masses and momentum to zero
-    for (Index i{0}; i < nNodes; i++) {
-      m_i[i] = mv_i[i] = 0.0;
-    }
-
-    // Accumulate mass and momentum from all material points
-    // For each particle p, accumulate its contribution to all nodes i
-    for (Index p{0}; p < nMPs; p++) {
-      // Note: Currently only 1 particle at x_p_current
-      // N_p[i] = shape function value of node i at particle p's position
-      for (Index i{0}; i < nNodes; i++) {
-        m_i[i] += N_p[i] * mass_p;        // m_i = Σ_p N_i(x_p) * mass_p
-        mv_i[i] += N_p[i] * mass_p * v_p; // mv_i = Σ_p N_i(x_p) * mass_p * v_p
+    for (Index p{0}; p < m_nMPs; ++p) {
+      Index e = findCageID(p);
+      if (e != -1) {
+        Index n1 = m_mesh.m_connectivity[e][0];
+        Index n2 = m_connectivity[e][1];
       }
     }
   }
@@ -233,6 +222,14 @@ public:
     std::cout << "Mapped mass to nodes (last step): " << m_i << '\n';
   }
 
+  void resetMesh() {
+    // Reset nodal masses and momentum to zero
+    for (Index i{0}; i < nNodes; i++) {
+      m_i[i] = mv_i[i] = 0.0;
+      m_mesh.resetMesh();
+    }
+  }
+
   void timeIntegration() {
     for (Index step{0}; step < nSteps; step++) {
       m_currentTime = step * m_dt;
@@ -241,6 +238,7 @@ public:
       computeNodalForce();
       applyBC();
       n2p();
+      resetMesh();
     }
   }
 
@@ -286,6 +284,13 @@ public:
 int main() {
   Timer t;
   double E = 4 * constants::pi * constants::pi;
-  MPM1D<double, 2, 1> beam1D(E, 1.0, 1.0, 0.1, 0.01, 10.0, 0.5);
-  std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
+  MPM1D<double, 2, 1> beam1D(
+      E, 1.0, 1.0, 0.1, 0.01, 10.0,
+      0.5); // MPM1D<type, nPoints, nMPperEle>(E,rho,length,v0,dt,duration,
+            // xloc)
+  double omega =
+      1 / (beam1D.getLength()) * std::sqrt(beam1D.getE() / beam1D.getRho());
+  beam1D.setAnalyticSolution([]() {
+    return beam1D.getXloc() / std::exp(beam1D.getIniVelo() / (beam1D.getLength()*w) * std::sin(w * beam1D.getCurrentTime())};
+std::cout << "Time elapsed: " << t.elapsed() << " seconds\n";
 }

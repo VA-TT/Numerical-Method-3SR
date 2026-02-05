@@ -74,6 +74,12 @@ public:
     return m_connectivity;
   }
 
+  // Get connectivity of a single element
+  const Vector<Index> &getEleConnectivity(Index e) const {
+    assert(e >= 0 && e < m_nElements && "Invalid element ID");
+    return m_connectivity[e];
+  }
+
   T getLengthEle(Index e) const {
     assert(e >= 0 && e < m_nElements && "Invalid element ID");
     Index n1 = m_connectivity[e][0];
@@ -134,7 +140,7 @@ public:
   const Vector<T> &getInitialNodes() const { return m_nodes_initial; }
 
   // MPM helper function
-  Index findCageID(T x) const {
+  friend Index findCageID(T x) const {
     for (Index e{0}; e < m_nElements; ++e) {
       Index n1 = m_connectivity[e][0];
       Index n2 = m_connectivity[e][1];
@@ -167,7 +173,7 @@ public:
   }
 
   // Check if a node is active (contains MPs)
-  bool isActiveNode(Index nodeID) const {
+  friend bool isActiveNode(Index nodeID) const {
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
     return m_activeNodes[nodeID];
   }
@@ -298,7 +304,7 @@ public:
   const Vector<T> &getYCoords() const { return m_y_coords; }
 
   // Get element connectivity
-  const Vector<Index> &getConnectivity(Index elemID) const {
+  const Vector<Index> &getEleConnectivity(Index elemID) const {
     assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
     return m_connectivity[elemID];
   }
