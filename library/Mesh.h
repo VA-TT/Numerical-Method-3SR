@@ -70,6 +70,10 @@ public:
   const Vector<bool> &getActiveNodes() const { return m_activeNodes; }
   const Vector<T> &nodeCoords() const { return m_nodes; }
   const Vector<T> &getMPCoords() const { return m_MPs; }
+  T getMPCoord(Index p) const {
+    assert(p >= 0 && p < nMPs && "Invalid MP index");
+    return m_MPs[p];
+  }
   const Vector<Vector<Index>> &getConnectivity() const {
     return m_connectivity;
   }
@@ -139,8 +143,8 @@ public:
 
   const Vector<T> &getInitialNodes() const { return m_nodes_initial; }
 
-  // MPM helper function
-  friend Index findCageID(T x) const {
+  // MPM helper function: Find element containing position x
+  Index findCageID(T x) const {
     for (Index e{0}; e < m_nElements; ++e) {
       Index n1 = m_connectivity[e][0];
       Index n2 = m_connectivity[e][1];
@@ -300,6 +304,10 @@ public:
   Index ny() const { return m_ny; }
   const Vector<std::pair<T, T>> &getNodes() const { return m_nodes; }
   const Vector<std::pair<T, T>> &getMPCoords() const { return m_MPs; }
+  std::pair<T, T> getMPCoord(Index p) const {
+    assert(p >= 0 && p < nMPs && "Invalid MP index");
+    return m_MPs[p];
+  }
   const Vector<T> &getXCoords() const { return m_x_coords; }
   const Vector<T> &getYCoords() const { return m_y_coords; }
 

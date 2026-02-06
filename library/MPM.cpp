@@ -6,6 +6,7 @@
 #include "Vector.h"
 #include "gaussQuadrature.h"
 #include "parentElement.h"
+#include "physicConstants.h"
 #include <cassert>
 #include <fstream>
 #include <functional>
@@ -26,6 +27,7 @@ private:
   T m_length{1.0}; // Domain length
   T m_volume{1.0}; // Volume
   T m_rho{1000};   // Density
+  T m_G{0.0};      // Gravity Acceleration
 
   // Simulation properties
   T m_currentTime{0.0}; // Current time
@@ -40,28 +42,25 @@ private:
 
   //  Mesh
   Mesh1D<T> m_mesh{};
-  Index m_nMPs{};
 
   // Nodes n
   Vector<T> mass_n(nNodes);
   Vector<T> position_n(nNodes);
   Vector<T> velocity_n(nNodes);
+  Vector<T> acceleration_n(nNodes);
   Vector<T> momentum_n(nNodes);
+  Vector<T> bodyForce_n(nNodes), tractionForce_n(nNodes);
   // Nodal external forces
-  Vector<double> f_ext_n(nNodes), f_int_n(nNodes), f_total_n(nNodes);
+  Vector<double> forceExternal_n(nNodes), forceInternal_n(nNodes),
+      totalForce_n(nNodes);
 
   // Material Points p
-  Vector<T> volume_p((nNodes - 1) * nMPperEle);   // Volume
-  Vector<T> mass_p((nNodes - 1) * nMPperEle);     // Mass
-  Vector<T> position_p((nNodes - 1) * nMPperEle); // Position
-  Vector<T> velocity_p((nNodes - 1) * nMPperEle); // Velocity
-  Vector<T> momentum_p((nNodes - 1) * nMPperEle); // Momentum
-  Vector<T> N_p((nNodes - 1) * nMPperEle),
-      B_p((nNodes - 1) * nMPperEle); // Shape function
-  Vector<T> stress_p((nNodes - 1) * nMPperEle),
-      strain_p((nNodes - 1) * nMPperEle),
-      strain_rate_p((nNodes - 1) * nMPperEle),
-      dStrain_p((nNodes - 1) * nMPperEle); // Stress + strain
+  Vector<T> volume_p;                                     // Volume
+  Vector<T> mass_p;                                       // Mass
+  Vector<T> position_p;                                   // Position
+  Vector<T> velocity_p;                                   // Velocity
+  Vector<T> momentum_p;                                   // Momentum
+  Vector<T> stress_p, strain_p, strain_rate_p, dStrain_p; // Stress + strain
 
   // Analytical solution (if available)
   std::function<T(T)> m_analyticSolution;
@@ -83,7 +82,6 @@ public:
 
     // Set up mesh
     m_mesh = Mesh1D<T>{length, nNodes, nMPperEle};
-    m_nMPs = m_mesh.getNumMPs();
     m_mesh.print();
   };
 
@@ -97,6 +95,7 @@ public:
 
   // Getters
   T getE() const { return m_E; }
+  T getG() const { return m_G; }
   T getRho() const { return m_rho; }
   T getLength() const { return m_length; }
   T getVolume() const { return m_volume; }
@@ -115,9 +114,9 @@ public:
   Vector<T> getNodalMass(Index i) { return mass_n[i]; }
   Vector<T> getNodalVelocity(Index i) { return velocity_n[i]; }
   Vector<T> getNodalMomentum(Index i) { return momentum_n[i]; }
-  Vector<T> getNodalExtForce(Index i) { return f_ext_n[i]; }
-  Vector<T> getNodalIntForce(Index i) { return f_int_n[i]; }
-  Vector<T> getNodalTotalForce(Index i) { return f_total_n[i]; }
+  Vector<T> getNodalExtForce(Index i) { return forceExternal_n[i]; }
+  Vector<T> getNodalIntForce(Index i) { return forceInternal_n[i]; }
+  Vector<T> getNodalTotalForce(Index i) { return totalForce_n[i]; }
 
   Vector<T> getMPvolume(Index p) { return volume_p[p]; }
   Vector<T> getMPmass(Index p) { return mass_p[p]; }
@@ -127,115 +126,146 @@ public:
   Vector<T> getMPstrain(Index p) { return strain_p[p]; }
   Vector<T> getMPstrainRate(Index p) { return strain_rate_p[p]; }
   Vector<T> getMPdStrain(Index p) { return dStrain_p[p]; }
-  Vector<T> getMPstress(Index p) { return stress[p]; }
-  Vector<T> getMPtotalForce(Index p) { return f_total_n[p]; }
+  Vector<T> getMPstress(Index p) { return stress_p[p]; }
+  Vector<T> getMPtotalForce(Index p) { return totalForce_n[p]; }
 
   // Setters
   void setE(T E) { m_E = E; }
+  void setG(T G) { m_G = G; }
   void setAnalyticSolution(std::function<T(T)> sol) {
     m_analyticSolution = sol;
   }
 
-  void setupMP() {                               // Set up MPs
-    volume_p = Vector<T>(nMPs, m_volume / nMPs); // m_volume might change
-    velocity_p = Vector<T>(nMPs, m_v0);
+  void setupMP() { // Set up MPs
+    for (Index p = 0; p < m_mesh.getNumMPs(); ++p) {
+      mp_element_id[p] = m_mesh.findCageID(m_mesh.getMPCoord(p));
+    }
+    volume_p = Vector<T>(m_mesh.getNumMPs(),
+                         m_volume / m_mesh.getNumMPs); // m_volume might change
+    velocity_p = Vector<T>(m_mesh.getNumMPs(), m_v0);
     momentum_p = mass_p * m_v0;
   }
 
   void p2n() {
-    for (Index p{0}; p < m_nMPs; ++p) {
-      Index e = findCageID(p);
+    // Nodal mass + momentum
+    for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
+      Index e = m_mesh.findCageID(x_p);
       if (e != -1) {
-        Index n1 = m_mesh.m_connectivity[e][0];
-        Index n2 = m_connectivity[e][1];
+        T x_p = m_mesh.getMPCoord(p);
+        Index n1 = m_mesh.getEleConnectivity(e)[0];
+        Index n2 = m_mesh.getEleConnectivity(e)[1];
+        auto [x1, x2] = m_mesh.getElementNodes(e);
+        T xi = parentCoor(x_p, x1, x2);
+        mass_n[n1] += N1_r(xi) * mass_p[p];
+        mass_n[n2] += N2_r(xi) * mass_p[p];
+        momentum_n[n1] += N1_r(xi) * mass_p[p] * velocity_p[p];
+        momentum_n[n2] += N2_r(xi) * mass_p[p] * velocity_p[p];
       }
+    }
+    // Nodal velocity
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (!approximatelyEqualAbsRel(mass_n[i], T{})) // avoid being divided by 0
+        velocity_n[i] = momentum_n[i] / mass_n[i];
     }
   }
 
-  void computeNodalForce() { // f_i,ext = b_i + t_i (body force + nodal force)
-    f_ext_i.resetZero();
-    // f_i,int = V_p*B_i(x_p)*stress_p (body force + nodal force)
-    f_int_i.resetZero();
-    for (Index p{0}; p < nMPs; p++) {
-      for (Index i{0}; i < nNodes; i++) {
-        f_int_i[i] += -B_p[i] * V_p *
-                      modelParameters::stress_p; // m_i = Σ_p N_i(x_p) * mass_p
+  void nodalEquilibrium() {
+    // f^ext = b + t
+    // g = constants::gravity; //not considering graivty in this case
+    for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
+      Index e = m_mesh.findCageID(x_p);
+      if (e != -1) {
+        T x_p = m_mesh.getMPCoord(p);
+        Index n1 = m_mesh.getEleConnectivity(e)[0];
+        Index n2 = m_mesh.getEleConnectivity(e)[1];
+        auto [x1, x2] = m_mesh.getElementNodes(e);
+        T xi = parentCoor(x_p, x1, x2);
+        bodyForce_n[n1] += m_G * N1_r(xi) * mass_p[p];
+        bodyForce_n[n2] += m_G * N2_r(xi) * mass_p[p];
+        // Traction force t_i (to be implemented)
+        forceInternal_n[n1] += volume_p[p] * dN1_dx(xi) * stress_p[p];
+        forceInternal_n[n2] += volume_p[p] * dN2_dx(xi) * stress_p[p];
       }
     }
-    f_total_i = f_int_i + f_ext_i; // Unbalanced at this point}
+    forceExternal_n = bodyForce_n + tractionForce_n;
+    totalForce_n = forceExternal_n + forceInternal_n;
+    acceleration_n = totalForce_n / mass_n;
+    velocity_n += acceleration_n * dt
   }
-
   void applyBC() {
     mv_i[0] = 0;      // v[0] = 0
     f_total_i[0] = 0; // a[0] = 0}
                       // Update nodal momentum
     mv_i += f_total_i * dt;
+  }
 
-    void n2p() { // Update particle velocity: v_p^{n+1} = v_p^n + Δt * Σ_i
-                 // N_i(x_p) * a_i
-      // where a_i = f_i / m_i
-      // Update particle position: x_p^{n+1} = x_p^n + Δt * Σ_i N_i(x_p) *
-      // v_i^{n+1} where v_i^{n+1} = mv_i^{n+1} / m_i
-      for (Index i{0}; i < nNodes; i++) {
-        v_p += N_p[i] * (f_total_i[i] / m_i[i]) * dt;
-        x_p += N_p[i] * (mv_i[i] / m_i[i]) * dt;
-      }
-
-      // Check for NaN or out of bounds
-      if (std::isnan(x_p) || std::isnan(v_p)) {
-        std::cerr << "ERROR at step " << step << ": NaN detected!\n";
-        std::cerr << "  x_p = " << x_p << ", v_p = " << v_p << "\n";
-        std::cerr << "  m_i = " << m_i << "\n";
-        std::cerr << "  N_p = " << N_p << "\n";
-        break;
-      }
-
-      if (x_p < a || x_p > b) {
-        std::cerr << "WARNING at step " << step
-                  << ": Particle out of domain!\n";
-        std::cerr << "  x_p = " << x_p << " (domain: [" << a << ", " << b
-                  << "])\n";
-      }
-
-      // Update particle momentum
-      mv_p = mass_p * v_p;
-      // Update nodal velocity
-      for (Index i{0}; i < nNodes; i++) {
-        if (m_i[i] > 1e-12) {
-          v_i[i] = mass_p * v_p * N_p[i] / m_i[i];
-          v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
-        } else {
-          v_i[i] = 0.0;
-        }
-      }
-      // Apply BC
-      v_i[0] = 0;
-
-      // Compute strain rate and stress
-      strain_rate_p = 0.0; // Reset strain rate
-      for (Index i{0}; i < nNodes; i++) {
-        strain_rate_p += B_p[i] * v_i[i]; // Mapping strain rate from the node
-      }
-      dStrain_p = strain_rate_p * dt;
-      stress_p += E * dStrain_p; // Elastic
+  void n2p() { // Update particle velocity: v_p^{n+1} = v_p^n + Δt * Σ_i
+               // N_i(x_p) * a_i
+    // where a_i = f_i / m_i
+    // Update particle position: x_p^{n+1} = x_p^n + Δt * Σ_i N_i(x_p) *
+    // v_i^{n+1} where v_i^{n+1} = mv_i^{n+1} / m_i
+    for (Index i{0}; i < nNodes; i++) {
+      v_p += N_p[i] * (f_total_i[i] / m_i[i]) * dt;
+      x_p += N_p[i] * (mv_i[i] / m_i[i]) * dt;
     }
-    std::cout << "Mapped mass to nodes (last step): " << m_i << '\n';
+
+    // Check for NaN or out of bounds
+    if (std::isnan(x_p) || std::isnan(v_p)) {
+      std::cerr << "ERROR at step " << step << ": NaN detected!\n";
+      std::cerr << "  x_p = " << x_p << ", v_p = " << v_p << "\n";
+      std::cerr << "  m_i = " << m_i << "\n";
+      std::cerr << "  N_p = " << N_p << "\n";
+      break;
+    }
+
+    if (x_p < a || x_p > b) {
+      std::cerr << "WARNING at step " << step << ": Particle out of domain!\n";
+      std::cerr << "  x_p = " << x_p << " (domain: [" << a << ", " << b
+                << "])\n";
+    }
+
+    // Update particle momentum
+    mv_p = mass_p * v_p;
+    // Update nodal velocity
+    for (Index i{0}; i < nNodes; i++) {
+      if (m_i[i] > 1e-12) {
+        v_i[i] = mass_p * v_p * N_p[i] / m_i[i];
+        v_i[i] = mv_i[i] / m_i[i]; // Causing losing in energy
+      } else {
+        v_i[i] = 0.0;
+      }
+    }
+    // Apply BC
+    v_i[0] = 0;
+
+    // Compute strain rate and stress
+    strain_rate_p = 0.0; // Reset strain rate
+    for (Index i{0}; i < nNodes; i++) {
+      strain_rate_p += B_p[i] * v_i[i]; // Mapping strain rate from the node
+    }
+    dStrain_p = strain_rate_p * dt;
+    stress_p += E * dStrain_p; // Elastic
   }
 
   void resetMesh() {
-    // Reset nodal masses and momentum to zero
-    for (Index i{0}; i < nNodes; i++) {
-      m_i[i] = mv_i[i] = 0.0;
-      m_mesh.resetMesh();
-    }
+    mass_n.resetZero();
+    momentum_n.resetZero();
+    velocity_n.resetZero();
+    bodyForce.resetZero();
+    tractionForce.resetZero();
+    forceExternal_n.resetZero();
+    forceExternal_n.resetZero();
+    forceInternal_n.resetZero();
+    m_mesh.resetMesh();
   }
 
   void timeIntegration() {
     for (Index step{0}; step < nSteps; step++) {
       m_currentTime = step * m_dt;
       times.push_back(current_time);
+      resetMesh();
       p2n();
-      computeNodalForce();
+      nodalEquilibrium();
       applyBC();
       n2p();
       resetMesh();
@@ -263,18 +293,20 @@ public:
               << "\n";
   }
 
-  void exportResult(
-      std::ofstream txtFile("mpm1D.txt");
-      txtFile << std::fixed << std::setprecision(6);
-      txtFile << "#Time \t x_analytical \t v_analytical \t x_MPM \t v_MPM \t "
-                 "error_x \t error_v\n";
-      for (Index i = 0; i < nSteps; ++i) {
-        double error_x = constexpr_fabs(positions[i] - positions_mpm[i]);
-        double error_v = constexpr_fabs(velocities[i] - velocities_mpm[i]);
-        txtFile << times[i] << " \t " << positions[i] << " \t " << velocities[i]
-                << " \t " << positions_mpm[i] << " \t " << velocities_mpm[i]
-                << " \t " << error_x << " \t " << error_v << "\n";
-      } txtFile.close();) {}
+  void exportResult() {
+    std::ofstream txtFile("mpm1D.txt");
+    txtFile << std::fixed << std::setprecision(6);
+    txtFile << "#Time \t x_analytical \t v_analytical \t x_MPM \t v_MPM \t "
+               "error_x \t error_v\n";
+    for (Index i = 0; i < nSteps; ++i) {
+      double error_x = constexpr_fabs(positions[i] - positions_mpm[i]);
+      double error_v = constexpr_fabs(velocities[i] - velocities_mpm[i]);
+      txtFile << times[i] << " \t " << positions[i] << " \t " << velocities[i]
+              << " \t " << positions_mpm[i] << " \t " << velocities_mpm[i]
+              << " \t " << error_x << " \t " << error_v << "\n";
+    }
+    txtFile.close();
+  }
 };
 
 #endif // MPM_H

@@ -176,6 +176,18 @@ template <typename T> Vector<T> operator*(const Vector<T> &v, const T &k) {
   return k * v;
 }
 
+// Element-wise multiplication
+template <typename T>
+Vector<T> operator*(const Vector<T> &v1, const Vector<T> &v2) {
+  assert(
+      v1.size() == v2.size() &&
+      "Can't perfom element-wised mulplication on 2 different-sized vectors!");
+  Vector<T> result(v1.size());
+  for (Index i = 0; i < v1.size(); ++i)
+    result[i] = v1[i] * v2[i];
+  return result;
+}
+
 // Unary minus
 template <typename T> Vector<T> operator-(const Vector<T> &v) {
   return T{-1} * v;
@@ -186,6 +198,22 @@ template <typename T> Vector<T> operator/(const Vector<T> &v, const T &k) {
   assert(!approximatelyEqualAbsRel(k, 0.0) &&
          "Can't divide by a number approximate to 0.");
   return v * (1 / k);
+}
+
+// Scalar divide (scalar/vector)
+template <typename T> Vector<T> operator/(const T &k, const Vector<T> &v) {
+  Vector<T> result(v.size());
+  for (Index i = 0; i < v.size(); ++i) {
+    assert(!approximatelyEqualAbsRel(v[i], T{}) && "Division by zero!");
+    result[i] = k / v[i];
+  }
+  return result;
+}
+
+// Element-wised divide
+template <typename T>
+Vector<T> operator/(const Vector<T> &v1, const Vector<T> &v2) {
+  return v1 * (1 / v2);
 }
 
 // Vector subtraction
@@ -236,19 +264,6 @@ Vector<T> crossProduct2(const Vector<T> &v1, const Vector<T> &v2) {
       }
     }
   }
-  return result;
-}
-
-// Hadamard product (element-wise multiplication)
-template <typename T>
-Vector<T> hadamardProduct(const Vector<T> &v1, const Vector<T> &v2) {
-  if (v1.size() != v2.size())
-    throw std::invalid_argument(
-        "Vectors must have the same dimension for Hadamard product.");
-
-  Vector<T> result(v1.size());
-  for (Index i = 0; i < v1.size(); ++i)
-    result[i] = v1[i] * v2[i];
   return result;
 }
 
