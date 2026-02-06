@@ -33,7 +33,7 @@ private:
   T m_currentTime{0.0}; // Current time
   T m_dt{0.0};          // Time step
   T m_duration{0.0};    // Duration of simulation
-  Index m_nSteps{0.0};  // Steps of simulation
+  Index m_nSteps{0};    // Steps of simulation
   T m_xloc{0.0};        // Position of surveying
   T m_v0{0.0};          // Initial velocity
 
@@ -52,7 +52,7 @@ private:
   Vector<T> momentum_n{};
   Vector<T> bodyForce_n{}, tractionForce_n{};
   // Nodal external forces
-  Vector<double> forceExternal_n{}, forceInternal_n{}, totalForce_n{};
+  Vector<T> forceExternal_n{}, forceInternal_n{}, totalForce_n{};
 
   // Material Points p
   Vector<Index> mp_element_id{}; // Cached element ID
@@ -218,8 +218,14 @@ public:
     }
     forceExternal_n = bodyForce_n + tractionForce_n;
     totalForce_n = forceExternal_n + forceInternal_n;
-    acceleration_n = totalForce_n / mass_n;
-    velocity_n += acceleration_n * m_dt;
+
+    // Update velocity (element-wise: v_i += (F_i/m_i) * dt)
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (mass_n[i] > T{1e-12}) {
+        acceleration_n[i] = totalForce_n[i] / mass_n[i];
+        velocity_n[i] += acceleration_n[i] * m_dt;
+      }
+    }
   }
   void applyNodalVeloConstraint(Index i, T value) { velocity_n[i] = value; }
   void applyNodalAccConstraint(Index i, T value) { acceleration_n[i] = value; }
@@ -239,7 +245,11 @@ public:
 
         // Update position
         position_p[p] += velocity_p[p] * m_dt;
+
+        // Update element ID (MP might move to different element)
         mp_element_id[p] = m_mesh.findCageID(position_p[p]);
+
+        // Strain rate: ε̇ = dN/dx * v (dN_dx already includes Jacobian)
         strain_rate_p[p] =
             dN1_dx(x1, x2) * velocity_n[n1] + dN2_dx(x1, x2) * velocity_n[n2];
 
@@ -286,7 +296,7 @@ public:
       p2n();
       nodalEquilibrium();
       applyNodalVeloConstraint(0, T{});
-      applyNodalVeloConstraint(0, T{});
+      applyNodalVeloConstraint(nNodes - 1, T{});
       n2p();
     }
   }
