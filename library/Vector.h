@@ -127,46 +127,6 @@ public:
       (*this)[i] += other[i];
     return *this;
   }
-
-  //-= operator
-  Vector &operator-=(const Vector<T> &other) { return *this += -other; }
-
-  //*= operator (scalar)
-  Vector &operator*=(const T &scalar) {
-    for (Index i{0}; i < this->size(); ++i)
-      (*this)[i] *= scalar;
-    return *this;
-  }
-
-  //*= operator (element-wise)
-  Vector &operator*=(const Vector<T> &other) {
-    if (this->size() != other.size())
-      throw std::invalid_argument(
-          "Vectors must have the same dimension for operator*=.");
-    for (Index i{0}; i < this->size(); ++i)
-      (*this)[i] *= other[i];
-    return *this;
-  }
-
-  ///= operator (scalar)
-  Vector &operator/=(const T &scalar) {
-    if (approximatelyEqualAbsRel(scalar, T{0}))
-      throw std::invalid_argument("Cannot divide by zero scalar.");
-    return *this *= (T{1} / scalar);
-  }
-
-  ///= operator (element-wise)
-  Vector &operator/=(const Vector<T> &other) {
-    if (this->size() != other.size())
-      throw std::invalid_argument(
-          "Vectors must have the same dimension for operator/=.");
-    for (Index i{0}; i < this->size(); ++i) {
-      if (approximatelyEqualAbsRel(other[i], T{0}))
-        throw std::invalid_argument("Cannot divide by zero element in vector.");
-    }
-    return *this *= (T{1} / other);
-  }
-
   // Projection on another vector
   Vector<T> projection(const Vector &other) const {
     return normalize(other) * dotProduct(*this, normalize(other));
@@ -237,17 +197,15 @@ template <typename T> Vector<T> operator-(const Vector<T> &v) {
 template <typename T> Vector<T> operator/(const Vector<T> &v, const T &k) {
   assert(!approximatelyEqualAbsRel(k, 0.0) &&
          "Can't divide by a number approximate to 0.");
-  return v * (1 / k);
+  return v * (T{1} / k);
 }
 
 // Scalar divide (scalar/vector)
 template <typename T> Vector<T> operator/(const T &k, const Vector<T> &v) {
   Vector<T> result(v.size());
   for (Index i = 0; i < v.size(); ++i) {
-    if (!approximatelyEqualAbsRel(v[i], T{}))
-      result[i] = k / v[i];
-    else
-      result[i] = T{};
+    assert(!approximatelyEqualAbsRel(v[i], T{}) && "Division by zero!");
+    result[i] = k / v[i];
   }
   return result;
 }
@@ -255,7 +213,9 @@ template <typename T> Vector<T> operator/(const T &k, const Vector<T> &v) {
 // Element-wised divide
 template <typename T>
 Vector<T> operator/(const Vector<T> &v1, const Vector<T> &v2) {
-  return v1 * (1 / v2);
+  assert(v1.size() == v2.size() &&
+         "Can't perfom element-wised division on 2 different-sized vectors!");
+  return v1 * (T{1} / v2);
 }
 
 // Vector subtraction

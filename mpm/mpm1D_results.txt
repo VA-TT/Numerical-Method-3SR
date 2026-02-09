@@ -3,4 +3,4 @@
 # MPs = 1, Nodes = 2
 # Columns: MP, x, v, strain, stress
       MP              x              v         strain         stress
-       0       0.500000       0.000000       0.000000       0.000000
+       0       0.500000      -0.000000      -0.000000      -0.000000

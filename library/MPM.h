@@ -1,5 +1,5 @@
-// #ifndef MATERIAL_POINT_METHOD_H
-// #define MATERIAL_POINT_METHOD_H
+#ifndef MATERIAL_POINT_METHOD_H
+#define MATERIAL_POINT_METHOD_H
 
 #include "Matrix.h"
 #include "Mesh.h"
@@ -27,7 +27,7 @@ private:
   T m_currentTime{0.0}; // Current time
   T m_dt{0.0};          // Time step
   T m_duration{10.0};   // Duration of simulation
-  Index m_nSteps{0.0};  // Number of steps
+  Index m_nSteps{0};    // Number of steps
   T m_xloc{0.0};        // Position of surveying
   T m_v0{0.0};          // Initial velocity
 
@@ -60,41 +60,41 @@ private:
 
 public:
   // Constructor
-  MPM1D(T dt, T duration, T rho, T length, T xloc, T v0 = T{}, T a0 = T{})
-      : m_rho{rho}, m_length{length}, m_v0{v0}, m_dt{dt}, m_duration{duration},
-        m_xloc{xloc}, m_mesh{Mesh1D<T>{length, nNodes, nMPperEle}} {
+  MPM1D(T E, T rho, T length, T v0, T dt, T duration, T xloc)
+      : m_E{E}, m_rho{rho}, m_length{length}, m_v0{v0}, m_dt{dt},
+        m_duration{duration}, m_xloc{xloc},
+        m_mesh{Mesh1D<T>{length, nNodes, nMPperEle}} {
     // Check critical time
-    T c = std::sqrt(E / rho);
+    T c = std::sqrt(m_E / rho);
     T dt_crit = m_length / c;
     assert((dt_crit / 10.0) >= dt &&
            "Time step isn't satisfied CFL condition (too big)");
     m_nSteps = static_cast<Index>(duration / dt);
 
     // Initialize nodal vectors
-    mass_n.resize(nNodes);
-    position_n.resize(nNodes);
-    velocity_n.resize(nNodes);
-    acceleration_n.resize(nNodes);
-    momentum_n.resize(nNodes);
-    bodyForce_n.resize(nNodes);
-    tractionForce_n.resize(nNodes);
-    forceExternal_n.resize(nNodes);
-    forceInternal_n.resize(nNodes);
-    totalForce_n.resize(nNodes);
+    mass_n.resize(nNodes, T{});
+    position_n.resize(nNodes, T{});
+    velocity_n.resize(nNodes, T{});
+    acceleration_n.resize(nNodes, T{});
+    momentum_n.resize(nNodes, T{});
+    bodyForce_n.resize(nNodes, T{});
+    tractionForce_n.resize(nNodes, T{});
+    forceExternal_n.resize(nNodes, T{});
+    forceInternal_n.resize(nNodes, T{});
+    totalForce_n.resize(nNodes, T{});
 
     // Initialize MP vectors
-    mp_element_id.resize(nMPs);
-    volume_p.resize(nMPs);
-    mass_p.resize(nMPs);
-    position_p.resize(nMPs);
-    velocity_p.resize(nMPs, m_v0);
-    momentum_p.resize(nMPs);
-    stress_p.resize(nMPs);
-    strain_p.resize(nMPs);
-    strain_rate_p.resize(nMPs);
-    dStrain_p.resize(nMPs);
-
     Index nMPs = m_mesh.getNumMPs();
+    mp_element_id.resize(nMPs, T{});
+    volume_p.resize(nMPs, T{});
+    mass_p.resize(nMPs, T{});
+    position_p.resize(nMPs, T{});
+    velocity_p.resize(nMPs, m_v0);
+    momentum_p.resize(nMPs, T{});
+    stress_p.resize(nMPs, T{}); // Explicitly initialize to zero
+    strain_p.resize(nMPs, T{}); // Explicitly initialize to zero
+    strain_rate_p.resize(nMPs, T{});
+    dStrain_p.resize(nMPs, T{});
     m_mesh.print();
   };
 
@@ -150,15 +150,15 @@ public:
   void setComportmentLaw(std::function<T(T)> law) { m_law = law; }
 
   void setupMP() {
-    // Recalculate 1D volume (length only, area = 1.0)
-    m_volume = m_length * 1.0; // Volume could change over time
-    m_rho = m_mass / nMPs;     // Density could change over time
+    Index nMPs = m_mesh.getNumMPs();
+    m_volume = m_length * 1.0; // 1D volume: length × area (area=1.0)
+    T totalMass = m_rho * m_volume;
 
     for (Index p = 0; p < nMPs; ++p) {
       position_p[p] = m_mesh.getMPCoord(p);
       mp_element_id[p] = m_mesh.findCageID(position_p[p]);
       volume_p[p] = m_volume / nMPs;
-      mass_p[p] = m_mass / nMPs;
+      mass_p[p] = totalMass / nMPs;
       momentum_p[p] = mass_p[p] * velocity_p[p];
     }
   }
@@ -179,11 +179,14 @@ public:
         momentum_n[n2] += N2_r(xi) * momentum_p[p];
       }
     }
+
     // Nodal velocity
-    for (Index i{0}; i < getNumNodes(); ++i) {
-      if (!approximatelyEqualAbsRel(mass_n[i], T{})) // avoid being divided by 0
-        velocity_n[i] = momentum_n[i] / mass_n[i];
-    }
+    velocity_n = momentum_n / mass_n;
+    // for (Index i{0}; i < getNumNodes(); ++i) {
+    //   if (!approximatelyEqualAbsRel(mass_n[i], T{})) // avoid being divided
+    //   by 0
+    //     velocity_n[i] = momentum_n[i] / mass_n[i];
+    // }
   }
 
   void nodalEquilibrium() {
@@ -204,12 +207,14 @@ public:
       }
     }
     forceExternal_n = bodyForce_n + tractionForce_n;
-    totalForce_n = forceExternal_n + forceInternal_n; 
+    totalForce_n = forceExternal_n + forceInternal_n;
     acceleration_n = totalForce_n / mass_n;
     velocity_n += acceleration_n * m_dt;
   }
   void applyNodalVeloConstraint(Index i, T value) { velocity_n[i] = value; }
   void applyNodalAccConstraint(Index i, T value) { acceleration_n[i] = value; }
+  void applyNodalMomentumConstraint(Index i, T value) { momentum_n[i] = value; }
+  void applyNodalForceConstraint(Index i, T value) { totalForce_n[i] = value; }
 
   void n2p() {
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
@@ -225,7 +230,7 @@ public:
 
         // Update position
         position_p[p] += velocity_p[p] * m_dt;
-        mp_element_id[p] = m_mesh.findCageID(position_p[p]);
+        // Attention: x is at instant (t), while velocity is at (t+dt)
         strain_rate_p[p] =
             dN1_dx(x1, x2) * velocity_n[n1] + dN2_dx(x1, x2) * velocity_n[n2];
 
@@ -233,7 +238,7 @@ public:
         dStrain_p[p] = strain_rate_p[p] * m_dt;
         strain_p[p] += dStrain_p[p];
 
-        // Constitutive law: σ = E * ε (elastic)
+        // Constitutive law:
         if (m_law) {
           stress_p[p] = m_law(strain_p[p]);
         } else {
@@ -256,14 +261,11 @@ public:
     m_mesh.nodalReset();
   }
 
-  //   void applyBC() {
-  //     // Apply boundary conditions
-  //     // Example: fix left node (essential BC)
-  //     // velocity_n[0] = T{};
-  //     // User should implement specific BCs here
-  //   }
+  void applyBC() {
+    // Apply boundary conditions
+  }
 
-  // void timeIntegration() {}
+  void timeIntegration() {}
 
   void compareAnalytic() {
     if (!m_analyticSolution) {
@@ -325,26 +327,4 @@ public:
   }
 };
 
-// #endif // MPM_H
-
-int main() {
-  std::cout << "=== MPM 1D PROBLEM ===\n\n";
-  MPM1D beam(0.01, 10, 1.0, 1.0, 0.5, 0.1, 0);
-  // (dt, duration, rho, length, xloc, v0, a0) // v0 = a0 = 0 by default
-  beam.setG{0.0}; // G = constants::gravity if gravity is considered
-  beam.setE{4 * constants::pi * constants::pi}; // Module Young
-  beam.setComportmentLaw();
-  for (Index step{0}; step < beam.getNumSteps(); ++step) {
-    beam.setupMP();
-    beam.p2n();
-    beam.nodalEquilibrium();
-    beam.applyNodalVeloConstraint(0, 0.0);
-    beam.applyNodalVeloConstraint(0, 0.0);
-    beam.n2p();
-    beam.resetMesh();
-  }
-  beam.setAnylyticSolution();
-  beam.compareAnylyticSolution();
-  beam.exportResult();
-  return 0;
-}
+#endif // MATERIAL_POINT_METHOD_H

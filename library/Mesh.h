@@ -12,7 +12,8 @@ private:
   T m_length{};
   Index m_nNodes{}, m_nElements{}, m_nMPperEle{}, nMPs{};
   Vector<T> m_nodes{};
-  // Vector<bool> m_activeNodes{};  // Commented - Vector<bool> causes issues
+  Vector<char> m_activeNodes{}; // Use char instead of bool to avoid
+                                // std::vector<bool> issues
   Vector<T> m_MPs{};
   Vector<T> m_nodes_initial{}; // Store initial configuration for reset
   Vector<Vector<Index>> m_connectivity{}; // [node_i, node_j]
@@ -67,7 +68,7 @@ public:
   Index getNumNodes() const { return m_nNodes; }
   Index getNumElements() const { return m_nElements; }
   Index getNumMPs() const { return nMPs; }
-  // const Vector<bool> &getActiveNodes() const { return m_activeNodes; }
+  const Vector<char> &getActiveNodes() const { return m_activeNodes; }
   const Vector<T> &nodeCoords() const { return m_nodes; }
   const Vector<T> &getMPCoords() const { return m_MPs; }
   T getMPCoord(Index p) const {
@@ -160,7 +161,7 @@ public:
   void activateNodes() {
     // Reset all nodes to inactive
     for (Index i{0}; i < m_nNodes; ++i) {
-      m_activeNodes[i] = false;
+      m_activeNodes[i] = 0;
     }
 
     // Activate nodes of elements containing MPs
@@ -170,16 +171,16 @@ public:
         // Get node indices (not coordinates!)
         Index n1 = m_connectivity[elemID][0];
         Index n2 = m_connectivity[elemID][1];
-        m_activeNodes[n1] = true;
-        m_activeNodes[n2] = true;
+        m_activeNodes[n1] = 1;
+        m_activeNodes[n2] = 1;
       }
     }
   }
 
   // Check if a node is active (contains MPs)
-  friend bool isActiveNode(Index nodeID) const {
+  bool isActiveNode(Index nodeID) const {
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
-    return m_activeNodes[nodeID];
+    return m_activeNodes[nodeID] != 0;
   }
 };
 
@@ -190,7 +191,7 @@ private:
   Vector<std::pair<T, T>> m_nodes{}; // All node coordinates as (x, y) pairs
   Vector<std::pair<T, T>> m_nodes_initial{}; // Initial configuration for reset
   Vector<std::pair<T, T>> m_MPs{};           // Material Points coordinates
-  // Vector<bool> m_activeNodes{}; // Track which nodes contain Material Points
+  Vector<char> m_activeNodes{}; // Track which nodes contain Material Points
   Vector<Vector<Index>> m_connectivity{};
   Vector<T> m_x_coords;         // Node x-coordinates vector
   Vector<T> m_y_coords;         // Node y-coordinates vector
@@ -209,7 +210,7 @@ public:
     // Resize vectors before using them
     m_nodes.resize(m_nNodes);
     m_nodes_initial.resize(m_nNodes);
-    // m_activeNodes.resize(m_nNodes, false);
+    m_activeNodes.resize(m_nNodes, 0);
     m_connectivity.resize(m_nElements);
     m_x_coords.resize(m_nNodes);
     m_y_coords.resize(m_nNodes);
@@ -299,7 +300,7 @@ public:
   Index getNumNodes() const { return m_nNodes; }
   Index getNumElements() const { return m_nElements; }
   Index getNumMPs() const { return nMPs; }
-  // const Vector<bool> &getActiveNodes() const { return m_activeNodes; }
+  const Vector<char> &getActiveNodes() const { return m_activeNodes; }
   Index nx() const { return m_nx; }
   Index ny() const { return m_ny; }
   const Vector<std::pair<T, T>> &getNodes() const { return m_nodes; }
@@ -436,22 +437,26 @@ public:
     return -1; // Not found (outside domain)
   }
 
-  // Activate nodes that contain Material Points
-  // void activateNodes() {
-  //   for (Index i{0}; i < m_nNodes; ++i) { m_activeNodes[i] = false; }
-  //   for (const auto &mp : m_MPs) {
-  //     Index elemID = findCageID(mp.first, mp.second);
-  //     if (elemID != -1) {
-  //       const auto &conn = m_connectivity[elemID];
-  //       for (Index i{0}; i < 4; ++i) { m_activeNodes[conn[i]] = true; }
-  //     }
-  //   }
-  // }
+  //   Activate nodes that contain Material Points
+  void activateNodes() {
+    for (Index i{0}; i < m_nNodes; ++i) {
+      m_activeNodes[i] = 0;
+    }
+    for (const auto &mp : m_MPs) {
+      Index elemID = findCageID(mp.first, mp.second);
+      if (elemID != -1) {
+        const auto &conn = m_connectivity[elemID];
+        for (Index i{0}; i < 4; ++i) {
+          m_activeNodes[conn[i]] = 1;
+        }
+      }
+    }
+  }
 
-  // bool isActiveNode(Index nodeID) const {
-  //   assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
-  //   return m_activeNodes[nodeID];
-  // }
+  bool isActiveNode(Index nodeID) const {
+    assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
+    return m_activeNodes[nodeID] != 0;
+  }
 };
 //////// WHAT HAPPENS IF THE MPs IS PERFECTLY LANDS ON THE NODE? ////////
 
