@@ -36,19 +36,23 @@ int main() {
     beam.setupMP();
     beam.p2n();
     beam.nodalEquilibrium();
+    // Python-like BC: clamp left node momentum and total force
+    beam.applyNodalMomentumConstraint(0, 0.0);
+    beam.applyNodalForceConstraint(0, 0.0);
     beam.applyNodalVeloConstraint(0, 0.0);
-    beam.applyNodalAccConstraint(0, 0.0);
     beam.n2p();
     beam.resetMesh();
     // beam.exportResult();
 
+    // State is advanced by dt after n2p()
+    const double t_state = time + dt;
     if (step < 5 || step == beam.getNumSteps() - 1) {
       std::cout << std::fixed << std::setprecision(6);
-      std::cout << "Step " << step << " t=" << time
+      std::cout << "Step " << step << " t=" << t_state
                 << " | x_num=" << beam.getMPposition(0)
                 << " v_num=" << beam.getMPvelocity(0)
-                << " | x_ana=" << analytic_x(time)
-                << " v_ana=" << analytic_v(time) << '\n';
+                << " | x_ana=" << analytic_x(t_state)
+                << " v_ana=" << analytic_v(t_state) << '\n';
     }
 
     time += dt;
