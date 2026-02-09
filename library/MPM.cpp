@@ -1,5 +1,5 @@
-#ifndef MATERIAL_POINT_METHOD_H
-#define MATERIAL_POINT_METHOD_H
+// #ifndef MATERIAL_POINT_METHOD_H
+// #define MATERIAL_POINT_METHOD_H
 
 #include "Matrix.h"
 #include "Mesh.h"
@@ -14,16 +14,10 @@
 #include <iostream>
 #include <string>
 
-// 1D Finite Element Method
-//  EA U_xx + f(x) = 0, 0 < x < L
-//  Boundary Conditions:
-//    - Dirichlet: u(x) = prescribed value (essential BC)
-//    - Neumann: EA * u'(x) = prescribed force (natural BC)
-
 template <typename T, Index nNodes, Index nMPperEle> class MPM1D {
 private:
   // Physical properties
-  T m_E{10.0};     // Module Young
+  T m_E{1.0};      // Module Young
   T m_length{1.0}; // Domain length
   T m_volume{1.0}; // Volume
   T m_rho{1000};   // Density
@@ -32,8 +26,8 @@ private:
   // Simulation properties
   T m_currentTime{0.0}; // Current time
   T m_dt{0.0};          // Time step
-  T m_duration{0.0};    // Duration of simulation
-  Index m_nSteps{0.0};  // Steps of simulation
+  T m_duration{10.0};   // Duration of simulation
+  Index m_nSteps{0.0};  // Number of steps
   T m_xloc{0.0};        // Position of surveying
   T m_v0{0.0};          // Initial velocity
 
@@ -66,21 +60,15 @@ private:
 
 public:
   // Constructor
-  MPM1D(T E, T rho, T length, T v0, T dt, T duration, T xloc)
-      : m_E{E}, m_rho{rho}, m_length{length}, m_v0{v0}, m_dt{dt},
-        m_duration{duration}, m_xloc{xloc} {
+  MPM1D(T dt, T duration, T rho, T length, T xloc, T v0 = T{}, T a0 = T{})
+      : m_rho{rho}, m_length{length}, m_v0{v0}, m_dt{dt}, m_duration{duration},
+        m_xloc{xloc}, m_mesh{Mesh1D<T>{length, nNodes, nMPperEle}} {
     // Check critical time
     T c = std::sqrt(E / rho);
     T dt_crit = m_length / c;
     assert((dt_crit / 10.0) >= dt &&
            "Time step isn't satisfied CFL condition (too big)");
     m_nSteps = static_cast<Index>(duration / dt);
-
-    // System set up - 1D volume (length only, area = 1.0)
-    m_volume = length * 1.0; // 1D: cross-section area = 1.0
-
-    // Set up mesh
-    m_mesh = Mesh1D<T>{length, nNodes, nMPperEle};
 
     // Initialize nodal vectors
     mass_n.resize(nNodes);
@@ -94,6 +82,19 @@ public:
     forceInternal_n.resize(nNodes);
     totalForce_n.resize(nNodes);
 
+    // Initialize MP vectors
+    mp_element_id.resize(nMPs);
+    volume_p.resize(nMPs);
+    mass_p.resize(nMPs);
+    position_p.resize(nMPs);
+    velocity_p.resize(nMPs, m_v0);
+    momentum_p.resize(nMPs);
+    stress_p.resize(nMPs);
+    strain_p.resize(nMPs);
+    strain_rate_p.resize(nMPs);
+    dStrain_p.resize(nMPs);
+
+    Index nMPs = m_mesh.getNumMPs();
     m_mesh.print();
   };
 
@@ -115,7 +116,7 @@ public:
   T getTimeStep() const { return m_dt; }
   T getDuration() const { return m_duration; }
   T getNumSteps() const { return m_nSteps; }
-  T getXloc() const { return m_xloc; }
+  T getSurveyLoc() const { return m_xloc; }
   T getIniVelo() const { return m_v0; }
 
   const Mesh1D<T> &getMesh() const { return m_mesh; }
@@ -148,31 +149,17 @@ public:
   }
   void setComportmentLaw(std::function<T(T)> law) { m_law = law; }
 
-  void setupMP() { // Set up MPs
-    Index nMPs = m_mesh.getNumMPs();
+  void setupMP() {
+    // Recalculate 1D volume (length only, area = 1.0)
+    m_volume = m_length * 1.0; // Volume could change over time
+    m_rho = m_mass / nMPs;     // Density could change over time
 
-    // Initialize MP vectors
-    mp_element_id.resize(nMPs);
-    volume_p.resize(nMPs);
-    mass_p.resize(nMPs);
-    position_p.resize(nMPs);
-    velocity_p.resize(nMPs);
-    momentum_p.resize(nMPs);
-    stress_p.resize(nMPs);
-    strain_p.resize(nMPs);
-    strain_rate_p.resize(nMPs);
-    dStrain_p.resize(nMPs);
-
-    // Cache element IDs and initialize properties
     for (Index p = 0; p < nMPs; ++p) {
       position_p[p] = m_mesh.getMPCoord(p);
       mp_element_id[p] = m_mesh.findCageID(position_p[p]);
       volume_p[p] = m_volume / nMPs;
-      mass_p[p] = m_rho * volume_p[p];
-      velocity_p[p] = m_v0;
-      momentum_p[p] = mass_p[p] * m_v0;
-      stress_p[p] = T{};
-      strain_p[p] = T{};
+      mass_p[p] = m_mass / nMPs;
+      momentum_p[p] = mass_p[p] * velocity_p[p];
     }
   }
 
@@ -217,7 +204,7 @@ public:
       }
     }
     forceExternal_n = bodyForce_n + tractionForce_n;
-    totalForce_n = forceExternal_n + forceInternal_n;
+    totalForce_n = forceExternal_n + forceInternal_n; 
     acceleration_n = totalForce_n / mass_n;
     velocity_n += acceleration_n * m_dt;
   }
@@ -234,7 +221,6 @@ public:
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
 
-        // Update velocity from grid
         velocity_p[p] = N1_r(xi) * velocity_n[n1] + N2_r(xi) * velocity_n[n2];
 
         // Update position
@@ -267,6 +253,7 @@ public:
     forceExternal_n.resetZero();
     forceInternal_n.resetZero();
     totalForce_n.resetZero();
+    m_mesh.nodalReset();
   }
 
   //   void applyBC() {
@@ -276,20 +263,7 @@ public:
   //     // User should implement specific BCs here
   //   }
 
-  void timeIntegration() {
-    setupMP(); // Initialize MPs once at t=0
-
-    for (Index step{0}; step < m_nSteps; ++step) {
-      m_currentTime = step * m_dt;
-
-      resetMesh();
-      p2n();
-      nodalEquilibrium();
-      applyNodalVeloConstraint(0, T{});
-      applyNodalVeloConstraint(0, T{});
-      n2p();
-    }
-  }
+  // void timeIntegration() {}
 
   void compareAnalytic() {
     if (!m_analyticSolution) {
@@ -351,4 +325,26 @@ public:
   }
 };
 
-#endif // MPM_H
+// #endif // MPM_H
+
+int main() {
+  std::cout << "=== MPM 1D PROBLEM ===\n\n";
+  MPM1D beam(0.01, 10, 1.0, 1.0, 0.5, 0.1, 0);
+  // (dt, duration, rho, length, xloc, v0, a0) // v0 = a0 = 0 by default
+  beam.setG{0.0}; // G = constants::gravity if gravity is considered
+  beam.setE{4 * constants::pi * constants::pi}; // Module Young
+  beam.setComportmentLaw();
+  for (Index step{0}; step < beam.getNumSteps(); ++step) {
+    beam.setupMP();
+    beam.p2n();
+    beam.nodalEquilibrium();
+    beam.applyNodalVeloConstraint(0, 0.0);
+    beam.applyNodalVeloConstraint(0, 0.0);
+    beam.n2p();
+    beam.resetMesh();
+  }
+  beam.setAnylyticSolution();
+  beam.compareAnylyticSolution();
+  beam.exportResult();
+  return 0;
+}

@@ -139,7 +139,7 @@ public:
   }
 
   // Reset to initial configuration
-  void resetMesh() { m_nodes = m_nodes_initial; }
+  void nodalReset() { m_nodes = m_nodes_initial; } // Excluding MPs
 
   const Vector<T> &getInitialNodes() const { return m_nodes_initial; }
 
@@ -157,30 +157,30 @@ public:
   }
 
   // Activate nodes that contain Material Points
-  // void activateNodes() {
-  //   // Reset all nodes to inactive
-  //   for (Index i{0}; i < m_nNodes; ++i) {
-  //     m_activeNodes[i] = false;
-  //   }
+  void activateNodes() {
+    // Reset all nodes to inactive
+    for (Index i{0}; i < m_nNodes; ++i) {
+      m_activeNodes[i] = false;
+    }
 
-  //   // Activate nodes of elements containing MPs
-  //   for (const auto &mp : m_MPs) {
-  //     Index elemID = findCageID(mp);
-  //     if (elemID != -1) {
-  //       // Get node indices (not coordinates!)
-  //       Index n1 = m_connectivity[elemID][0];
-  //       Index n2 = m_connectivity[elemID][1];
-  //       m_activeNodes[n1] = true;
-  //       m_activeNodes[n2] = true;
-  //     }
-  //   }
-  // }
+    // Activate nodes of elements containing MPs
+    for (const auto &mp : m_MPs) {
+      Index elemID = findCageID(mp);
+      if (elemID != -1) {
+        // Get node indices (not coordinates!)
+        Index n1 = m_connectivity[elemID][0];
+        Index n2 = m_connectivity[elemID][1];
+        m_activeNodes[n1] = true;
+        m_activeNodes[n2] = true;
+      }
+    }
+  }
 
   // Check if a node is active (contains MPs)
-  // friend bool isActiveNode(Index nodeID) const {
-  //   assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
-  //   return m_activeNodes[nodeID];
-  // }
+  friend bool isActiveNode(Index nodeID) const {
+    assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
+    return m_activeNodes[nodeID];
+  }
 };
 
 template <typename T> class Mesh2D {
