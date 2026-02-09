@@ -10,8 +10,8 @@
 #include <iostream>
 // Range of 1D parent element Sr: [-1,1] -> mapping to [x1,x2] physical element
 // First order polynomial shape function using Lagrange's basis in range [-1,1]
-auto N1_r = [](auto xi) { return (1 + xi) / 2; };
-auto N2_r = [](auto xi) { return (1 - xi) / 2; };
+auto N1_ref = [](auto xi) { return (1 - xi) / 2; };
+auto N2_ref = [](auto xi) { return (1 + xi) / 2; };
 
 // Discretizing x = phi(xi) = x1 N1(xi) + x2 N2(xi) = J*xi + M = xi *
 // (x2-x1)/2 + (x2+x1)/2
@@ -29,17 +29,17 @@ template <typename T> T midPoint(T x1, T x2) {
 // Mapping deriviation: dN/dx = dN/d(xi) * d(xi)/dx = dN/d(xi) * 1/J
 template <typename T> T dN1_dx(T x1, T x2) {
   assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
-  return 0.5 / Jacobian(x1, x2);
+  return -0.5 / Jacobian(x1, x2);
 }
 template <typename T> T dN2_dx(T x1, T x2) {
   assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
-  return -0.5 / Jacobian(x1, x2);
+  return 0.5 / Jacobian(x1, x2);
 }
 
 // Function Phi(xi) used to map
 template <typename T> T physicCoor(T xi, T x1, T x2) {
   assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
-  return N1_r(xi) * x1 + N2_r(xi) * x2;
+  return N1_ref(xi) * x1 + N2_ref(xi) * x2;
 }
 template <typename T> T parentCoor(T x, T x1, T x2) {
   assert(x2 > x1 && "Element coordinates must satisfy x2 > x1");
@@ -268,7 +268,7 @@ std::pair<Vector<T>, Vector<T>> dNdxdy(T xi, T eta, const Vector<T> &x_nodes,
 //   // Test 1: Integrate N1 over element [x1,x2]
 //   // Analytical: int N1 dxi = int (1+xi)/2 dxi from -1 to 1 = [xi/2 +
 //   // xi^2/4] = 1 With Jacobian J: Result = J * 1 = 1.5
-//   auto f1 = [](double xi) { return N1_r(xi); };
+//   auto f1 = [](double xi) { return N1_ref(xi); };
 //   double I1 = integrationGauss1D_ref(x1, x2, f1, 2);
 //   std::cout << std::fixed << std::setprecision(10);
 //   std::cout << "Integral of N1: " << I1 << " (expected: 1.5)" << '\n';
@@ -278,7 +278,7 @@ std::pair<Vector<T>, Vector<T>> dNdxdy(T xi, T eta, const Vector<T> &x_nodes,
 //   // int (1-xi^2)/4 dxi from -1 to 1 = 1/4 * [xi - xi^3/3]|_{-1}^{1}
 //   // = 1/4 * [(1 - 1/3) - (-1 + 1/3)] = 1/4 * [2/3 + 2/3] = 1/4 * 4/3 = 1/3
 //   // With Jacobian J: Result = J * 1/3 = 1.5/3 = 0.5
-//   auto f2 = [](double xi) { return N1_r(xi) * N2_r(xi); };
+//   auto f2 = [](double xi) { return N1_ref(xi) * N2_ref(xi); };
 //   double I2 = integrationGauss1D_ref(x1, x2, f2, 2);
 //   std::cout << "Integral of N1*N2: " << I2 << " (expected: 0.5)" << '\n';
 

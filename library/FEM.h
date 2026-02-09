@@ -106,10 +106,10 @@ public:
       // Elementary force matrix assembly: F_e = int_element N^T * f(x) dx
       auto [x1, x2] = m_mesh.getElementNodes(e);
       auto integrand0 = [=, this](T xi) {
-        return m_rhsFunction(physicCoor(xi, x1, x2)) * N1_r(xi);
+        return m_rhsFunction(physicCoor(xi, x1, x2)) * N1_ref(xi);
       };
       auto integrand1 = [=, this](T xi) {
-        return m_rhsFunction(physicCoor(xi, x1, x2)) * N2_r(xi);
+        return m_rhsFunction(physicCoor(xi, x1, x2)) * N2_ref(xi);
       };
       m_F[e] += integrationGauss1D_ref(x1, x2, integrand0, 2);
       m_F[e + 1] += integrationGauss1D_ref(x1, x2, integrand1, 2);

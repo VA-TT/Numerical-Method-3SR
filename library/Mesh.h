@@ -29,7 +29,7 @@ public:
     // Resize vectors before using them
     m_nodes.resize(m_nNodes);
     m_nodes_initial.resize(m_nNodes);
-    // m_activeNodes.resize(m_nNodes, false);
+    m_activeNodes.resize(m_nNodes);
     m_connectivity.resize(m_nElements);
 
     T lx{m_length / m_nElements};
@@ -38,6 +38,11 @@ public:
     }
     // Copy to initial configuration
     m_nodes_initial = m_nodes;
+
+    // Initialize active node flags to 0 (inactive)
+    for (Index i{0}; i < m_nNodes; ++i) {
+      m_activeNodes[i] = 0;
+    }
 
     for (Index e{0}; e < m_nElements; ++e) {
       m_connectivity[e] = {e, e + 1}; // Node indices of elements
@@ -74,6 +79,18 @@ public:
   T getMPCoord(Index p) const {
     assert(p >= 0 && p < nMPs && "Invalid MP index");
     return m_MPs[p];
+  }
+
+
+  void setMPCoords(const Vector<T> &mp_positions) {
+    assert(mp_positions.size() == static_cast<std::size_t>(nMPs) &&
+           "Size mismatch: mp_positions must match mesh MP count");
+    m_MPs = mp_positions;
+  }
+
+  void setMPCoord(Index p, T x) {
+    assert(p >= 0 && p < nMPs && "Invalid MP index");
+    m_MPs[p] = x;
   }
   const Vector<Vector<Index>> &getConnectivity() const {
     return m_connectivity;
@@ -159,6 +176,10 @@ public:
 
   // Activate nodes that contain Material Points
   void activateNodes() {
+    // Defensive: ensure storage is correctly sized
+    if (m_activeNodes.size() != m_nNodes) {
+      m_activeNodes.resize(static_cast<std::size_t>(m_nNodes));
+    }
     // Reset all nodes to inactive
     for (Index i{0}; i < m_nNodes; ++i) {
       m_activeNodes[i] = 0;

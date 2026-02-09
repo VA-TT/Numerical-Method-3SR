@@ -21,6 +21,7 @@ private:
   T m_length{1.0}; // Domain length
   T m_volume{1.0}; // Volume
   T m_rho{1000};   // Density
+  T m_mass{1000};  // mass
   T m_G{0.0};      // Gravity Acceleration
 
   // Simulation properties
@@ -40,7 +41,7 @@ private:
 
   // Nodes n
   Vector<T> mass_n{};
-  Vector<T> position_n{};
+  // Vector<T> position_n{}; // Don't get used
   Vector<T> velocity_n{};
   Vector<T> acceleration_n{};
   Vector<T> momentum_n{};
@@ -62,8 +63,8 @@ public:
   // Constructor
   MPM1D(T E, T rho, T length, T v0, T dt, T duration, T xloc)
       : m_E{E}, m_rho{rho}, m_length{length}, m_v0{v0}, m_dt{dt},
-        m_duration{duration}, m_xloc{xloc},
-        m_mesh{Mesh1D<T>{length, nNodes, nMPperEle}} {
+        m_duration{duration}, m_xloc{xloc}, m_mass{rho * length},
+        m_volume{length * 1.0}, m_mesh{Mesh1D<T>{length, nNodes, nMPperEle}} {
     // Check critical time
     T c = std::sqrt(m_E / rho);
     T dt_crit = m_length / c;
@@ -73,7 +74,7 @@ public:
 
     // Initialize nodal vectors
     mass_n.resize(nNodes, T{});
-    position_n.resize(nNodes, T{});
+    // position_n.resize(nNodes, T{});
     velocity_n.resize(nNodes, T{});
     acceleration_n.resize(nNodes, T{});
     momentum_n.resize(nNodes, T{});
@@ -86,15 +87,18 @@ public:
     // Initialize MP vectors
     Index nMPs = m_mesh.getNumMPs();
     mp_element_id.resize(nMPs, T{});
-    volume_p.resize(nMPs, T{});
-    mass_p.resize(nMPs, T{});
+    volume_p.resize(nMPs, m_volume / nMPs);
+    mass_p.resize(nMPs, m_mass / nMPs); // MP mass is constant
     position_p.resize(nMPs, T{});
-    velocity_p.resize(nMPs, m_v0);
+    velocity_p.resize(nMPs, m_v0); // Initial velocity
     momentum_p.resize(nMPs, T{});
     stress_p.resize(nMPs, T{}); // Explicitly initialize to zero
     strain_p.resize(nMPs, T{}); // Explicitly initialize to zero
     strain_rate_p.resize(nMPs, T{});
     dStrain_p.resize(nMPs, T{});
+
+    position_p = m_mesh.getMPCoords();
+
     m_mesh.print();
   };
 
@@ -110,6 +114,7 @@ public:
   T getE() const { return m_E; }
   T getG() const { return m_G; }
   T getRho() const { return m_rho; }
+  T getMass() const { return m_mass; }
   T getLength() const { return m_length; }
   T getVolume() const { return m_volume; }
   T getCurrentTime() const { return m_currentTime; }
@@ -151,16 +156,12 @@ public:
 
   void setupMP() {
     Index nMPs = m_mesh.getNumMPs();
-    m_volume = m_length * 1.0; // 1D volume: length × area (area=1.0)
-    T totalMass = m_rho * m_volume;
-
     for (Index p = 0; p < nMPs; ++p) {
-      position_p[p] = m_mesh.getMPCoord(p);
       mp_element_id[p] = m_mesh.findCageID(position_p[p]);
       volume_p[p] = m_volume / nMPs;
-      mass_p[p] = totalMass / nMPs;
       momentum_p[p] = mass_p[p] * velocity_p[p];
     }
+    m_mesh.activateNodes();
   }
 
   void p2n() {
@@ -173,20 +174,23 @@ public:
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
-        mass_n[n1] += N1_r(xi) * mass_p[p];
-        mass_n[n2] += N2_r(xi) * mass_p[p];
-        momentum_n[n1] += N1_r(xi) * momentum_p[p];
-        momentum_n[n2] += N2_r(xi) * momentum_p[p];
+        mass_n[n1] += N1_ref(xi) * mass_p[p];
+        mass_n[n2] += N2_ref(xi) * mass_p[p];
+        momentum_n[n1] += N1_ref(xi) * momentum_p[p];
+        momentum_n[n2] += N2_ref(xi) * momentum_p[p];
       }
     }
 
     // Nodal velocity
-    velocity_n = momentum_n / mass_n;
-    // for (Index i{0}; i < getNumNodes(); ++i) {
-    //   if (!approximatelyEqualAbsRel(mass_n[i], T{})) // avoid being divided
-    //   by 0
-    //     velocity_n[i] = momentum_n[i] / mass_n[i];
-    // }
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (!m_mesh.isActiveNode(i)) {
+        continue;
+      }
+      if (approximatelyEqualAbsRel(mass_n[i], T{})) {
+        continue;
+      }
+      velocity_n[i] = momentum_n[i] / mass_n[i];
+    }
   }
 
   void nodalEquilibrium() {
@@ -199,8 +203,8 @@ public:
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
-        bodyForce_n[n1] += m_G * N1_r(xi) * mass_p[p];
-        bodyForce_n[n2] += m_G * N2_r(xi) * mass_p[p];
+        bodyForce_n[n1] += m_G * N1_ref(xi) * mass_p[p];
+        bodyForce_n[n2] += m_G * N2_ref(xi) * mass_p[p];
         // Traction force t_i (to be implemented)
         forceInternal_n[n1] -= volume_p[p] * dN1_dx(x1, x2) * stress_p[p];
         forceInternal_n[n2] -= volume_p[p] * dN2_dx(x1, x2) * stress_p[p];
@@ -208,8 +212,20 @@ public:
     }
     forceExternal_n = bodyForce_n + tractionForce_n;
     totalForce_n = forceExternal_n + forceInternal_n;
-    acceleration_n = totalForce_n / mass_n;
-    velocity_n += acceleration_n * m_dt;
+    // Update nodes after applying BC
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (!m_mesh.isActiveNode(i)) {
+        continue;
+      }
+      if (approximatelyEqualAbsRel(mass_n[i], T{})) {
+        continue;
+      }
+
+      acceleration_n[i] = totalForce_n[i] / mass_n[i];
+      velocity_n[i] += acceleration_n[i] * m_dt;
+      // position_n[i] += velocity_n[i] * m_dt; //Grid nodes don't change
+      // position?
+    }
   }
   void applyNodalVeloConstraint(Index i, T value) { velocity_n[i] = value; }
   void applyNodalAccConstraint(Index i, T value) { acceleration_n[i] = value; }
@@ -217,6 +233,7 @@ public:
   void applyNodalForceConstraint(Index i, T value) { totalForce_n[i] = value; }
 
   void n2p() {
+    // Map back to MPs
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
       Index e = mp_element_id[p];
       if (e != -1) {
@@ -226,29 +243,32 @@ public:
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
 
-        velocity_p[p] = N1_r(xi) * velocity_n[n1] + N2_r(xi) * velocity_n[n2];
-
-        // Update position
+        velocity_p[p] =
+            N1_ref(xi) * velocity_n[n1] + N2_ref(xi) * velocity_n[n2];
         position_p[p] += velocity_p[p] * m_dt;
-        // Attention: x is at instant (t), while velocity is at (t+dt)
+
+        // Attention: x1-x2 belong to nodes (their positions don't get updated),
+        // while the velocity is measured at MPs (updated at t+dt)
         strain_rate_p[p] =
             dN1_dx(x1, x2) * velocity_n[n1] + dN2_dx(x1, x2) * velocity_n[n2];
-
-        // Strain increment
         dStrain_p[p] = strain_rate_p[p] * m_dt;
         strain_p[p] += dStrain_p[p];
 
         // Constitutive law:
         if (m_law) {
-          stress_p[p] = m_law(strain_p[p]);
+          stress_p[p] += m_law(dStrain_p[p]);
         } else {
-          stress_p[p] = m_E * strain_p[p]; // Default linear elastic
+          stress_p[p] += m_E * dStrain_p[p]; // Default linear elastic
         }
+
+        // Update volume
+        // volume_p[p] *= (1.0 + dStrain_p[p]);
       }
     }
   }
 
   void resetMesh() {
+    m_mesh.setMPCoords(position_p);
     mass_n.resetZero();
     momentum_n.resetZero();
     velocity_n.resetZero();
