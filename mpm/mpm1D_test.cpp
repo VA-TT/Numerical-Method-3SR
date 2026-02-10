@@ -64,6 +64,8 @@ int main() {
   for (Index step{0}; step < beam.getNumSteps(); ++step) {
     beam.setNodalVeloConstraint(0, 0.0);
     beam.setNodalAccConstraint(0, 0.0);
+    beam.setNodalForceConstraint(0, 0.0); // v_i[0] = a_i[0] = 0
+    beam.setNodalMomentumConstraint(0, 0.0);
     beam.setupMP();
     beam.p2n();
     beam.nodalEquilibrium();
