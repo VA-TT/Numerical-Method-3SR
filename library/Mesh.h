@@ -15,7 +15,8 @@ private:
   Vector<char> m_activeNodes{}; // Use char instead of bool to avoid
                                 // std::vector<bool> issues
   Vector<T> m_MPs{};
-  Vector<T> m_nodes_initial{}; // Store initial configuration for reset
+  Vector<Index> m_mpElementId{}; // Cached element ID for each MP
+  Vector<T> m_nodes_initial{};   // Store initial configuration for reset
   Vector<Vector<Index>> m_connectivity{}; // [node_i, node_j]
 
 public:
@@ -60,6 +61,12 @@ public:
         }
       }
     }
+
+    // Initialize cached element IDs for MPs
+    m_mpElementId.resize(static_cast<std::size_t>(nMPs), Index{-1});
+    for (Index p{0}; p < static_cast<Index>(m_MPs.size()); ++p) {
+      m_mpElementId[p] = findCageID(m_MPs[p]);
+    }
   };
   // Other defaults
   Mesh1D() = default;
@@ -76,11 +83,15 @@ public:
   const Vector<char> &getActiveNodes() const { return m_activeNodes; }
   const Vector<T> &nodeCoords() const { return m_nodes; }
   const Vector<T> &getMPCoords() const { return m_MPs; }
+  const Vector<Index> &getMPElementIds() const { return m_mpElementId; }
   T getMPCoord(Index p) const {
     assert(p >= 0 && p < nMPs && "Invalid MP index");
     return m_MPs[p];
   }
-
+  Index getMPElementId(Index p) const {
+    assert(p >= 0 && p < nMPs && "Invalid MP index");
+    return m_mpElementId[p];
+  }
 
   void setMPCoords(const Vector<T> &mp_positions) {
     assert(mp_positions.size() == static_cast<std::size_t>(nMPs) &&
@@ -91,6 +102,21 @@ public:
   void setMPCoord(Index p, T x) {
     assert(p >= 0 && p < nMPs && "Invalid MP index");
     m_MPs[p] = x;
+    // Keep cached element id consistent
+    if (m_mpElementId.size() != nMPs) {
+      m_mpElementId.resize(static_cast<std::size_t>(nMPs), Index{-1});
+    }
+    m_mpElementId[p] = findCageID(x);
+  }
+
+  // Update cached element IDs using the mesh-internal MP coordinates.
+  void updateMPElementIds() {
+    if (m_mpElementId.size() != nMPs) {
+      m_mpElementId.resize(static_cast<std::size_t>(nMPs), Index{-1});
+    }
+    for (Index p{0}; p < nMPs; ++p) {
+      m_mpElementId[p] = findCageID(m_MPs[p]);
+    }
   }
   const Vector<Vector<Index>> &getConnectivity() const {
     return m_connectivity;
@@ -186,8 +212,8 @@ public:
     }
 
     // Activate nodes of elements containing MPs
-    for (const auto &mp : m_MPs) {
-      Index elemID = findCageID(mp);
+    for (Index p{0}; p < nMPs; ++p) {
+      Index elemID = m_mpElementId[p];
       if (elemID != -1) {
         // Get node indices (not coordinates!)
         Index n1 = m_connectivity[elemID][0];

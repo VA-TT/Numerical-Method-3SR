@@ -48,17 +48,23 @@ private:
   Vector<char> velocityConstrained_n{};
   Vector<char> accelerationConstrained_n{};
   Vector<char> momentumConstrained_n{};
+  Vector<char> forceConstrained_n{};
+
+  // Constraint values (so constraints can be set anytime and enforced later)
+  Vector<T> velocityConstraintValue_n{};
+  Vector<T> accelerationConstraintValue_n{};
+  Vector<T> momentumConstraintValue_n{};
+  Vector<T> forceConstraintValue_n{};
   Vector<T> bodyForce_n{}, tractionForce_n{};
   // Nodal external forces
   Vector<double> forceExternal_n{}, forceInternal_n{}, totalForce_n{};
 
   // Material Points p
-  Vector<Index> mp_element_id{}; // Cached element ID
-  Vector<T> volume_p{};          // Volume
-  Vector<T> mass_p{};            // Mass
-  Vector<T> position_p{};        // Position
-  Vector<T> velocity_p{};        // Velocity
-  Vector<T> momentum_p{};        // Momentum
+  Vector<T> volume_p{};   // Volume
+  Vector<T> mass_p{};     // Mass
+  Vector<T> position_p{}; // Position
+  Vector<T> velocity_p{}; // Velocity
+  Vector<T> momentum_p{}; // Momentum
   Vector<T> stress_p{}, strain_p{}, strain_rate_p{},
       dStrain_p{}; // Stress + strain
 
@@ -84,6 +90,12 @@ public:
     velocityConstrained_n.resize(nNodes, 0);
     accelerationConstrained_n.resize(nNodes, 0);
     momentumConstrained_n.resize(nNodes, 0);
+    forceConstrained_n.resize(nNodes, 0);
+
+    velocityConstraintValue_n.resize(nNodes, T{});
+    accelerationConstraintValue_n.resize(nNodes, T{});
+    momentumConstraintValue_n.resize(nNodes, T{});
+    forceConstraintValue_n.resize(nNodes, T{});
     bodyForce_n.resize(nNodes, T{});
     tractionForce_n.resize(nNodes, T{});
     forceExternal_n.resize(nNodes, T{});
@@ -92,7 +104,6 @@ public:
 
     // Initialize MP vectors
     Index nMPs = m_mesh.getNumMPs();
-    mp_element_id.resize(nMPs, Index{-1});
     volume_p.resize(nMPs, m_volume / nMPs);
     mass_p.resize(nMPs, m_mass / nMPs); // MP mass is constant
     position_p.resize(nMPs, T{});
@@ -160,22 +171,85 @@ public:
   }
   void setComportmentLaw(std::function<T(T)> law) { m_law = law; }
 
-  void setupMP() {
-    Index nMPs = m_mesh.getNumMPs();
-    for (Index p = 0; p < nMPs; ++p) {
-      mp_element_id[p] = m_mesh.findCageID(position_p[p]);
-      volume_p[p] = m_volume / nMPs;
-      momentum_p[p] = mass_p[p] * velocity_p[p];
+  // Setters: store constraint values + mark constrained
+  void setNodalVeloConstraint(Index i, T value) {
+    velocityConstraintValue_n[i] = value;
+    velocityConstrained_n[i] = 1;
+  }
+  void setNodalAccConstraint(Index i, T value) {
+    accelerationConstraintValue_n[i] = value;
+    accelerationConstrained_n[i] = 1;
+  }
+  void setNodalMomentumConstraint(Index i, T value) {
+    momentumConstraintValue_n[i] = value;
+    momentumConstrained_n[i] = 1;
+  }
+  void setNodalForceConstraint(Index i, T value) {
+    forceConstraintValue_n[i] = value;
+    forceConstrained_n[i] = 1;
+  }
+
+  // Apply stored constraints to current nodal state
+  void applyNodalVeloConstraint(Index i) {
+    if (velocityConstrained_n[i] != 0) {
+      velocity_n[i] = velocityConstraintValue_n[i];
+      if (momentumConstrained_n[i] == 0 &&
+          !approximatelyEqualAbsRel(mass_n[i], T{})) {
+        momentum_n[i] = mass_n[i] * velocity_n[i];
+      }
     }
-    // Keep mesh-internal MP coordinates aligned with the solver state.
-    m_mesh.setMPCoords(position_p);
+  }
+  void applyNodalAccConstraint(Index i) {
+    if (accelerationConstrained_n[i] != 0) {
+      acceleration_n[i] = accelerationConstraintValue_n[i];
+      if (forceConstrained_n[i] == 0 &&
+          !approximatelyEqualAbsRel(mass_n[i], T{})) {
+        totalForce_n[i] = mass_n[i] * acceleration_n[i];
+      }
+    }
+  }
+  void applyNodalMomentumConstraint(Index i) {
+    if (momentumConstrained_n[i] != 0) {
+      momentum_n[i] = momentumConstraintValue_n[i];
+    }
+  }
+  void applyNodalForceConstraint(Index i) {
+    if (forceConstrained_n[i] != 0) {
+      totalForce_n[i] = forceConstraintValue_n[i];
+    }
+  }
+
+  void applyConstraints() { applyStoredConstraintsAllNodes(); }
+
+  // Backward-compatible aliases (old API)
+  void applyNodalVeloConstraint(Index i, T value) {
+    setNodalVeloConstraint(i, value);
+  }
+  void applyNodalAccConstraint(Index i, T value) {
+    setNodalAccConstraint(i, value);
+  }
+  void applyNodalMomentumConstraint(Index i, T value) {
+    setNodalMomentumConstraint(i, value);
+  }
+  void applyNodalForceConstraint(Index i, T value) {
+    setNodalForceConstraint(i, value);
+  }
+
+  void setupMP() {
+    m_mesh.setMPCoords(position_p); // Saving the updated position to Mesh
+    m_mesh.updateMPElementIds();
     m_mesh.activateNodes();
   }
 
   void p2n() {
-    // Nodal mass + momentum
-    for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
-      Index e = mp_element_id[p];
+    Index nMPs = m_mesh.getNumMPs();
+    for (Index p = 0; p < nMPs; ++p) {
+      volume_p[p] = m_volume / nMPs;
+      momentum_p[p] = mass_p[p] * velocity_p[p];
+    }
+    // Map nodal mass + momentum
+    for (Index p{0}; p < nMPs; ++p) {
+      Index e = m_mesh.getMPElementId(p);
       if (e != -1) {
         T x_p = position_p[p];
         Index n1 = m_mesh.getEleConnectivity(e)[0];
@@ -186,6 +260,7 @@ public:
         mass_n[n2] += N2_ref(xi) * mass_p[p];
         momentum_n[n1] += N1_ref(xi) * momentum_p[p];
         momentum_n[n2] += N2_ref(xi) * momentum_p[p];
+        // apply momentumCondition here
       }
     }
 
@@ -199,12 +274,34 @@ public:
       }
       velocity_n[i] = momentum_n[i] / mass_n[i];
     }
+
+    // Enforce kinematic constraints after mapping (and keep momentum consistent)
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (!m_mesh.isActiveNode(i)) {
+        continue;
+      }
+      if (approximatelyEqualAbsRel(mass_n[i], T{})) {
+        continue;
+      }
+      if (velocityConstrained_n[i] != 0) {
+        velocity_n[i] = velocityConstraintValue_n[i];
+        // If user didn't explicitly constrain momentum, derive it from v = p/m
+        if (momentumConstrained_n[i] == 0) {
+          momentumConstraintValue_n[i] = mass_n[i] * velocityConstraintValue_n[i];
+          momentumConstrained_n[i] = 1;
+          momentum_n[i] = momentumConstraintValue_n[i];
+        }
+      }
+      if (momentumConstrained_n[i] != 0) {
+        momentum_n[i] = momentumConstraintValue_n[i];
+      }
+    }
   }
 
   void nodalEquilibrium() {
     // f^ext = b + t
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
-      Index e = mp_element_id[p];
+      Index e = m_mesh.getMPElementId(p);
       if (e != -1) {
         T x_p = position_p[p];
         Index n1 = m_mesh.getEleConnectivity(e)[0];
@@ -220,25 +317,20 @@ public:
     }
     forceExternal_n = bodyForce_n + tractionForce_n;
     totalForce_n = forceExternal_n + forceInternal_n;
+
+    // Enforce any force constraints after assembling forces
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (forceConstrained_n[i] != 0) {
+        totalForce_n[i] = forceConstraintValue_n[i];
+      }
+    }
   }
-  void applyNodalVeloConstraint(Index i, T value) {
-    velocity_n[i] = value;
-    velocityConstrained_n[i] = 1;
-  }
-  void applyNodalAccConstraint(Index i, T value) {
-    acceleration_n[i] = value;
-    accelerationConstrained_n[i] = 1;
-  }
-  void applyNodalMomentumConstraint(Index i, T value) {
-    momentum_n[i] = value;
-    momentumConstrained_n[i] = 1;
-  }
-  void applyNodalForceConstraint(Index i, T value) { totalForce_n[i] = value; }
+
+  
 
   void n2p() {
-    // Python-like momentum scheme:
-    // - nodal momentum update: mv += f_total * dt (after BC)
-    // - nodal velocity from momentum
+    // If acceleration is constrained and force is not explicitly constrained,
+    // derive force from f = m*a (when mass is known).
     for (Index i{0}; i < getNumNodes(); ++i) {
       if (!m_mesh.isActiveNode(i)) {
         continue;
@@ -246,21 +338,50 @@ public:
       if (approximatelyEqualAbsRel(mass_n[i], T{})) {
         continue;
       }
+      if (accelerationConstrained_n[i] != 0 && forceConstrained_n[i] == 0) {
+        forceConstraintValue_n[i] = mass_n[i] * accelerationConstraintValue_n[i];
+        forceConstrained_n[i] = 1;
+        totalForce_n[i] = forceConstraintValue_n[i];
+      }
+    }
 
+    // Enforce force constraints before nodal momentum update
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (forceConstrained_n[i] != 0) {
+        totalForce_n[i] = forceConstraintValue_n[i];
+      }
+    }
+
+    // Update momentum and velocity
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (!m_mesh.isActiveNode(i)) {
+        continue;
+      }
+      if (approximatelyEqualAbsRel(mass_n[i], T{})) {
+        continue;
+      }
       if (momentumConstrained_n[i] == 0) {
         momentum_n[i] += totalForce_n[i] * m_dt;
+      } else {
+        momentum_n[i] = momentumConstraintValue_n[i];
       }
       if (velocityConstrained_n[i] == 0) {
         velocity_n[i] = momentum_n[i] / mass_n[i];
+      } else {
+        velocity_n[i] = velocityConstraintValue_n[i];
       }
       if (accelerationConstrained_n[i] == 0) {
         acceleration_n[i] = totalForce_n[i] / mass_n[i];
+      } else {
+        acceleration_n[i] = accelerationConstraintValue_n[i];
       }
+      // position_n[i] += velocity_n[i] * m_dt; //Grid nodes don't change
+      // position?
     }
 
     // Map back to MPs
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
-      Index e = mp_element_id[p];
+      Index e = m_mesh.getMPElementId(p);
       if (e != -1) {
         T x_p = position_p[p];
         Index n1 = m_mesh.getEleConnectivity(e)[0];
@@ -268,25 +389,9 @@ public:
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
 
-        // Particle velocity: v_p += dt * sum_i N_i(x_p) * (f_i / m_i)
-        T a_p{};
-        if (!approximatelyEqualAbsRel(mass_n[n1], T{})) {
-          a_p += N1_ref(xi) * (totalForce_n[n1] / mass_n[n1]);
-        }
-        if (!approximatelyEqualAbsRel(mass_n[n2], T{})) {
-          a_p += N2_ref(xi) * (totalForce_n[n2] / mass_n[n2]);
-        }
-        velocity_p[p] += a_p * m_dt;
-
-        // Particle position: x_p += dt * sum_i N_i(x_p) * (mv_i / m_i)
-        T v_grid_p{};
-        if (!approximatelyEqualAbsRel(mass_n[n1], T{})) {
-          v_grid_p += N1_ref(xi) * (momentum_n[n1] / mass_n[n1]);
-        }
-        if (!approximatelyEqualAbsRel(mass_n[n2], T{})) {
-          v_grid_p += N2_ref(xi) * (momentum_n[n2] / mass_n[n2]);
-        }
-        position_p[p] += v_grid_p * m_dt;
+        velocity_p[p] =
+            N1_ref(xi) * velocity_n[n1] + N2_ref(xi) * velocity_n[n2];
+        position_p[p] += velocity_p[p] * m_dt;
 
         // Attention: x1-x2 belong to nodes (their positions don't get updated),
         // while the velocity is measured at MPs (updated at t+dt)
@@ -309,7 +414,6 @@ public:
   }
 
   void resetMesh() {
-    m_mesh.setMPCoords(position_p);
     mass_n.resetZero();
     momentum_n.resetZero();
     velocity_n.resetZero();
@@ -317,6 +421,12 @@ public:
     velocityConstrained_n.resetZero();
     accelerationConstrained_n.resetZero();
     momentumConstrained_n.resetZero();
+    forceConstrained_n.resetZero();
+
+    velocityConstraintValue_n.resetZero();
+    accelerationConstraintValue_n.resetZero();
+    momentumConstraintValue_n.resetZero();
+    forceConstraintValue_n.resetZero();
     bodyForce_n.resetZero();
     tractionForce_n.resetZero();
     forceExternal_n.resetZero();

@@ -156,8 +156,9 @@ public:
 
   void setupMP() {
     Index nMPs = m_mesh.getNumMPs();
+    m_mesh.setMPCoords(position_p);
+    m_mesh.updateMPElementIds();
     for (Index p = 0; p < nMPs; ++p) {
-      mp_element_id[p] = m_mesh.findCageID(position_p[p]);
       volume_p[p] = m_volume / nMPs;
       momentum_p[p] = mass_p[p] * velocity_p[p];
     }
@@ -223,8 +224,7 @@ public:
 
       acceleration_n[i] = totalForce_n[i] / mass_n[i];
       velocity_n[i] += acceleration_n[i] * m_dt;
-      // position_n[i] += velocity_n[i] * m_dt; //Grid nodes don't change
-      // position?
+
     }
   }
   void applyNodalVeloConstraint(Index i, T value) { velocity_n[i] = value; }
