@@ -62,13 +62,11 @@ int main() {
 
   double time = 0.0;
   for (Index step{0}; step < beam.getNumSteps(); ++step) {
+    beam.setNodalVeloConstraint(0, 0.0);
+    beam.setNodalAccConstraint(0, 0.0);
     beam.setupMP();
     beam.p2n();
     beam.nodalEquilibrium();
-    // Python-like BC: clamp left node momentum and total force
-    beam.applyNodalMomentumConstraint(0, 0.0);
-    beam.applyNodalForceConstraint(0, 0.0);
-    beam.applyNodalVeloConstraint(0, 0.0);
     // Capture debug quantities at the same point in the step as the Python
     // code:
     // - N, mass_n, mv_n, f_total computed from (x_p^n, v_p^n)

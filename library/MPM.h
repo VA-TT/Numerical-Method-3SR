@@ -190,50 +190,34 @@ public:
   }
 
   // Apply stored constraints to current nodal state
-  void applyNodalVeloConstraint(Index i) {
-    if (velocityConstrained_n[i] != 0) {
-      velocity_n[i] = velocityConstraintValue_n[i];
-      if (momentumConstrained_n[i] == 0 &&
-          !approximatelyEqualAbsRel(mass_n[i], T{})) {
-        momentum_n[i] = mass_n[i] * velocity_n[i];
+  void applyNodalVeloConstraint() {
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (velocityConstrained_n[i] != 0) {
+        velocity_n[i] = velocityConstraintValue_n[i];
       }
     }
   }
-  void applyNodalAccConstraint(Index i) {
-    if (accelerationConstrained_n[i] != 0) {
-      acceleration_n[i] = accelerationConstraintValue_n[i];
-      if (forceConstrained_n[i] == 0 &&
-          !approximatelyEqualAbsRel(mass_n[i], T{})) {
-        totalForce_n[i] = mass_n[i] * acceleration_n[i];
+  void applyNodalAccConstraint() {
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (accelerationConstrained_n[i] != 0) {
+        acceleration_n[i] = accelerationConstraintValue_n[i];
       }
     }
   }
-  void applyNodalMomentumConstraint(Index i) {
-    if (momentumConstrained_n[i] != 0) {
-      momentum_n[i] = momentumConstraintValue_n[i];
-    }
-  }
-  void applyNodalForceConstraint(Index i) {
-    if (forceConstrained_n[i] != 0) {
-      totalForce_n[i] = forceConstraintValue_n[i];
-    }
-  }
-
-  void applyConstraints() { applyStoredConstraintsAllNodes(); }
-
-  // Backward-compatible aliases (old API)
-  void applyNodalVeloConstraint(Index i, T value) {
-    setNodalVeloConstraint(i, value);
-  }
-  void applyNodalAccConstraint(Index i, T value) {
-    setNodalAccConstraint(i, value);
-  }
-  void applyNodalMomentumConstraint(Index i, T value) {
-    setNodalMomentumConstraint(i, value);
-  }
-  void applyNodalForceConstraint(Index i, T value) {
-    setNodalForceConstraint(i, value);
-  }
+  // void applyNodalMomentumConstraint() {
+  //   for (Index i{0}; i < getNumNodes(); ++i) {
+  //     if (momentumConstrained_n[i] != 0) {
+  //       momentum_n[i] = momentumConstraintValue_n[i];
+  //     }
+  //   }
+  // }
+  // void applyNodalForceConstraint() {
+  //   for (Index i{0}; i < getNumNodes(); ++i) {
+  //     if (forceConstrained_n[i] != 0) {
+  //       totalForce_n[i] = forceConstraintValue_n[i];
+  //     }
+  //   }
+  // }
 
   void setupMP() {
     m_mesh.setMPCoords(position_p); // Saving the updated position to Mesh
@@ -275,7 +259,8 @@ public:
       velocity_n[i] = momentum_n[i] / mass_n[i];
     }
 
-    // Enforce kinematic constraints after mapping (and keep momentum consistent)
+    // Enforce kinematic constraints after mapping (and keep momentum
+    // consistent)
     for (Index i{0}; i < getNumNodes(); ++i) {
       if (!m_mesh.isActiveNode(i)) {
         continue;
@@ -285,9 +270,11 @@ public:
       }
       if (velocityConstrained_n[i] != 0) {
         velocity_n[i] = velocityConstraintValue_n[i];
-        // If user didn't explicitly constrain momentum, derive it from v = p/m
+        // If user didn't explicitly constrain momentum, derive it from v =
+        // p/m
         if (momentumConstrained_n[i] == 0) {
-          momentumConstraintValue_n[i] = mass_n[i] * velocityConstraintValue_n[i];
+          momentumConstraintValue_n[i] =
+              mass_n[i] * velocityConstraintValue_n[i];
           momentumConstrained_n[i] = 1;
           momentum_n[i] = momentumConstraintValue_n[i];
         }
@@ -326,8 +313,6 @@ public:
     }
   }
 
-  
-
   void n2p() {
     // If acceleration is constrained and force is not explicitly constrained,
     // derive force from f = m*a (when mass is known).
@@ -339,7 +324,8 @@ public:
         continue;
       }
       if (accelerationConstrained_n[i] != 0 && forceConstrained_n[i] == 0) {
-        forceConstraintValue_n[i] = mass_n[i] * accelerationConstraintValue_n[i];
+        forceConstraintValue_n[i] =
+            mass_n[i] * accelerationConstraintValue_n[i];
         forceConstrained_n[i] = 1;
         totalForce_n[i] = forceConstraintValue_n[i];
       }
@@ -393,8 +379,8 @@ public:
             N1_ref(xi) * velocity_n[n1] + N2_ref(xi) * velocity_n[n2];
         position_p[p] += velocity_p[p] * m_dt;
 
-        // Attention: x1-x2 belong to nodes (their positions don't get updated),
-        // while the velocity is measured at MPs (updated at t+dt)
+        // Attention: x1-x2 belong to nodes (their positions don't get
+        // updated), while the velocity is measured at MPs (updated at t+dt)
         strain_rate_p[p] =
             dN1_dx(x1, x2) * velocity_n[n1] + dN2_dx(x1, x2) * velocity_n[n2];
         dStrain_p[p] = strain_rate_p[p] * m_dt;
