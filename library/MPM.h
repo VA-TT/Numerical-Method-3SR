@@ -370,15 +370,7 @@ public:
     momentum_n.resetZero();
     velocity_n.resetZero();
     acceleration_n.resetZero();
-    velocityConstrained_n.resetZero();
-    accelerationConstrained_n.resetZero();
-    momentumConstrained_n.resetZero();
-    forceConstrained_n.resetZero();
 
-    velocityConstraintValue_n.resetZero();
-    accelerationConstraintValue_n.resetZero();
-    momentumConstraintValue_n.resetZero();
-    forceConstraintValue_n.resetZero();
     bodyForce_n.resetZero();
     tractionForce_n.resetZero();
     forceExternal_n.resetZero();
