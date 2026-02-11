@@ -17,7 +17,7 @@ int main() {
   const double rho = 1.0;
   const double dt = 0.01;
   const double duration = 10.0;
-  const double xloc = 0.5; // same as Sample.py (only used for optional compare)
+  const double xloc = 0.5; // Point of surveying
 
   using Beam = MPM1D<double, 2, 1>; // 2 nodes, 1 MP/element
   Beam beam(E, rho, L, v0, dt, duration, xloc);
