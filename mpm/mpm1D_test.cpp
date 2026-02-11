@@ -9,8 +9,6 @@
 int main() {
   Timer t;
 
-  // Parameters matching Python code
-  // Match Sample.py
   const double L = 1.0;
   const double v0 = 0.1;
   const double E = 4.0 * constants::pi * constants::pi;
@@ -49,10 +47,19 @@ int main() {
          "mv_n0\t mv_n1\t f_total0\t f_total1\t mv_n0_after\t mv_n1_after\t "
          "a_grid\t v_pic\t x_p_np1\t v_p_np1\n";
 
-  // Initial state at t = 0 (before any update)
+  double time = 0.0;
+
+  // Call setupMP() FIRST to initialize positions
+  beam.setNodalVeloConstraint(0, 0.0);
+  beam.setNodalAccConstraint(0, 0.0);
+  beam.setNodalForceConstraint(0, 0.0); // v_i[0] = a_i[0] = 0
+  beam.setNodalMomentumConstraint(0, 0.0);
+  beam.setupMP(); // ✅ Initialize positions
+
+  // NOW record initial state
   {
     const double t_state = 0.0;
-    const double x_num = beam.getMPposition(0);
+    const double x_num = beam.getMPposition(0); // ✅ Now = 0.5
     const double v_num = beam.getMPvelocity(0);
     const double x_ana = analytic_x(t_state);
     const double v_ana = analytic_v(t_state);
@@ -60,7 +67,6 @@ int main() {
          << '\t' << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
   }
 
-  double time = 0.0;
   for (Index step{0}; step < beam.getNumSteps(); ++step) {
     beam.setNodalVeloConstraint(0, 0.0);
     beam.setNodalAccConstraint(0, 0.0);

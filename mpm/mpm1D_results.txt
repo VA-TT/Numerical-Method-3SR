@@ -1,6 +1,0 @@
-# MPM 1D Results
-# E = 39.4784, rho = 1, L = 1
-# MPs = 1, Nodes = 2
-# Columns: MP, x, v, strain, stress
-      MP              x              v         strain         stress
-       0       0.500000      -0.000000      -0.000000      -0.000000
