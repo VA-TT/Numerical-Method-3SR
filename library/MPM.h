@@ -107,8 +107,9 @@ public:
     Index nMPs = m_mesh.getNumMPs();
     volume_p.resize(nMPs, m_volume / nMPs);
     mass_p.resize(nMPs, m_mass / nMPs); // MP's mass is constant
-    position_p.resize(nMPs, T{});
-    velocity_p.resize(nMPs, m_v0); // Initial velocity
+    // position_p.resize(nMPs);
+    position_p = m_mesh.getMPCoords(); // Initialize position of MPs
+    velocity_p.resize(nMPs, m_v0);     // Initial velocity
     momentum_p.resize(nMPs, T{});
     stress_p.resize(nMPs, T{});
     strain_p.resize(nMPs, T{});
@@ -163,12 +164,14 @@ public:
   T getMPstress(Index p) const { return stress_p[p]; }
 
   // Setters
+  void setCurrentTime(T value) { m_currentTime = value; }
   void setE(T E) { m_E = E; }
   void setG(T G) { m_G = G; } // Set G if considering gravity
   void setAnalyticSolution(std::function<T(T)> sol) {
     m_analyticSolution = sol;
   }
   void setComportmentLaw(std::function<T(T)> law) { m_law = law; }
+  void setMPvelocity(Index p, T value) { velocity_p[p] = value; }
 
   // Setters: store constraint values + mark constrained
   void setNodalVeloConstraint(Index i, T value) {
@@ -219,7 +222,6 @@ public:
   }
 
   void setupMP() {
-    position_p = m_mesh.getMPCoords(); // Initialize position of MPs
     m_mesh.updateMPElementIds();
     m_mesh.activateNodes();
   }
@@ -278,8 +280,9 @@ public:
     // Update momentum at nodes
     for (Index i{0}; i < getNumNodes(); ++i) {
       if (m_mesh.isActiveNode(i)) {
-        acceleration_n[i] = totalForce_n[i] / mass_n[i];
         momentum_n[i] += totalForce_n[i] * m_dt;
+        acceleration_n[i] = totalForce_n[i] / mass_n[i];
+        applyNodalAccConstraint(); // No need to apply AccConstraint here as
         // velocity_n[i] += acceleration_n[i] * m_dt;
         // applyNodalVeloConstraint();
         // position_n[i] += velocity_n[i] * m_dt; //Grid nodes don't change
@@ -298,8 +301,14 @@ public:
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
-        velocity_p[p] += m_dt * N1_ref(xi) * totalForce_n[n1] / mass_n[n1] +
-                         m_dt * N2_ref(xi) * totalForce_n[n2] / mass_n[n2];
+        // Update velocity and position using FLIP style
+        velocity_p[p] += (N1_ref(xi) * acceleration_n[n1] +
+                          N2_ref(xi) * acceleration_n[n2]) *
+                         m_dt;
+        // Hybrid (alpha = 0.05)
+        // T v_pic = N1 * velocity_n[n1] + N2 * velocity_n[n2];
+        // T v_flip = velocity_p[p] + (N1 * a_n1 + N2 * a_n2) * dt;
+        // velocity_p[p] = alpha * v_pic + '(1-alpha)' * v_flip;
         // position_p[p] += velocity_p[p] * m_dt;
         position_p[p] += (N1_ref(xi) * momentum_n[n1] / mass_n[n1] +
                           N2_ref(xi) * momentum_n[n2] / mass_n[n2]) *
@@ -308,19 +317,6 @@ public:
       }
     }
 
-    // Map updated nodal velocity to calculate strain
-    // for (Index i{0}; i < getNumNodes(); ++i) {
-    //   if (m_mesh.isActiveNode(i)) {
-    //     velocity_n[i] = momentum_p[p] * velocity_p[p] * m_dt;
-    //   }
-    // }
-
-    // Update Nodal velocity to calculate strain
-    // for (Index i{0}; i < getNumNodes(); ++i) {
-    //   if (m_mesh.isActiveNode(i)) {
-    //     velocity_n[i] = momentum_n[i] / mass_n[i];
-    //   }
-    // }
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
       Index e = m_mesh.getMPElementId(p);
       if (e != -1) {
@@ -329,8 +325,8 @@ public:
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
-        velocity_n[n1] += mass_p[p] * velocity_p[p] * N1_ref(xi) / mass_n[n1];
-        velocity_n[n2] += mass_p[p] * velocity_p[p] * N2_ref(xi) / mass_n[n2];
+        velocity_n[n1] += momentum_p[p] * N1_ref(xi) / mass_n[n1];
+        velocity_n[n2] += momentum_p[p] * N2_ref(xi) / mass_n[n2];
       }
     }
     applyNodalVeloConstraint();
@@ -359,13 +355,13 @@ public:
       }
     }
 
-    m_mesh.setMPCoords(position_p); // Saving the updated position to Mesh
-
     // Update volume
     // volume_p[p] *= (1.0 + dStrain_p[p]);
   }
 
   void resetMesh() {
+    m_mesh.setMPCoords(position_p); // Saving the updated MPs' position to Mesh
+
     mass_n.resetZero();
     momentum_n.resetZero();
     velocity_n.resetZero();
@@ -376,14 +372,9 @@ public:
     forceExternal_n.resetZero();
     forceInternal_n.resetZero();
     totalForce_n.resetZero();
+
     m_mesh.nodalReset();
   }
-
-  void applyBC() {
-    // Apply boundary conditions
-  }
-
-  void timeIntegration() {}
 
   void compareAnalytic() {
     if (!m_analyticSolution) {
@@ -417,32 +408,9 @@ public:
               << std::scientific << error << '\n';
   }
 
-  void exportResult(const std::string &filename = "mpm1D_results.txt") {
-    std::cout << "\n=== Exporting Results ===\n";
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-      std::cerr << "Error: Cannot open file " << filename << '\n';
-      return;
-    }
-
-    file << "# MPM 1D Results\n";
-    file << "# E = " << m_E << ", rho = " << m_rho << ", L = " << m_length
-         << '\n';
-    file << "# MPs = " << m_mesh.getNumMPs() << ", Nodes = " << nNodes << '\n';
-    file << "# Columns: MP, x, v, strain, stress\n";
-    file << std::setw(8) << "MP" << std::setw(15) << "x" << std::setw(15) << "v"
-         << std::setw(15) << "strain" << std::setw(15) << "stress" << '\n';
-
-    for (Index p = 0; p < m_mesh.getNumMPs(); ++p) {
-      file << std::setw(8) << p << std::setw(15) << std::fixed
-           << std::setprecision(6) << position_p[p] << std::setw(15)
-           << velocity_p[p] << std::setw(15) << strain_p[p] << std::setw(15)
-           << stress_p[p] << '\n';
-    }
-
-    file.close();
-    std::cout << "Results exported to: " << filename << '\n';
-  }
+  void exportResult(const std::string &filename = "mpm1D_results.txt") {}
+  void applyBC() {}
+  void timeIntegration() {}
 };
 
 #endif // MATERIAL_POINT_METHOD_H

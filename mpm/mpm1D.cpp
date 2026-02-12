@@ -8,6 +8,7 @@
 int main() {
   Timer t;
 
+  // Input
   const double L = 1.0;
   const double v0 = 0.1;
   const double E = 4.0 * constants::pi * constants::pi;
@@ -16,6 +17,14 @@ int main() {
   const double duration = 10.0;
   const double xloc = 0.5;
 
+  // Analytic result
+  const double omega = (1.0 / L) * std::sqrt(E / rho);
+  auto analytic_v = [&](double time) { return v0 * std::cos(omega * time); };
+  auto analytic_x = [&](double time) {
+    return xloc * std::exp((v0 / (L * omega)) * std::sin(omega * time));
+  };
+
+  // Set up MPM1D grid with 2 nodes and 1 MP
   using Beam = MPM1D<double, 2, 1>;
   Beam beam(E, rho, L, v0, dt, duration, xloc);
   // (dt, duration, rho, length, xloc, v0, a0) // v0 = a0 = 0 by default
@@ -23,24 +32,16 @@ int main() {
   beam.setE(E);               // Module Young
   beam.setComportmentLaw({}); // Tangential Operator
 
-  const double omega = (1.0 / L) * std::sqrt(E / rho);
-  auto analytic_v = [&](double time) { return v0 * std::cos(omega * time); };
-  auto analytic_x = [&](double time) {
-    return xloc * std::exp((v0 / (L * omega)) * std::sin(omega * time));
-  };
-
+  // Output files
   std::ofstream hist("mpm1D_history.txt");
-  if (!hist.is_open()) {
-    std::cerr << "Error: Cannot open mpm1D_history.txt\n";
-    return 1;
-  }
   hist << "# time\tx_num\tv_num\tx_ana\tv_ana\n";
 
-  // Initialize MPs once
-  beam.setupMP();
+  std::ofstream stress_strain("mpm1D_stress_strain.txt");
+  stress_strain << "# time\tstress\tstrain\n";
 
-  // Set boundary conditions ONCE (if resetMesh() doesn't clear them)
+  // Set boundary conditions ONCE
   beam.setNodalVeloConstraint(0, 0.0);
+  beam.setNodalAccConstraint(0, 0.0);
   beam.setNodalMomentumConstraint(0, 0.0);
   beam.setNodalForceConstraint(0, 0.0);
 
@@ -59,7 +60,7 @@ int main() {
             << "] at x=" << beam.getMPposition(tracked_mp) << " (xloc=" << xloc
             << ")\n\n";
 
-  // Initial state (t=0)
+  // Initial state (t=0) to the output file
   {
     const double x_num = beam.getMPposition(tracked_mp);
     const double v_num = beam.getMPvelocity(tracked_mp);
@@ -67,11 +68,15 @@ int main() {
     const double v_ana = analytic_v(0.0);
     hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << x_num << '\t'
          << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
+
+    stress_strain << std::fixed << std::setprecision(10) << 0.0 << '\t'
+                  << beam.getMPstress(tracked_mp) << '\t'
+                  << beam.getMPstrain(tracked_mp) << '\n';
   }
 
   // Time integration loop
   for (Index step = 0; step < beam.getNumSteps(); ++step) {
-    double time = (step + 1) * dt;
+    double time = (step + 1) * beam.getTimeStep();
 
     // MPM algorithm
     beam.setupMP(); // Update MP elements and activate nodes
@@ -89,6 +94,10 @@ int main() {
     hist << std::fixed << std::setprecision(10) << time << '\t' << x_num << '\t'
          << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
 
+    stress_strain << std::fixed << std::setprecision(10) << time << '\t'
+                  << beam.getMPstress(tracked_mp) << '\t'
+                  << beam.getMPstrain(tracked_mp) << '\n';
+
     if (step < 5 || step == beam.getNumSteps() - 1) {
       std::cout << std::fixed << std::setprecision(6);
       std::cout << "t=" << time << " | Num: x=" << x_num << " v=" << v_num
@@ -99,7 +108,9 @@ int main() {
   }
 
   hist.close();
+  stress_strain.close();
   std::cout << "\n✓ Results saved to: mpm1D_history.txt\n";
+  std::cout << "✓ Stress-strain data saved to: mpm1D_stress_strain.txt\n";
   std::cout << "✓ Computation time: " << t.elapsed() << " s\n";
   return 0;
 }
