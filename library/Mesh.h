@@ -10,7 +10,7 @@
 template <typename T> class Mesh1D {
 private:
   T m_length{};
-  Index m_nNodes{}, m_nElements{}, m_nMPperEle{}, nMPs{};
+  Index m_nNodes{}, m_nElements{}, m_nMPperEle{}, m_nMPs{};
   Vector<T> m_nodes{};
   Vector<char> m_activeNodes{}; // Use char instead of bool to avoid
                                 // std::vector<bool> issues
@@ -23,7 +23,7 @@ public:
   // Constructor
   Mesh1D(T length, Index nNodes, Index nMPperEle = 0)
       : m_length{length}, m_nNodes{nNodes}, m_nElements{nNodes - 1},
-        m_nMPperEle{nMPperEle}, nMPs{nMPperEle * (nNodes - 1)} {
+        m_nMPperEle{nMPperEle}, m_nMPs{nMPperEle * (nNodes - 1)} {
     assert(m_nElements > 0 && "Number of elements must be positive");
     assert(length > 0 && "Domain length must be positive");
 
@@ -51,7 +51,7 @@ public:
 
     // Initialize Material Points (MPs) if needed
     if (m_nMPperEle > 0) {
-      m_MPs.reserve(nMPs);
+      m_MPs.reserve(m_nMPs);
       Index mpID{0};
       for (Index e{0}; e < m_nElements; ++e) {
         T x_start = m_nodes[e];
@@ -63,7 +63,7 @@ public:
     }
 
     // Initialize cached element IDs for MPs
-    m_mpElementId.resize(static_cast<std::size_t>(nMPs), Index{-1});
+    m_mpElementId.resize(static_cast<std::size_t>(m_nMPs), Index{-1});
     for (Index p{0}; p < static_cast<Index>(m_MPs.size()); ++p) {
       m_mpElementId[p] = findCageID(m_MPs[p]);
     }
@@ -79,42 +79,42 @@ public:
   // Getter
   Index getNumNodes() const { return m_nNodes; }
   Index getNumElements() const { return m_nElements; }
-  Index getNumMPs() const { return nMPs; }
+  Index getNumMPs() const { return m_nMPs; }
   const Vector<char> &getActiveNodes() const { return m_activeNodes; }
   const Vector<T> &nodeCoords() const { return m_nodes; }
   const Vector<T> &getMPCoords() const { return m_MPs; }
   const Vector<Index> &getMPElementIds() const { return m_mpElementId; }
   T getMPCoord(Index p) const {
-    assert(p >= 0 && p < nMPs && "Invalid MP index");
+    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
   }
   Index getMPElementId(Index p) const {
-    assert(p >= 0 && p < nMPs && "Invalid MP index");
+    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_mpElementId[p];
   }
 
   void setMPCoords(const Vector<T> &mp_positions) {
-    assert(mp_positions.size() == static_cast<std::size_t>(nMPs) &&
+    assert(mp_positions.size() == static_cast<std::size_t>(m_nMPs) &&
            "Size mismatch: mp_positions must match mesh MP count");
     m_MPs = mp_positions;
   }
 
   void setMPCoord(Index p, T x) {
-    assert(p >= 0 && p < nMPs && "Invalid MP index");
+    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     m_MPs[p] = x;
     // Keep cached element id consistent
-    if (m_mpElementId.size() != nMPs) {
-      m_mpElementId.resize(static_cast<std::size_t>(nMPs), Index{-1});
+    if (m_mpElementId.size() != m_nMPs) {
+      m_mpElementId.resize(static_cast<std::size_t>(m_nMPs), Index{-1});
     }
     m_mpElementId[p] = findCageID(x);
   }
 
   // Update cached element IDs using the mesh-internal MP coordinates.
   void updateMPElementIds() {
-    if (m_mpElementId.size() != nMPs) {
-      m_mpElementId.resize(static_cast<std::size_t>(nMPs), Index{-1});
+    if (m_mpElementId.size() != m_nMPs) {
+      m_mpElementId.resize(static_cast<std::size_t>(m_nMPs), Index{-1});
     }
-    for (Index p{0}; p < nMPs; ++p) {
+    for (Index p{0}; p < m_nMPs; ++p) {
       m_mpElementId[p] = findCageID(m_MPs[p]);
     }
   }
@@ -212,7 +212,7 @@ public:
     }
 
     // Activate nodes of elements containing MPs
-    for (Index p{0}; p < nMPs; ++p) {
+    for (Index p{0}; p < m_nMPs; ++p) {
       Index elemID = m_mpElementId[p];
       if (elemID != -1) {
         // Get node indices (not coordinates!)
@@ -230,12 +230,11 @@ public:
     return m_activeNodes[nodeID] != 0;
   }
 };
-template <typename T> void createMeshMP() {}
 
 template <typename T> class Mesh2D {
 private:
   T m_length{}, m_height{};
-  Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{}, m_nMPperEle{}, nMPs{};
+  Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{}, m_nMPs{};
   Vector<std::pair<T, T>> m_nodes{}; // All node coordinates as (x, y) pairs
   Vector<std::pair<T, T>> m_nodes_initial{}; // Initial configuration for reset
   Vector<std::pair<T, T>> m_MPs{};           // Material Points coordinates
@@ -248,10 +247,9 @@ private:
 
 public:
   // Constructor
-  Mesh2D(T length, T height, Index nx, Index ny, Index nMPperEle = 0)
+  Mesh2D(T length, T height, Index nx, Index ny)
       : m_length{length}, m_height{height}, m_nx{nx}, m_ny{ny},
-        m_nNodes{nx * ny}, m_nElements{(nx - 1) * (ny - 1)},
-        m_nMPperEle{nMPperEle}, nMPs{nMPperEle * nMPperEle * m_nElements} {
+        m_nNodes{nx * ny}, m_nElements{(nx - 1) * (ny - 1)} {
     assert(nx > 1 && ny > 1 && "Need at least 2 nodes in each direction");
     assert(length > 0 && height > 0 && "Domain dimensions must be positive");
 
@@ -308,34 +306,15 @@ public:
         ++elemID;
       }
     }
-
-    // Initialize Material Points (MPs) if needed
-    if (m_nMPperEle > 0) {
-      m_MPs.resize(nMPs);
-      Index mpID{0};
-      for (Index e{0}; e < m_nElements; ++e) {
-        // Get element corner coordinates
-        const auto &conn = m_connectivity[e];
-        T x_min = m_x_coords[conn[0]];
-        T x_max = m_x_coords[conn[1]];
-        T y_min = m_y_coords[conn[0]];
-        T y_max = m_y_coords[conn[3]];
-
-        T dx = (x_max - x_min) / (m_nMPperEle + 1);
-        T dy = (y_max - y_min) / (m_nMPperEle + 1);
-
-        // Distribute MPs uniformly in 2D grid within element
-        for (Index j{0}; j < m_nMPperEle; ++j) {
-          for (Index i{0}; i < m_nMPperEle; ++i) {
-            T x = x_min + (i + 1) * dx;
-            T y = y_min + (j + 1) * dy;
-            m_MPs[mpID] = {x, y};
-            ++mpID;
-          }
-        }
-      }
-    }
-  };
+  } // End of Mesh2D constructor
+  
+  // MP grid generation methods
+  void generateSquareMPgrid(T x0, T y0, T x1, T y1, T MP_size) {
+    T npx = static_cast<Index>((x1 - x0) / MP_size);
+    T npy = static_cast<Index>((y1 - y0) / MP_size);
+    m_nMPs = npx * npx;
+  }
+  void generateCircleMPgrid() {}
   // Other defaults
   Mesh2D() = default;
   Mesh2D(const Mesh2D &) = default;
@@ -347,14 +326,14 @@ public:
   // Getter
   Index getNumNodes() const { return m_nNodes; }
   Index getNumElements() const { return m_nElements; }
-  Index getNumMPs() const { return nMPs; }
+  Index getNumMPs() const { return m_nMPs; }
   const Vector<char> &getActiveNodes() const { return m_activeNodes; }
   Index nx() const { return m_nx; }
   Index ny() const { return m_ny; }
   const Vector<std::pair<T, T>> &getNodes() const { return m_nodes; }
   const Vector<std::pair<T, T>> &getMPCoords() const { return m_MPs; }
   std::pair<T, T> getMPCoord(Index p) const {
-    assert(p >= 0 && p < nMPs && "Invalid MP index");
+    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
   }
   const Vector<T> &getXCoords() const { return m_x_coords; }
@@ -413,9 +392,7 @@ public:
     m_height = height;
     regenerateMesh();
   }
-  void regenerateMesh() {
-    *this = Mesh2D(m_length, m_height, m_nx, m_ny, m_nMPperEle);
-  }
+  void regenerateMesh() { *this = Mesh2D(m_length, m_height, m_nx, m_ny); }
 
   // Update mesh for time-stepping (e.g., Updated Lagrangian FEM)
   void updateNodePosition(Index nodeID, T new_x, T new_y) {
@@ -443,7 +420,7 @@ public:
       m_y_coords[i] = new_positions[i].second;
     }
   }
-
+  void createMeshMP() {}
   // Reset to initial configuration
   void resetMesh() {
     m_nodes = m_nodes_initial;
