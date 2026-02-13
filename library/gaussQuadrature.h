@@ -1,5 +1,5 @@
-#ifndef GAUSS_LEGENDRE_QUADRATURE
-#define GAUSS_LEGENDRE_QUADRATURE
+#ifndef GAUSS_LEGENDRE_QUADRATURE_H
+#define GAUSS_LEGENDRE_QUADRATURE_H
 
 #include "squareRoot.h"
 #include <array>

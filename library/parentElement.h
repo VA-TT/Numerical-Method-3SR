@@ -4,6 +4,7 @@
 #include "Matrix.h"
 #include "Vector.h"
 #include "gaussQuadrature.h"
+#include "interpolate.h"
 #include <cassert>
 #include <functional>
 #include <iomanip>
@@ -250,6 +251,59 @@ std::pair<Vector<T>, Vector<T>> dNdxdy(T xi, T eta, const Vector<T> &x_nodes,
 
   return {dN_dx, dN_dy};
 }
+
+// void shapeFunction() {
+//   // Equally divied
+//   int local_i = 0;
+//   int local_j = 1;
+//   for (Index e{0}; e < nElements; ++e) {
+//     int i = eleOrigin[e];
+//     int j = eleEnd[e];
+//     double x_i = nodes[i];
+//     double x_j = nodes[j];
+//     element[e] = {x_i, x_j};
+//     length[e] = constexpr_fabs(x_j - x_i);
+//     k[e] = EA / length[e];
+
+//     // MUST set parameter "x" here to type <<auto>> in order to accept Dual
+//     // class as input for derivative calculating
+//     auto shapefunction_i = [=](auto x) {
+//       return basisLagrange(local_i, element[e], x);
+//     };
+//     auto dShape_i = [=](double x) { return automaticDiff(shapefunction_i, x);
+//     }; auto shapefunction_j = [=](auto x) {
+//       return basisLagrange(local_j, element[e], x);
+//     };
+//     auto dShape_j = [=](double x) { return automaticDiff(shapefunction_j, x);
+//     }; for (Index kk{0}; kk < nNodes; ++kk) {
+//       if (kk == i) {
+//         N[kk].push_back(shapefunction_i);
+//         N_x[kk].push_back(dShape_i);
+//       } else if (kk == j) {
+//         N[kk].push_back(shapefunction_j);
+//         N_x[kk].push_back(dShape_j);
+//       } else {
+//         N[kk].push_back([](double x) { return 0.0; });
+//         N_x[kk].push_back([](double x) { return 0.0; });
+//       }
+//     }
+//   }
+// }
+
+auto cubicBSpline = [](auto x, auto h) {
+  if (-2.0 * h <= x <= -h)
+    return (x * x * x) / (6.0 * h * h * h) + x * x / (h * h) + 2.0 * x / h +
+           4.0 / 3.0;
+  if (-h <= x <= 0.0)
+    return (-x * x * x) / (2.0 * h * h * h) - x * x / (h * h) + 4.0 / 3.0;
+  if (-2.0 * h <= x <= -h)
+    return (x * x * x) / (2.0 * h * h * h) - x * x / (h * h) + 4.0 / 3.0;
+  if (-2.0 * h <= x <= -h)
+    return (-x * x * x) / (6.0 * h * h * h) + x * x / (h * h) - 2.0 * x / h +
+           4.0 / 3.0;
+  else
+    return 0;
+};
 
 #endif
 

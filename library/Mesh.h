@@ -230,6 +230,7 @@ public:
     return m_activeNodes[nodeID] != 0;
   }
 };
+template <typename T> void createMeshMP() {}
 
 template <typename T> class Mesh2D {
 private:
