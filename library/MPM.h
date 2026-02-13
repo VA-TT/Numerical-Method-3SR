@@ -228,13 +228,9 @@ public:
 
   void p2n() {
     Index nMPs = m_mesh.getNumMPs();
-    for (Index p = 0; p < nMPs; ++p) {
-      volume_p[p] = m_volume / nMPs;
-      // mass_p[p] = m_mass / nMPs;
-      momentum_p[p] = mass_p[p] * velocity_p[p];
-    }
     // Map nodal mass + momentum
     for (Index p{0}; p < nMPs; ++p) {
+      momentum_p[p] = mass_p[p] * velocity_p[p];
       Index e = m_mesh.getMPElementId(p);
       if (e != -1) {
         T x_p = position_p[p];
@@ -305,7 +301,7 @@ public:
         velocity_p[p] += (N1_ref(xi) * acceleration_n[n1] +
                           N2_ref(xi) * acceleration_n[n2]) *
                          m_dt;
-        // Hybrid (alpha = 0.05)
+        // Hybrid
         // T v_pic = N1 * velocity_n[n1] + N2 * velocity_n[n2];
         // T v_flip = velocity_p[p] + (N1 * a_n1 + N2 * a_n2) * dt;
         // velocity_p[p] = alpha * v_pic + '(1-alpha)' * v_flip;
@@ -352,11 +348,10 @@ public:
         } else {
           stress_p[p] += m_E * dStrain_p[p]; // Default linear elastic
         }
+        // Update volume
+        volume_p[p] *= (1.0 + dStrain_p[p]);
       }
     }
-
-    // Update volume
-    // volume_p[p] *= (1.0 + dStrain_p[p]);
   }
 
   void resetMesh() {
