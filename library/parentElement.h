@@ -142,8 +142,8 @@ Matrix<T, 2, 2> Jacobian(T xi, T eta, const Vector<T> &x_nodes,
   return J;
 }
 
-// Inverse mapping: (x,y) -> (xi,eta) using Newton-Raphson
-// Solves: x = physicCoor_x(xi,eta), y = physicCoor_y(xi,eta)
+// Inverse mapping: (x,y) -> (xi,eta) - Optimized for rectangular elements
+// For general quadrilaterals, falls back to Newton-Raphson
 template <typename T>
 std::pair<T, T> parentCoor(T x, T y, const Vector<T> &x_nodes,
                            const Vector<T> &y_nodes, int maxIter = 20,
@@ -151,8 +151,27 @@ std::pair<T, T> parentCoor(T x, T y, const Vector<T> &x_nodes,
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 
-  // Initial guess: center of parent element
-  T xi = 0.0, eta = 0.0;
+  // Check if element is rectangular (aligned with axes)
+  // Rectangle: x1=x4, x2=x3, y1=y2, y3=y4
+  bool isRectangular = (std::abs(x_nodes[0] - x_nodes[3]) < tol) && // x1 = x4
+                       (std::abs(x_nodes[1] - x_nodes[2]) < tol) && // x2 = x3
+                       (std::abs(y_nodes[0] - y_nodes[1]) < tol) && // y1 = y2
+                       (std::abs(y_nodes[2] - y_nodes[3]) < tol);   // y3 = y4
+
+  if (isRectangular) {
+    // Direct analytical solution for rectangular element
+    T x_center = (x_nodes[0] + x_nodes[1]) / 2.0;
+    T y_center = (y_nodes[0] + y_nodes[2]) / 2.0;
+    T half_width = (x_nodes[1] - x_nodes[0]) / 2.0;
+    T half_height = (y_nodes[2] - y_nodes[0]) / 2.0;
+
+    T xi = (x - x_center) / half_width;
+    T eta = (y - y_center) / half_height;
+    return {xi, eta};
+  }
+
+  // General case: Newton-Raphson iteration for non-rectangular elements
+  T xi = 0.0, eta = 0.0; // Initial guess: center
 
   for (int iter = 0; iter < maxIter; ++iter) {
     // Compute residual: R = [x - x(xi,eta), y - y(xi,eta)]
