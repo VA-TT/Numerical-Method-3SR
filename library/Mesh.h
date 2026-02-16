@@ -52,7 +52,6 @@ public:
     // Initialize Material Points (MPs) if needed
     if (m_nMPperEle > 0) {
       m_MPs.reserve(m_nMPs);
-      Index mpID{0};
       for (Index e{0}; e < m_nElements; ++e) {
         T x_start = m_nodes[e];
         T le = getLengthEle(e);
@@ -240,14 +239,19 @@ private:
   Vector<std::pair<T, T>> m_MPs{};           // Material Points coordinates
   Vector<char> m_activeNodes{}; // Track which nodes contain Material Points
   Vector<Vector<Index>> m_connectivity{};
-  Vector<T> m_x_coords;         // Node x-coordinates vector
-  Vector<T> m_y_coords;         // Node y-coordinates vector
-  Vector<T> m_x_coords_initial; // Initial x-coordinates
-  Vector<T> m_y_coords_initial; // Initial y-coordinates
+  Vector<T> m_nodes_x;         // Node x-coordinates vector
+  Vector<T> m_nodes_y;         // Node y-coordinates vector
+  Vector<T> m_nodes_x_initial; // Initial nodal x-coordinates
+  Vector<T> m_nodes_y_initial; // Initial nodal y-coordinates
+  Vector<T> m_MP_x_initial;    // Initial MP x-coordinates
+  Vector<T> m_MP_y_initial;    // Initial MP y-coordinates
+  Vector<T> m_MP_x;            // MP x-coordinates
+  Vector<T> m_MP_y;            // MP y-coordinates
 
 public:
   // Constructor
-  Mesh2D(T length, T height, Index nx, Index ny)
+  Mesh2D(T length, T height, Index nx, Index ny, T x0 = 0.0, T y0 = 0.0,
+         T x1 = 0.0, T y1 = 0.0, T MP_size = 0.0)
       : m_length{length}, m_height{height}, m_nx{nx}, m_ny{ny},
         m_nNodes{nx * ny}, m_nElements{(nx - 1) * (ny - 1)} {
     assert(nx > 1 && ny > 1 && "Need at least 2 nodes in each direction");
@@ -258,10 +262,10 @@ public:
     m_nodes_initial.resize(m_nNodes);
     m_activeNodes.resize(m_nNodes, 0);
     m_connectivity.resize(m_nElements);
-    m_x_coords.resize(m_nNodes);
-    m_y_coords.resize(m_nNodes);
-    m_x_coords_initial.resize(m_nNodes);
-    m_y_coords_initial.resize(m_nNodes);
+    m_nodes_x.resize(m_nNodes);
+    m_nodes_y.resize(m_nNodes);
+    m_nodes_x_initial.resize(m_nNodes);
+    m_nodes_y_initial.resize(m_nNodes);
 
     T dx = length / (nx - 1);
     T dy = height / (ny - 1);
@@ -277,15 +281,15 @@ public:
         nodeID = j * nx + i;
         T x = dx * i;
         T y = dy * j;
-        m_x_coords[nodeID] = x;
-        m_y_coords[nodeID] = y;
+        m_nodes_x[nodeID] = x;
+        m_nodes_y[nodeID] = y;
         m_nodes[nodeID] = {x, y};
       }
     }
     // Copy to initial configuration (more efficient than per-element
     // assignment)
-    m_x_coords_initial = m_x_coords;
-    m_y_coords_initial = m_y_coords;
+    m_nodes_x_initial = m_nodes_x;
+    m_nodes_y_initial = m_nodes_y;
     m_nodes_initial = m_nodes;
 
     // Generate connectivity for Q4 elements
@@ -306,13 +310,32 @@ public:
         ++elemID;
       }
     }
+    generateSquareGridMP(x0, y0, x1, y1, MP_size);
   } // End of Mesh2D constructor
-  
+
   // MP grid generation methods
-  void generateSquareMPgrid(T x0, T y0, T x1, T y1, T MP_size) {
-    T npx = static_cast<Index>((x1 - x0) / MP_size);
-    T npy = static_cast<Index>((y1 - y0) / MP_size);
-    m_nMPs = npx * npx;
+  void generateSquareGridMP(T x0, T y0, T x1, T y1, T MP_size) {
+    Index npx = static_cast<Index>((x1 - x0) / MP_size);
+    Index npy = static_cast<Index>((y1 - y0) / MP_size);
+    m_nMPs = npx * npy;
+
+    // Initialize Material Points (MPs) if needed
+    if (m_nMPs > 0) {
+      m_MPs.reserve(m_nMPs);
+      m_MP_x.reserve(m_nMPs);
+      m_MP_y.reserve(m_nMPs);
+      for (Index j{0}; j < npy; ++j) {
+        for (Index i{0}; i < npx; ++i) {
+          T x = x0 + MP_size / 2 + i * MP_size;
+          T y = y0 + MP_size / 2 + j * MP_size;
+          m_MP_x.push_back(x);
+          m_MP_y.push_back(y);
+          m_MPs.push_back({x, y});
+        }
+      }
+      m_MP_x_initial = m_MP_x;
+      m_MP_y_initial = m_MP_y;
+    }
   }
   void generateCircleMPgrid() {}
   // Other defaults
@@ -336,8 +359,76 @@ public:
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
   }
-  const Vector<T> &getXCoords() const { return m_x_coords; }
-  const Vector<T> &getYCoords() const { return m_y_coords; }
+  const Vector<T> &getXCoords() const { return m_nodes_x; }
+  const Vector<T> &getYCoords() const { return m_nodes_y; }
+
+  // MP getters
+  const Vector<T> &getMPXCoords() const { return m_MP_x; }
+  const Vector<T> &getMPYCoords() const { return m_MP_y; }
+  const Vector<T> &getInitialMPXCoords() const { return m_MP_x_initial; }
+  const Vector<T> &getInitialMPYCoords() const { return m_MP_y_initial; }
+  T getMPXCoord(Index p) const {
+    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
+    return m_MP_x[p];
+  }
+  T getMPYCoord(Index p) const {
+    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
+    return m_MP_y[p];
+  }
+
+  // MP setters
+  void setMPCoord(Index p, T x, T y) {
+    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
+    m_MP_x[p] = x;
+    m_MP_y[p] = y;
+    m_MPs[p] = {x, y};
+  }
+
+  void setMPCoords(const Vector<T> &mp_x, const Vector<T> &mp_y) {
+    assert(mp_x.size() == static_cast<std::size_t>(m_nMPs) &&
+           mp_y.size() == static_cast<std::size_t>(m_nMPs) &&
+           "Size mismatch: mp coordinates must match mesh MP count");
+    m_MP_x = mp_x;
+    m_MP_y = mp_y;
+    for (Index p{0}; p < m_nMPs; ++p) {
+      m_MPs[p] = {mp_x[p], mp_y[p]};
+    }
+  }
+
+  void setMPCoords(const Vector<std::pair<T, T>> &mp_positions) {
+    assert(mp_positions.size() == static_cast<std::size_t>(m_nMPs) &&
+           "Size mismatch: mp_positions must match mesh MP count");
+    m_MPs = mp_positions;
+    for (Index p{0}; p < m_nMPs; ++p) {
+      m_MP_x[p] = mp_positions[p].first;
+      m_MP_y[p] = mp_positions[p].second;
+    }
+  }
+
+  void updateMPCoord(Index p, T x, T y) {
+    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
+    m_MP_x[p] = x;
+    m_MP_y[p] = y;
+    m_MPs[p] = {x, y};
+  }
+
+  void updateAllMPs(const Vector<T> &new_mp_x, const Vector<T> &new_mp_y) {
+    assert(new_mp_x.size() == m_nMPs && new_mp_y.size() == m_nMPs &&
+           "Size mismatch");
+    m_MP_x = new_mp_x;
+    m_MP_y = new_mp_y;
+    for (Index p{0}; p < m_nMPs; ++p) {
+      m_MPs[p] = {new_mp_x[p], new_mp_y[p]};
+    }
+  }
+
+  void resetMPs() {
+    m_MP_x = m_MP_x_initial;
+    m_MP_y = m_MP_y_initial;
+    for (Index p{0}; p < m_nMPs; ++p) {
+      m_MPs[p] = {m_MP_x_initial[p], m_MP_y_initial[p]};
+    }
+  }
 
   // Get element connectivity
   const Vector<Index> &getEleConnectivity(Index elemID) const {
@@ -348,7 +439,7 @@ public:
   // Get node coordinates by ID
   std::pair<T, T> getNodeCoor(Index nodeID) const {
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
-    return {m_x_coords[nodeID], m_y_coords[nodeID]};
+    return {m_nodes_x[nodeID], m_nodes_y[nodeID]};
   }
 
   // Print mesh info
@@ -360,8 +451,8 @@ public:
 
     std::cout << "\nFirst 5 nodes:\n";
     for (Index i = 0; i < std::min(m_nNodes, Index(5)); ++i) {
-      std::cout << "  Node " << i << ": (" << m_x_coords[i] << ", "
-                << m_y_coords[i] << ")\n";
+      std::cout << "  Node " << i << ": (" << m_nodes_x[i] << ", "
+                << m_nodes_y[i] << ")\n";
     }
 
     std::cout << "\nFirst 3 elements:\n";
@@ -397,16 +488,16 @@ public:
   // Update mesh for time-stepping (e.g., Updated Lagrangian FEM)
   void updateNodePosition(Index nodeID, T new_x, T new_y) {
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
-    m_x_coords[nodeID] = new_x;
-    m_y_coords[nodeID] = new_y;
+    m_nodes_x[nodeID] = new_x;
+    m_nodes_y[nodeID] = new_y;
     m_nodes[nodeID] = {new_x, new_y};
   }
 
   void updateAllNodes(const Vector<T> &new_x, const Vector<T> &new_y) {
     assert(new_x.size() == m_nNodes && new_y.size() == m_nNodes &&
            "Size mismatch");
-    m_x_coords = new_x;
-    m_y_coords = new_y;
+    m_nodes_x = new_x;
+    m_nodes_y = new_y;
     for (Index i{0}; i < m_nNodes; ++i) {
       m_nodes[i] = {new_x[i], new_y[i]};
     }
@@ -416,23 +507,23 @@ public:
     assert(new_positions.size() == m_nNodes && "Size mismatch");
     m_nodes = new_positions;
     for (Index i{0}; i < m_nNodes; ++i) {
-      m_x_coords[i] = new_positions[i].first;
-      m_y_coords[i] = new_positions[i].second;
+      m_nodes_x[i] = new_positions[i].first;
+      m_nodes_y[i] = new_positions[i].second;
     }
   }
   void createMeshMP() {}
   // Reset to initial configuration
   void resetMesh() {
     m_nodes = m_nodes_initial;
-    m_x_coords = m_x_coords_initial;
-    m_y_coords = m_y_coords_initial;
+    m_nodes_x = m_nodes_x_initial;
+    m_nodes_y = m_nodes_y_initial;
   }
 
   const Vector<std::pair<T, T>> &getInitialNodes() const {
     return m_nodes_initial;
   }
-  const Vector<T> &getInitialXCoords() const { return m_x_coords_initial; }
-  const Vector<T> &getInitialYCoords() const { return m_y_coords_initial; }
+  const Vector<T> &getInitialXCoords() const { return m_nodes_x_initial; }
+  const Vector<T> &getInitialYCoords() const { return m_nodes_y_initial; }
 
   // MPM helper function
   bool isPointInElement(T x, T y, Index e) const {
@@ -440,8 +531,8 @@ public:
     const auto &localNodes = m_connectivity[e];
     Vector<T> x_nodes(4), y_nodes(4);
     for (Index i{0}; i < 4; i++) {
-      x_nodes[i] = m_x_coords[localNodes[i]];
-      y_nodes[i] = m_y_coords[localNodes[i]];
+      x_nodes[i] = m_nodes_x[localNodes[i]];
+      y_nodes[i] = m_nodes_y[localNodes[i]];
     }
     auto [xi, eta] = parentCoor(x, y, x_nodes, y_nodes);
     return (xi >= -1.0 && xi <= 1.0 && eta >= -1.0 && eta <= 1.0);
