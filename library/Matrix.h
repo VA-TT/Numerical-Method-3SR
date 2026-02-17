@@ -470,6 +470,8 @@ public:
     }
     return result;
   }
+
+  eigenpairs() {}
 };
 
 /////////////////////////// END OF MATRIX CLASS//////////////////////////

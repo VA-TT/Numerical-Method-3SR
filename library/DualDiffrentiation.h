@@ -78,6 +78,17 @@ inline Dual log(const Dual &d) {
   return Dual{std::log(d.getVal()), d.getDer() / d.getVal()};
 }
 
+inline Dual pow(const Dual &d, double n) {
+  // d/dx x^n = n*x^(n-1)
+  return Dual{std::pow(d.getVal(), n),
+              n * std::pow(d.getVal(), n - 1) * d.getDer()};
+}
+
+inline Dual pow(const Dual &d, int n) {
+  // d/dx x^n = n*x^(n-1)
+  return pow(d, static_cast<double>(n));
+}
+
 inline Dual operator-(const Dual &d, double b) {
   return Dual{d.getVal() - b, d.getDer()};
 }
