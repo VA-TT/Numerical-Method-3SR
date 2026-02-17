@@ -7,14 +7,25 @@
 
 int main() {
   Timer t;
-
-  // Input - matching Python MPM code with ppc=2
-  const double R = 0.2;
-  const double E = 1000.0;
+  // Material properties
+  const double E = 100000.0;
   const double v = 0.3;
-  const double rho = 2000.0;
-  const double v0 = 0.5;
-  const double duration = 100.0;
+  const double rho = 3600.0;
+  const double mu = 0.385;
+  const double phi = 30;
+  const double c = 1;
+  const double K0 = 0.5;
+
+  // Analysis setting
+  const double dt = 0.0001;
+  const double duration = 1.0;
+  const double interval = 200;
+  const double t = 0;
+  const double g = 4.8;
+
+  const double L = 1.0;
+  const double nx = 20;
+  const double ny = 20;
 
   // Computational parameters
   const double c = std::sqrt(E / rho);

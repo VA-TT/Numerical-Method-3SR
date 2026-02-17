@@ -680,8 +680,16 @@ Matrix<T, R1 * R2, C1 * C2> tensorProduct(const Matrix<T, R1, C1> &A,
       }
     }
   }
-
   return result;
+}
+
+template <typename T, Index R1, Index C1, Index R2, Index C2>
+T tensorContraction(const Matrix<T, R1, C1> &A, const Matrix<T, R2, C2> &B) {
+  return trace(A.transpose() * B);
+}
+
+template <typename T, Index R, Index C> T tensorNorm(const Matrix<T, R, C> &A) {
+  return constexpr_sqrt(tensorContraction(A, A));
 }
 
 // Hadamard product (element-wise multiplication) for matrices
