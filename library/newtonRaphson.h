@@ -10,7 +10,7 @@
 // General polynomial function: coef[0] + coef[1]*x + coef[2]*x^2 + ...
 // Works with both double and Dual types
 template <typename T> auto polyFunc(const std::vector<double> &coef, T x) {
-  using std::pow;
+
   T result{};
   if constexpr (std::is_same_v<T, Dual>) {
     result = Dual{0.0, 0.0};
@@ -26,8 +26,8 @@ template <typename T> auto polyFunc(const std::vector<double> &coef, T x) {
   }
 
   for (const auto &c : coef) {
-    result = result + c * x_power;
-    x_power = x_power * x;
+    result = result + c * std::pow(x_power);
+    x_power = std::pow(x_power, x);
   }
   return result;
 }

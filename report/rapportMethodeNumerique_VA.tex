@@ -343,7 +343,7 @@ Rewritten \cref{weakformFEM1D} in tensor notation:
   \label{FEM1D}
 \end{align}
 The boundary condition in this section is applied through direct method, with 2 types of well-known condition: the Dirichlet's condition and Neumann's condition.
-In order to calculate each element of stiffness matrix $\mathcal{K}_{ij} = EA \int_0^l  N_{i,x} N^{j,x} dx$. The numerical integration scheme is Gaussian quadrature (document distributed during the course) with 2 points, values referencing in \cref{GaussWeight}.
+In order to calculate each element of stiffness matrix $\mathcal{K}_{ij} = EA \int_0^l  N_{i,x} N_{j,x} dx$. The numerical integration scheme is Gaussian quadrature (document distributed during the course) with 2 points, values referencing in \cref{GaussWeight}.
    \begin{equation}
     \int^1_{-1}h(\xi)d\xi = \sum^N_{i=1} h(\xi_i)W_i
 \label{gaussQuadrature}
@@ -637,6 +637,7 @@ Though the numerical cost could be reduced strongly using reference element, ele
 In a nutshell, the code provided trustable result. Further, implemented still rested to continue.
 Thanks to using C++, time elapsed to execute one code is less than 1 second on the student's computer.
 Further optimization will continue to be implemented.
+\pagebreak
 \appendix
 \section{Appendix}\label{Appendix}
 Full version of the codes, including libraries used, could be downloaded in this \href{https://github.com/VA-TT/Numerical-Method-3SR}{link}.
