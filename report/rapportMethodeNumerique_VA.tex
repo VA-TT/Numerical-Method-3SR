@@ -6,6 +6,20 @@
 
 % Math, graphics, and nicer tables
 \usepackage{amsmath,amssymb, amsfonts}
+% --- For remark and footnote support ---
+\usepackage{amsthm} % For remark/theorem environments
+\usepackage[stable,para]{footmisc} % Improved footnote placement
+% --- Added for advanced table and color support ---
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{xcolor}
+% Define new column types for tabularx
+\newcolumntype{Y}{>{\centering\arraybackslash}p{5cm}}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
 % Number equations within sections (gives (1.1), (1.2), ...)
 \numberwithin{equation}{section}
 \usepackage{graphicx}
@@ -35,8 +49,12 @@
 }
 
 
-% Bibliography and hyperlinks
 
+% --- Remark environment setup ---
+\theoremstyle{remark}
+\newtheorem{rmk}{Remark}
+
+% Bibliography and hyperlinks
 \usepackage{caption}
 \usepackage{subcaption}
 
@@ -66,6 +84,9 @@
 
 \section{Introduction}
 This short report present the code that is assign for the subject "Numerical Methods for Non-Linear Mechanics" of the Master Program for Civil Engineering, taught by professor Stafano-Dal Pont at Laboratory 3SR, University Grenoble Alpes, France.
+
+% --- Test Remark and Footnote ---
+
 The objective of the course is studying the non-linear problems in mechanics, caused by both the geometric and material behavior.
 2 main problems are taken into account: A simplified truss - the console problem in 2D and a generalized Truss problem in 3D, therefore the remaining of this report are divided into two sections of the former subject. 
 The main code is actually written in \texttt{C++}, with libraries mostly built from scratch. They have been uploaded to \texttt{Github}, the link to download is provided in \cref{Appendix}. 
@@ -225,7 +246,8 @@ u_3^{N}\\
 \end{equation}
 Within each component the subscript $k = 1,2,3$ stands for the 3 directions in 3D and the superscript $n = 1..N$ determines indices of nodes.
 
-Meanwhile, the global stiffness matrix $\underline{\underline{\mathcal{K}}}$ could be assembled by multiple methods. One of them is by using the elementary application $K^b$ of bar $b$ along with the connectivity matrix $\underline{\underline{C^n}}$ as followed:
+Meanwhile, the global stiffness matrix $\underline{\underline{\mathcal{K}}}$ could be assembled by multiple methods. \\ 
+One of them is by using the elementary application $K^b$ of bar $b$ along with the connectivity matrix $\underline{\underline{C^n}}$: \footnote{This method is easily implemented in coding small problems, though, demands a huge price of numerical cost, owing to storing and calculating all the huge dimension connectivity matrices.} 
 
 \begin{align}
   \underline{\underline{\mathcal{K}}} &= \sum_{b \in \mathcal{B}} \left( \underline{\underline{C}}^{E(b)} - \underline{\underline{C}}^{O(b)}\right) \underline{\underline{K}}^b \left( \underline{\underline{C}}^{E(b)} - \underline{\underline{C}}^{O(b)}\right) \\
@@ -249,15 +271,17 @@ Meanwhile, the global stiffness matrix $\underline{\underline{\mathcal{K}}}$ cou
     \text{denoting }\tilde{\mathcal{A}^b}\left(l^b\right) &= \dfrac{\mathcal{A}^b \left( l^b\right)}{l^b}
   \label{stifnessMatrix}
    \end{align}
-Though this method is easily implemented in coding small problem, at the numerical cost owing to storing and calculating all the huge dimension connectivity matrix.
-% when calculating manually by hand, we prefer using the elementary stiffness matrix 
-% \begin{equation}
-%   \underline{\underline{\mathcal{K}}}^b = \underline{\underline{K}}^b 
-%   \begin{bmatrix}
-%     1 & -1 \\
-%     -1 & 1 
-%   \end{bmatrix} \label{elementaryStiffness}
-% \end{equation}
+\begin{rmk}\label{rmk:elementaryStiffness}
+When calculating manually by hand, we prefer using the elementary stiffness matrix and them assemble them into the global stiffness matrix:
+\begin{equation}
+  \underline{\underline{\mathcal{K}}}^b = \underline{\underline{K}}^b 
+  \begin{bmatrix}
+    1 & -1 \\
+    -1 & 1 
+  \end{bmatrix} \label{elementaryStiffness}
+\end{equation}
+\end{rmk}
+
 At this point, $\underline{\underline{\mathcal{K}}}$ should be singular i.e.  $\det(\underline{\underline{\mathcal{K}}})=0$ because the kinematic boundary condition is not yet applied. Two different techniques are usually proposed: the direct method and the approximated method (so-called penalization method).
 The approximated is obtained by adding $1/\epsilon$ to the main diagonal terms of $\underline{\underline{\mathcal{K}}}$ which corresponds to the nodes of $\mathcal{N}_I$:
    \begin{align}
@@ -326,36 +350,33 @@ In order to calculate each element of stiffness matrix $\mathcal{K}_{ij} = EA \i
 \end{equation}
 After assembly the stiffness matrix, by choosing the suitable virtual field, we could calculate the displacement vector $\underline{\mathcal{U}}$ and then identify the reaction $\mathcal{R}$ afterward.
 
-\begin{table}[h]
-\centering
-\caption{Gauss-Legendre Quadrature Points and Weights in range $[-1,1]$}
-\begin{tabular}{|c|p{4cm}|p{3cm}|} 
-\hline
-\textbf{n} & \textbf{Gauss Points } $\xi_i$ & \textbf{Weights } $W_i$ \\
-\hline
-1 & $\{0\}$ & $\{2\}$ \\
-\hline
-2 & $\left\{-\dfrac{1}{\sqrt{3}}, \dfrac{1}{\sqrt{3}}\right\}$ & $\{1,1\}$ \\[0.5cm]
-\hline
-3 & $\left\{{-\sqrt{\dfrac{3}{5}}, 0 , \sqrt{\dfrac{3}{5}}}\right\}$ & $\left\{\dfrac{5}{9}, \dfrac{8}{9}, \dfrac{5}{9}\right\}$ \\[0.3cm]
-\hline
-4 & 
-$\left\{
-\begin{array}{c}
-\pm\sqrt{\dfrac{3}{7} + \dfrac{2}{7}\sqrt{\dfrac{6}{5}}}, \\
-\pm\sqrt{\dfrac{3}{7} - \dfrac{2}{7}\sqrt{\dfrac{6}{5}}}
-\end{array}
-\right\}$ 
-& 
-$\left\{
-\begin{array}{c}
-\dfrac{18 - \sqrt{30}}{36}, \\
-\dfrac{18 + \sqrt{30}}{36}
-\end{array}
-\right\}$ \\
-\hline
-\end{tabular}  \label{GaussWeight}
-\end{table}
+\begin{table*}[h!]
+  \centering
+  \caption{Gauss-Legendre Quadrature Points and Weights in range $[-1,1]$}
+  \renewcommand\arraystretch{1.4}
+  \vskip-\topsep%
+  \smallskip%
+  \setlength\fboxsep{0pt}
+  \colorbox{gray!20}{%
+  \begin{tabular}{c Y Y}
+    \toprule
+    \textbf{n} & \textbf{Gauss Points } $\xi_i$ & \textbf{Weights } $W_i$ \\
+    \midrule
+    1 & $\{0\}$ & $\{2\}$ \\
+    2 & $\left\{-\dfrac{1}{\sqrt{3}}, \dfrac{1}{\sqrt{3}}\right\}$ & $\{1,1\}$ \\[0.5cm]
+    3 & $\left\{{-\sqrt{\dfrac{3}{5}}, 0 , \sqrt{\dfrac{3}{5}}}\right\}$ & $\left\{\dfrac{5}{9}, \dfrac{8}{9}, \dfrac{5}{9}\right\}$ \\[0.3cm]
+    4 & $\left\{\begin{array}{c}
+      \pm\sqrt{\dfrac{3}{7} + \dfrac{2}{7}\sqrt{\dfrac{6}{5}}}, \\
+      \pm\sqrt{\dfrac{3}{7} - \dfrac{2}{7}\sqrt{\dfrac{6}{5}}}
+    \end{array}\right\}$ & $\left\{\begin{array}{c}
+      \dfrac{18 - \sqrt{30}}{36}, \\
+      \dfrac{18 + \sqrt{30}}{36}
+    \end{array}\right\}$ \\
+    \bottomrule
+  \end{tabular}%
+  }
+  \label{GaussWeight}
+\end{table*}
 
 \subsection{2D Finite Element Method}
 \begin{figure}[h]
