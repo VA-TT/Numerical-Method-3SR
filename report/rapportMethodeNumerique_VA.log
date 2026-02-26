@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  20 FEB 2026 13:38
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  26 FEB 2026 13:37
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -522,24 +522,24 @@ LaTeX Warning: Label `solutionFEM1D@cref' multiply defined.
 )
 \openout1 = `rapportMethodeNumerique_VA.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 76.
+LaTeX Font Info:    ... okay on input line 76.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -599,7 +599,7 @@ Package caption Info: hyperref package is loaded.
 Package caption Info: listings package is loaded.
 Package caption Info: End \AtBeginDocument code.
 \c@lstlisting=\count338
-Package hyperref Info: Link coloring ON on input line 77.
+Package hyperref Info: Link coloring ON on input line 76.
  (/usr/share/texlive/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2021-04-02 v2.47 Cross-referencing by name of section
  (/usr/share/texlive/texmf-dist/tex/latex/refcount/refcount.sty
@@ -609,30 +609,30 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
 \c@section@level=\count339
 )
-LaTeX Info: Redefining \ref on input line 77.
-LaTeX Info: Redefining \pageref on input line 77.
-LaTeX Info: Redefining \nameref on input line 77.
+LaTeX Info: Redefining \ref on input line 76.
+LaTeX Info: Redefining \pageref on input line 76.
+LaTeX Info: Redefining \nameref on input line 76.
  (./rapportMethodeNumerique_VA.out) (./rapportMethodeNumerique_VA.out)
 \@outlinefile=\write5
 \openout5 = `rapportMethodeNumerique_VA.out'.
 
-Package backref Info: ** backref set up for natbib ** on input line 77.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 79.
+Package backref Info: ** backref set up for natbib ** on input line 76.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 78.
  (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 79.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 78.
  (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 92.
+LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 91.
  (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2019/12/16 v2.5j Standard LaTeX font definitions
 )
 <console2D.pdf, id=71, 174.03018pt x 156.93633pt>
 File: console2D.pdf Graphic file (type pdf)
 <use console2D.pdf>
-Package pdftex.def Info: console2D.pdf  used on input line 105.
+Package pdftex.def Info: console2D.pdf  used on input line 104.
 (pdftex.def)             Requested size: 157.77286pt x 142.26378pt.
 
 
@@ -644,7 +644,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 <truss.pdf, id=126, 135.18504pt x 227.62039pt>
 File: truss.pdf Graphic file (type pdf)
 <use truss.pdf>
-Package pdftex.def Info: truss.pdf  used on input line 194.
+Package pdftex.def Info: truss.pdf  used on input line 193.
 (pdftex.def)             Requested size: 101.39264pt x 170.71652pt.
 
 
@@ -654,7 +654,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 <fem1D.pdf, id=163, 227.62039pt x 59.5023pt>
 File: fem1D.pdf Graphic file (type pdf)
 <use fem1D.pdf>
-Package pdftex.def Info: fem1D.pdf  used on input line 300.
+Package pdftex.def Info: fem1D.pdf  used on input line 299.
 (pdftex.def)             Requested size: 272.11502pt x 71.13188pt.
 
 
@@ -664,7 +664,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 <fem2D.pdf, id=210, 227.62039pt x 127.48628pt>
 File: fem2D.pdf Graphic file (type pdf)
 <use fem2D.pdf>
-Package pdftex.def Info: fem2D.pdf  used on input line 384.
+Package pdftex.def Info: fem2D.pdf  used on input line 383.
 (pdftex.def)             Requested size: 304.80829pt x 170.71652pt.
  [7 <./fem2D.pdf>] (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2020/03/24 1.8d listings language file
@@ -676,15 +676,15 @@ File: lstmisc.sty 2020/03/24 1.8d (Carsten Heinz)
 <console2D_results.pdf, id=276, 170.7178pt x 146.71814pt>
 File: console2D_results.pdf Graphic file (type pdf)
 <use console2D_results.pdf>
-Package pdftex.def Info: console2D_results.pdf  used on input line 446.
+Package pdftex.def Info: console2D_results.pdf  used on input line 445.
 (pdftex.def)             Requested size: 165.54916pt x 142.26378pt.
 <console_plot.pdf, id=277, 284.52296pt x 170.97878pt>
 File: console_plot.pdf Graphic file (type pdf)
 <use console_plot.pdf>
-Package pdftex.def Info: console_plot.pdf  used on input line 452.
+Package pdftex.def Info: console_plot.pdf  used on input line 451.
 (pdftex.def)             Requested size: 236.74876pt x 142.26378pt.
 
-Overfull \hbox (18.23355pt too wide) in paragraph at lines 452--453
+Overfull \hbox (18.23355pt too wide) in paragraph at lines 451--452
  [][] 
  []
 
@@ -692,20 +692,20 @@ Overfull \hbox (18.23355pt too wide) in paragraph at lines 452--453
 <truss_result.pdf, id=382, 252.92493pt x 286.06876pt>
 File: truss_result.pdf Graphic file (type pdf)
 <use truss_result.pdf>
-Package pdftex.def Info: truss_result.pdf  used on input line 558.
+Package pdftex.def Info: truss_result.pdf  used on input line 557.
 (pdftex.def)             Requested size: 150.93794pt x 170.71652pt.
 <truss_plot.pdf, id=383, 284.52296pt x 171.25983pt>
 File: truss_plot.pdf Graphic file (type pdf)
 <use truss_plot.pdf>
-Package pdftex.def Info: truss_plot.pdf  used on input line 564.
+Package pdftex.def Info: truss_plot.pdf  used on input line 563.
 (pdftex.def)             Requested size: 236.36237pt x 142.26378pt.
 
-Overfull \hbox (17.84715pt too wide) in paragraph at lines 564--565
+Overfull \hbox (17.84715pt too wide) in paragraph at lines 563--564
  [][] 
  []
 
 
-Underfull \hbox (badness 1681) in paragraph at lines 565--565
+Underfull \hbox (badness 1681) in paragraph at lines 564--564
 []\T1/cmr/m/n/10.95 (b) |Mag-ni-tude sum of dis-place-ments and
  []
 
@@ -713,27 +713,32 @@ Underfull \hbox (badness 1681) in paragraph at lines 565--565
 <fem1D_u.pdf, id=422, 201.3924pt x 150.94392pt>
 File: fem1D_u.pdf Graphic file (type pdf)
 <use fem1D_u.pdf>
-Package pdftex.def Info: fem1D_u.pdf  used on input line 611.
+Package pdftex.def Info: fem1D_u.pdf  used on input line 610.
 (pdftex.def)             Requested size: 227.77971pt x 170.71652pt.
 
-Overfull \hbox (9.2645pt too wide) in paragraph at lines 611--612
+Overfull \hbox (9.2645pt too wide) in paragraph at lines 610--611
  [][] 
  []
 
 <fem1D_N.pdf, id=423, 201.3121pt x 152.1384pt>
 File: fem1D_N.pdf Graphic file (type pdf)
 <use fem1D_N.pdf>
-Package pdftex.def Info: fem1D_N.pdf  used on input line 618.
+Package pdftex.def Info: fem1D_N.pdf  used on input line 617.
 (pdftex.def)             Requested size: 225.9134pt x 170.71652pt.
 
-Overfull \hbox (7.3982pt too wide) in paragraph at lines 618--619
+Overfull \hbox (7.3982pt too wide) in paragraph at lines 617--618
  [][] 
  []
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[12] [13 <./fem1D_u.pdf> <./fem1D_N.pdf>] (./rapportMethodeNumerique_VA.bbl (./rapportMethodeNumerique_VA.brf)
+[12] [13 <./fem1D_u.pdf> <./fem1D_N.pdf>]
+Overfull \hbox (3.41893pt too wide) in paragraph at lines 642--645
+\T1/cmr/m/n/12 The scripts pre-sented in this re-port are \T1/cmtt/m/n/12 console2D.cpp, truss3D.cpp, fem1D.cpp\T1/cmr/m/n/12 , along
+ []
+
+(./rapportMethodeNumerique_VA.bbl (./rapportMethodeNumerique_VA.brf)
 \tf@brf=\write6
 \openout6 = `rapportMethodeNumerique_VA.brf'.
 
@@ -755,7 +760,7 @@ Here is how much of TeX's memory you used:
  1141 hyphenation exceptions out of 8191
  87i,24n,91p,583b,1989s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1728.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2074.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm0600.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm0700.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm0800.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfti1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1200.pfb>
-Output written on rapportMethodeNumerique_VA.pdf (14 pages, 680974 bytes).
+Output written on rapportMethodeNumerique_VA.pdf (14 pages, 680946 bytes).
 PDF statistics:
  626 PDF objects out of 1000 (max. 8388607)
  538 compressed objects within 6 object streams
