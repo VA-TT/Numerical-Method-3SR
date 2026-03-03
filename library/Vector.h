@@ -282,6 +282,13 @@ template <typename T> Vector<T> normalize(const Vector<T> &v) {
   return v * (T{1.0} / mag);
 }
 
+template <typename T> T transpose(const Vector<T> &v) {
+  T mag = magnitude(v);
+  if (approximatelyEqualAbsRel(mag, T{0.0}))
+    throw std::invalid_argument("Cannot normalize zero vector.");
+  return v * (T{1.0} / mag);
+}
+
 // Angle functions
 template <typename T> T angleRad(const Vector<T> &v1, const Vector<T> &v2) {
   return std::acos(dotProduct(v1, v2) / (magnitude(v1) * magnitude(v2)));

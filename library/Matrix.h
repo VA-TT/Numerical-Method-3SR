@@ -8,9 +8,10 @@
 // EigenValue, EigenVector? Dyadic? Power Matrix?
 // Jacobian, Hessian Matrix
 
-#include "Vector.h"     //My vector class
-#include "comparison.h" //Approximative Comparsion
-#include <algorithm>    //max, min, swap, sort
+#include "Vector.h"       //My vector class
+#include "comparison.h"   //Approximative Comparsion
+#include "signFunction.h" //sign()
+#include <algorithm>      //max, min, swap, sort
 #include <array>
 #include <cassert>          //assert
 #include <cmath>            //power
@@ -122,14 +123,18 @@ public:
 
     // Print floating point entries in scientific notation with 3 digits
     if constexpr (std::is_floating_point_v<T>) {
-      out << std::scientific << std::setprecision(1);
+      out << std::fixed << std::setprecision(4);
+      out << std::scientific;
     }
 
     constexpr int tab = 15;
     for (Index i = 0; i < nRows; ++i) {
       out << "|";
       for (Index j = 0; j < nCols; ++j) {
-        out << std::setw(tab) << matrix(i, j);
+        if (approximatelyEqualAbsRel(matrix(i, j), T{0.0}))
+          out << std::setw(tab) << T{0.0};
+        else
+          out << std::setw(tab) << matrix(i, j);
       }
       out << " |" << '\n';
     }
@@ -471,7 +476,33 @@ public:
     return result;
   }
 
-  eigenpairs() {}
+  Vector<T> getColVector(Index j) const {
+    Vector<T> v(nRows);
+    for (Index i = 0; i < nRows; ++i)
+      v[i] = (*this)(i, j);
+    return v;
+  }
+
+  // Householder reflection
+  Matrix<T, nRows, nCols> QRdecomposition() {
+    // assert(this->isSymmetric() && "Only implemented for symmetric matrices");
+    constexpr Index i = 0;
+    constexpr Index subSize = nRows - i;
+    Vector<T> a{getColVector(i)};
+    Vector<T> b(subSize);
+    b[0] = T{1.0};
+    Vector<T> n{normalize(a - (-sgn(a[0])) * magnitude(a) * b)};
+    Matrix<T, subSize, 1> nMat{n};
+    Matrix<T, nRows, nCols> P =
+        Matrix<T, subSize, subSize>::identity() - 2 * nMat * nMat.transpose();
+    Matrix<T, subSize, subSize> B = this->subMatrix(i, i);
+    B.QRdecomposition();
+    return P;
+  }
+  // Real Eigenvalues, Eigen Vectors for symmetric matrices
+  void eigenpairs() const {
+    // A  = Q * R
+  }
 };
 
 /////////////////////////// END OF MATRIX CLASS//////////////////////////
