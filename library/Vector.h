@@ -128,8 +128,26 @@ public:
     return *this;
   }
   // Projection on another vector
-  Vector<T> projection(const Vector &other) const {
+  Vector projection(const Vector &other) const {
     return normalize(other) * dotProduct(*this, normalize(other));
+  }
+
+  // Sort in-place. Default: descending order.
+  void sort(bool descending = true) {
+    if (descending) {
+      std::sort(this->begin(), this->end(),
+                [](const T &a, const T &b) { return a > b; });
+    } else {
+      std::sort(this->begin(), this->end(),
+                [](const T &a, const T &b) { return a < b; });
+    }
+  }
+
+  // Return a sorted copy. Default: descending order.
+  Vector sorted(bool descending = true) const {
+    Vector copy = *this;
+    copy.sort(descending);
+    return copy;
   }
 };
 
