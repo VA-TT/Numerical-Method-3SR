@@ -10,6 +10,7 @@
 
 #include "Vector.h"       //My vector class
 #include "comparison.h"   //Approximative Comparsion
+#include "random.h"       //random
 #include "signFunction.h" //sign()
 #include <algorithm>      //max, min, swap, sort
 #include <array>
@@ -391,7 +392,7 @@ public:
     for (Index i = 0; i < nRows; ++i) {
       for (Index j = 0; j < nCols; ++j) {
         if (i != j) {
-          if ((*this)(i, j) != 0) {
+          if (!approximatelyEqualAbsRel((*this)(i, j), T{0.0})) {
             return false;
           }
         }
@@ -404,7 +405,7 @@ public:
     for (Index i = 0; i < nRows; ++i) {
       for (Index j = 0; j < nCols; ++j) {
         if (i > j) {
-          if ((*this)(i, j) != 0) {
+          if (!approximatelyEqualAbsRel((*this)(i, j), T{0.0})) {
             return false;
           }
         }
@@ -417,7 +418,7 @@ public:
     for (Index i = 0; i < nRows; ++i) {
       for (Index j = 0; j < nCols; ++j) {
         if (i < j) {
-          if ((*this)(i, j) != 0) {
+          if (!approximatelyEqualAbsRel((*this)(i, j), T{0.0})) {
             return false;
           }
         }
@@ -467,7 +468,7 @@ public:
     return;
   }
 
-  // Convert a Matrix type to a Vector type
+  // Convert a Matrix type to a Vector type by using Constructor
   Matrix(const Vector<T> &vec) {
     static_assert(nCols == 1, "Can only construct column matrix from Vector");
     if (vec.size() != nRows)
@@ -494,7 +495,88 @@ public:
     return v;
   }
 
-  // Real Eigenvalues, Eigen Vectors for symmetric matrices
+  // Real Eigenvalues and their Eigen Vectors for symmetric matrices
+  std::pair<Vector<T>, Matrix> eigen(Index maxIterations = 1000) const {
+    const bool symmetric = this->isSymmetric();
+
+    // Phase 1: QR iteration to estimate eigenvalues.
+    Index iteration{0};
+    Matrix A_qr = *this;
+    Matrix V = symmetric ? Matrix::identity() : Matrix::zero();
+
+    while (iteration < maxIterations && !A_qr.isUpperTriangular()) {
+      auto [Q, R] = QRdecomposition(A_qr);
+      A_qr = R * Q;
+      if (symmetric) {
+        V = V * Q; // for symmetric: columns converge to eigenvectors
+      }
+      ++iteration;
+    }
+
+    if (iteration == maxIterations) {
+      std::cout << "Max iteration reached without achieving upper triangular "
+                   "form for A!"
+                << '\n';
+    }
+
+    Vector<T> eigenValues(nRows);
+    for (Index i = 0; i < nRows; ++i)
+      eigenValues[i] = A_qr(i, i);
+
+    // Phase 2 (non-symmetric): compute right-eigenvectors using shifted inverse
+    // iteration for each (real) eigenvalue estimate.
+    if (!symmetric) {
+      const Matrix A0 = *this;
+      const Matrix I = Matrix::identity();
+      const T tol = static_cast<T>(1e-10);
+      const T epsBase = static_cast<T>(1e-8);
+
+      for (Index j = 0; j < nRows; ++j) {
+        const T mu0 = eigenValues[j];
+
+        Vector<T> x(nRows);
+        for (Index i = 0; i < nRows; ++i)
+          x[i] = static_cast<T>(Random::get(-10, 10));
+
+        // Avoid zero initial vector
+        if (approximatelyEqualAbsRel(magnitude(x), T{0}))
+          x[0] = T{1};
+        x = x / magnitude(x);
+
+        Vector<T> xPrev = Vector<T>::zero(nRows);
+
+        for (Index invIter = 0; invIter < maxIterations; ++invIter) {
+          if (magnitude(x - xPrev) < tol)
+            break;
+          xPrev = x;
+
+          Vector<T> y;
+          bool solved = false;
+
+          for (int attempt = 0; attempt < 4 && !solved; ++attempt) {
+            const T mu = mu0 + epsBase * static_cast<T>(attempt);
+            const Matrix shifted = A0 - mu * I;
+            try {
+              y = solveLinearSystem(shifted, x);
+              solved = true;
+            } catch (const std::exception &) {
+              // try a slightly perturbed shift
+            }
+          }
+          if (!solved)
+            break;
+          const T yNorm = magnitude(y);
+          if (approximatelyEqualAbsRel(yNorm, T{0}))
+            break;
+          x = y / yNorm;
+        }
+        for (Index i = 0; i < nRows; ++i)
+          V(i, j) = x[i];
+      }
+    }
+
+    return {eigenValues, V};
+  }
 };
 
 /////////////////////////// END OF MATRIX CLASS//////////////////////////
@@ -503,7 +585,6 @@ template <typename T, Index nRows, Index nCols>
 std::pair<Matrix<T, nRows, nCols>, Matrix<T, nRows, nCols>>
 QRdecomposition(const Matrix<T, nRows, nCols> &A) {
   assert(A.isSquare() && "Only implemented for square matrices");
-  // assert(this->isSymmetric() && "Only implemented for symmetric matrices");
   Matrix<T, nRows, nCols> R{A};
   Matrix<T, nRows, nCols> Q{Matrix<T, nRows, nCols>::identity()};
 
@@ -518,7 +599,8 @@ QRdecomposition(const Matrix<T, nRows, nCols> &A) {
     }
     Vector<T> n = normalize(a1 - (-sgn(a1[0])) * magnitude(a1) * b1); // n = û
 
-    // Build full Householder matrix P = I - 2 n n^T (embedded in nRows x nCols)
+    // Build full Householder matrix P = I - 2 n n^T (embedded in nRows x
+    // nCols)
     Matrix<T, nRows, nCols> P = Matrix<T, nRows, nCols>::identity();
     for (Index row = j; row < nRows; ++row) {
       for (Index col = j; col < nCols; ++col) {
