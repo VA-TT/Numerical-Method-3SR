@@ -13,7 +13,7 @@ template <Index N> void testQR(const Matrix<double, N, N> &A) {
 }
 
 int main() {
-  std::cout << "************************************<**********" << std::endl;
+  std::cout << "**********************************************" << std::endl;
   std::cout << "Testing QR decomposition code." << std::endl;
   std::cout << "**********************************************" << std::endl
             << std::endl;
