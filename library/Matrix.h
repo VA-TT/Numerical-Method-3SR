@@ -5,7 +5,7 @@
 // the matrices with index starting from 1 in mathematic
 // LU Decomposition (to be implemented) to be more optimized
 // Resize function?
-// EigenValue, EigenVector? Dyadic? Power Matrix?
+// Power Matrix?
 // Jacobian, Hessian Matrix
 
 #include "Vector.h"       //My vector class
@@ -495,7 +495,7 @@ public:
     return v;
   }
 
-  // Real Eigenvalues and their Eigen Vectors for symmetric matrices
+  // Real Eigenvalues and their Eigen Vectors for symmetric matrices:: A X = k X
   std::pair<Vector<T>, Matrix> eigen(Index maxIterations = 1000) const {
     const bool symmetric = this->isSymmetric();
 
@@ -573,6 +573,20 @@ public:
         for (Index i = 0; i < nRows; ++i)
           V(i, j) = x[i];
       }
+    }
+
+    // Normalize eigenvectors (each column of V) to unit length.
+    // For symmetric matrices, V should already be close to orthonormal;
+    // normalization improves numerical stability of printing/usage.
+    for (Index j = 0; j < nRows; ++j) {
+      T norm2{};
+      for (Index i = 0; i < nRows; ++i)
+        norm2 += V(i, j) * V(i, j);
+      const T norm = std::sqrt(norm2);
+      if (approximatelyEqualAbsRel(norm, T{0}))
+        continue;
+      for (Index i = 0; i < nRows; ++i)
+        V(i, j) /= norm;
     }
 
     return {eigenValues, V};
@@ -771,6 +785,11 @@ T det(const Matrix<T, nRows, nCols> &m) {
     return m(0, 0);
   else if constexpr (nRows == 2)
     return m(0, 0) * m(1, 1) - m(0, 1) * m(1, 0);
+  else if constexpr (nRows == 3) // not necessary, but optimized for 3x3 matrix
+                                 // (which is the most often case in my need)
+    return m(0, 0) * (m(1, 1) * m(2, 2) - m(1, 2) * m(2, 1)) -
+           m(0, 1) * (m(1, 0) * m(2, 2) - m(1, 2) * m(2, 0)) +
+           m(0, 2) * (m(1, 0) * m(2, 1) - m(1, 1) * m(2, 0));
   else {
     T detSum{};
     Index rowNum{mostZeroRow(m)};

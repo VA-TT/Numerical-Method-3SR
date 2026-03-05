@@ -33,9 +33,7 @@ void printEigenReport(const Matrix<double, N, N> &A, const char *label) {
   auto [eigvals, V] = A.eigen();
 
   std::cout << "Eigenvalues:" << std::endl;
-  for (Index i = 0; i < N; ++i)
-    std::cout << std::setprecision(6) << eigvals[i] << " ";
-  std::cout << std::endl << std::endl;
+  std::cout << std::setprecision(6) << eigvals << std::endl << std::endl;
 
   std::cout << "Eigenvector matrix V (columns):\n" << V << std::endl;
 
@@ -88,6 +86,12 @@ int main() {
   // Example that likely has complex eigenvalues (real-only method limitation)
   {
     Matrix<double, 3, 3> A{4.0, -6.0, 8.0, 7.0, 9.0, -5.0, 9.0, -6.0, -4.0};
+    printEigenReport(
+        A, "Testing with an example that should have complex eigenvalues:");
+  }
+  {
+
+    Matrix<double, 3, 3> A{1.0, 2.0, 4.0, 1.0, 1.0, 5.0, 1.0, 5.0, 1.0};
     printEigenReport(
         A, "Testing with an example that should have complex eigenvalues:");
   }

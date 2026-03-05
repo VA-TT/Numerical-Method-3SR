@@ -110,7 +110,10 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const Vector<T> &v) {
     os << "[";
     for (Index i = 0; i < v.size(); ++i) {
-      os << v[i];
+      if (approximatelyEqualAbsRel(v[i], T{0.0}))
+        os << T{0.0};
+      else
+        os << v[i];
       if (i < v.size() - 1)
         os << ", ";
     }
