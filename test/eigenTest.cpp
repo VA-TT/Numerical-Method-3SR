@@ -19,6 +19,15 @@ double residualNorm2(const Matrix<double, N, N> &A, const Vector<double> &v,
   return std::sqrt(s);
 }
 
+template <Index N> double maxAbsOffDiagonal(const Matrix<double, N, N> &M) {
+  double m = 0.0;
+  for (Index i = 0; i < N; ++i)
+    for (Index j = 0; j < N; ++j)
+      if (i != j)
+        m = std::max(m, std::abs(M(i, j)));
+  return m;
+}
+
 template <Index N>
 void printEigenReport(const Matrix<double, N, N> &A, const char *label) {
   std::cout << label << std::endl;
@@ -45,18 +54,58 @@ void printEigenReport(const Matrix<double, N, N> &A, const char *label) {
   }
   std::cout << std::endl << std::endl;
 
+  // Build diagonal matrix from eigenvalues (for comparison).
+  Matrix<double, N, N> D = Matrix<double, N, N>::zero();
+  for (Index i = 0; i < N; ++i)
+    D(i, i) = eigvals[i];
+
   if (A.isSymmetric()) {
     std::cout << "V^T * V (should be close to identity):\n"
               << (V.transpose() * V) << std::endl;
+
+    const Matrix<double, N, N> VtAV = V.transpose() * A * V;
+    std::cout << "V^T * A * V (A in eigenvector basis; should be ~diagonal):\n"
+              << VtAV << std::endl;
+    std::cout << "diag(eigvals):\n" << D << std::endl;
+    std::cout << "Difference (V^T A V - diag(eigvals)):\n"
+              << (VtAV - D) << std::endl;
+
+    // Also test the helper that performs the basis change.
+    try {
+      const Matrix<double, N, N> A_eig = A.toEigenBasis();
+      std::cout << "A.toEigenBasis():\n" << A_eig << std::endl;
+      std::cout << "Difference (A.toEigenBasis() - V^T A V):\n"
+                << (A_eig - VtAV) << std::endl;
+      std::cout << "max|offdiag(A.toEigenBasis())| = " << std::setprecision(6)
+                << maxAbsOffDiagonal(A_eig) << std::endl;
+    } catch (const std::exception &e) {
+      std::cout << "Could not compute A.toEigenBasis(): " << e.what()
+                << std::endl;
+    }
   } else {
     std::cout << "For non-symmetric A: diagonalization check uses V^{-1} A V"
                  " (not V^T A V)."
               << std::endl;
     try {
       const Matrix<double, N, N> Vinv = V.inverse();
+      const Matrix<double, N, N> VinvAV = Vinv * A * V;
       std::cout << "V^{-1} * A * V (should be close to diagonal if A is "
                    "diagonalizable with real eigenpairs):\n"
-                << (Vinv * A * V) << std::endl;
+                << VinvAV << std::endl;
+      std::cout << "diag(eigvals):\n" << D << std::endl;
+      std::cout << "Difference (V^{-1} A V - diag(eigvals)):\n"
+                << (VinvAV - D) << std::endl;
+
+      // Test helper (uses V^{-1} A V for non-symmetric).
+      try {
+        const Matrix<double, N, N> A_eig = A.toEigenBasis();
+        std::cout << "A.toEigenBasis():\n" << A_eig << std::endl;
+        std::cout << "max|offdiag(A.toEigenBasis())| = " << std::setprecision(6)
+                  << maxAbsOffDiagonal(A_eig) << std::endl;
+      } catch (const std::exception &e) {
+        std::cout << "Could not compute A.toEigenBasis(): " << e.what()
+                  << std::endl;
+      }
     } catch (const std::exception &e) {
       std::cout << "Could not compute V.inverse(): " << e.what() << std::endl;
     }

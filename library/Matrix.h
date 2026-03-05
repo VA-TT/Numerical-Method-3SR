@@ -587,7 +587,24 @@ public:
         V(i, j) /= norm;
     }
 
+    // V^T is the tensor which transform current xyz coordinate system to the
+    // the system defined by normalized eigenvectors of the current tensor
+    // getColVector to retrieve the eigenvectors[i] corresponding to
+    // eigenvalues[i]
     return {eigenValues, V};
+  }
+
+  // turn matrix from (x,y,z) basis to eigenvectors basis (diagonalization)
+  Matrix toEigenBasis() const {
+    auto [_, V] = this->eigen();
+    const Matrix A{*this};
+
+    // Symmetric case: eigenvectors are (approximately) orthonormal
+    if (this->isSymmetric()) {
+      return (V.transpose() * A * V);
+    }
+    const Matrix Vinv = V.inverse();
+    return (Vinv * A * V);
   }
 
   Matrix symPower(T pow) const {
@@ -600,6 +617,12 @@ public:
     }
     return result;
   }
+
+  T firstInvariant() const { return trace(*this); }
+  T secondInvariant() const {
+    return T{0.5} * (trace(*this) * trace(*this) - trace((*this) * (*this)));
+  }
+  T thirdInvariant() const { return det(*this); }
 };
 
 /////////////////////////// END OF MATRIX CLASS//////////////////////////
