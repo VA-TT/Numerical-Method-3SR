@@ -576,8 +576,6 @@ public:
     }
 
     // Normalize eigenvectors (each column of V) to unit length.
-    // For symmetric matrices, V should already be close to orthonormal;
-    // normalization improves numerical stability of printing/usage.
     for (Index j = 0; j < nRows; ++j) {
       T norm2{};
       for (Index i = 0; i < nRows; ++i)
