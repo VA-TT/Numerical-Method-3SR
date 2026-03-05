@@ -589,6 +589,17 @@ public:
 
     return {eigenValues, V};
   }
+
+  Matrix symPower(T pow) const {
+    assert(this->isSymmetric() && "Only implemented for symmetric matrix!");
+    Matrix result{};
+    auto [eigvals, V] = this->eigen();
+    for (Index i{0}; i < eigvals.size(); ++i) {
+      const Vector<T> v = V.getColVector(i);
+      result += std::pow(eigvals[i], pow) * tensorProduct<nRows, nRows>(v, v);
+    }
+    return result;
+  }
 };
 
 /////////////////////////// END OF MATRIX CLASS//////////////////////////
