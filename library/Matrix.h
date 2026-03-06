@@ -5,7 +5,6 @@
 // the matrices with index starting from 1 in mathematic
 // LU Decomposition (to be implemented) to be more optimized
 // Resize function?
-// Power Matrix?
 // Jacobian, Hessian Matrix
 
 #include "Vector.h"       //My vector class
