@@ -227,20 +227,16 @@ template <typename T> class Mesh2D {
 private:
   T m_length{}, m_height{};
   T m_MP_size{}; // MP spacing / particle size used for square-grid MPs
-  Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{}, m_nMPs{};
+  Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{}, m_nMPs{}; // numbers
   Vector<std::pair<T, T>> m_nodes{}; // All node coordinates as (x, y) pairs
   Vector<std::pair<T, T>> m_nodes_initial{}; // Initial configuration for reset
   Vector<std::pair<T, T>> m_MPs{};           // Material Points coordinates
-  Vector<char> m_activeNodes{};  // Track which nodes contain Material Points
-  Vector<T> m_nodes_x;           // Node x-coordinates vector
-  Vector<T> m_nodes_y;           // Node y-coordinates vector
-  Vector<T> m_nodes_x_initial;   // Initial nodal x-coordinates
-  Vector<T> m_nodes_y_initial;   // Initial nodal y-coordinates
-  Vector<T> m_MP_x_initial;      // Initial MP x-coordinates
-  Vector<T> m_MP_y_initial;      // Initial MP y-coordinates
-  Vector<T> m_MP_x;              // MP x-coordinates
-  Vector<T> m_MP_y;              // MP y-coordinates
-  Vector<Index> m_mpElementId{}; // Cached element ID for each MP
+  Vector<char> m_activeNodes{};   // Track which nodes contain Material Points
+  Vector<T> m_nodes_x, m_nodes_y; // Node coordinates vector
+  Vector<T> m_nodes_x_initial, m_nodes_y_initial; // Initial nodal coordinates
+  Vector<T> m_MP_x_initial, m_MP_y_initial;       // Initial MP coordinates
+  Vector<T> m_MP_x, m_MP_y;                       // MP coordinates
+  Vector<Index> m_mpElementId{};          // Cached element ID for each MP
   Vector<Vector<Index>> m_connectivity{}; // Elements representing
   static constexpr Index idError = -1;
 
