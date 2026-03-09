@@ -87,10 +87,18 @@ public:
   auto end() const { return m_elements.end(); }
 
   // Resize + Reserve vector
-  void resize(std::size_t n) { m_elements.resize(n); }
-  void resize(std::size_t n, const T &value) { m_elements.resize(n, value); }
-  void reserve(std::size_t n) { m_elements.reserve(n); }
-  void reserve(std::size_t n, const T &value) { m_elements.reserve(n, value); }
+  void resize(Index n) {
+    assert(n >= 0 && "Negative size not allowed");
+    m_elements.resize(static_cast<std::size_t>(n));
+  }
+  void resize(Index n, const T &value) {
+    assert(n >= 0 && "Negative size not allowed");
+    m_elements.resize(static_cast<std::size_t>(n), value);
+  }
+  void reserve(Index n) {
+    assert(n >= 0 && "Negative reserve not allowed");
+    m_elements.reserve(static_cast<std::size_t>(n));
+  }
 
   // Add element
   void push_back(const T &value) { m_elements.push_back(value); }
