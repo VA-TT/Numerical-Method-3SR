@@ -435,11 +435,14 @@ public:
     }
   }
 
-  // Disallow the pair-based convenience ctor to keep construction explicit.
+  // Pair-based convenience ctor: delegates to the full-parameter constructor.
   Mesh2D(const std::pair<T, T> &gridDimension,
          const std::pair<Index, Index> &gridnPoints,
          const std::pair<T, T> &minCorner, const std::pair<T, T> &maxCorner,
-         T MP_size) = delete;
+         T MP_size)
+      : Mesh2D(gridDimension.first, gridDimension.second, gridnPoints.first,
+               gridnPoints.second, minCorner.first, minCorner.second,
+               maxCorner.first, maxCorner.second, MP_size) {}
 
   // MPs-per-element constructor (kept for existing tests)
   Mesh2D(T length, T height, Index nx, Index ny, Index nMPperEle)

@@ -9,7 +9,7 @@ int main() {
   Timer t;
   // Material properties
   const double E = 100000.0;
-  const double v = 0.3;
+  const double nu = 0.3;
   const double rho = 3600.0;
   const double mu = 0.385; // wall-obstacle
   const double phi = 30;   // internal friction andgle (in degree)
@@ -24,10 +24,19 @@ int main() {
   const double g = 4.8; //?
 
   const double L = 1.0;
-  const double nx = 20;
-  const double ny = 20;
+  const double H = 1.0;
+  const Index nx = 20;
+  const Index ny = 20;
   const double dx = L / nx;
-  const double dy = L / ny;
+  const double dy = H / ny;
+
+  // Particles per cell
+  const Index ppc = 2;
+  const double MP_size = dx / ppc;
+
+  // MP domain
+  const std::pair<double, double> minCorner{0.0125, 0.0125};
+  const std::pair<double, double> maxCorner{0.3125, 0.3125};
 
   // Computational parameters
   const double c = std::sqrt(E / rho);
@@ -36,14 +45,13 @@ int main() {
   const double dt_crit = dx / c;
   const double dt = 0.1 * dt_crit;
 
-  // Particles per cell
-  const Index ppc = 2;
-  const double spacing = dx / ppc;
+  const double v0 = 0.1;
 
   // Set up MPM2D grid: 14 nodes, 13 elements, 2 MPs per element
-  using collapse2D = MPM2D<double>;
-  collapse2D collumn(E, rho, L, v0, dt, duration, xloc);
-  collumn.setG(0.0);
+  using collapse2D = MPM2D<double, L, H, nx, ny, MP_size>;
+  collapse2D collumn(E, nu, rho, mu, phi, c, K0, minCorner, maxCorner, dt,
+                     duration, v0);
+  collumn.setG(4.8); // G=9.81
   collumn.setE(E);
   collumn.setComportmentLaw({});
 

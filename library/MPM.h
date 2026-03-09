@@ -413,110 +413,110 @@ public:
 ////////////////::: 2D ::://////////////////
 ////////////////////////////////////////////
 
-template <typename T, Index nNodes, Index nMPperEle> class MPM2D {
+template <typename T, T length, T height, Index nx, Index ny, T MP_size>
+class MPM2D {
 private:
   // Material properties
   T m_E{100000.0}; // Module Young
   T m_nu{1.0};     // Poisson ratio
+  T m_rho{1000};   // Density
   T m_phi{30.0};   // Internal Friction angle
   T m_mu{30.0};    // Material-Boundary Friction
   T m_c{1.0};      // cohesion
   T m_K0{0.5};     // Initial earth pressure coefficient
 
   // MP domain
-  T m_length{1.0}; // Grid length
-  T m_height{1.0}; // Grid height
-  T m_volume{1.0}; // Volume
-  T m_rho{1000};   // Density
-  T m_mass{1000};  // mass
-  T m_G{0.0};      // Gravity Acceleration
+  std::pair<T, T> minCorner{}, maxCorner{};
+  T m_volume{1.0};                // Volume
+  T m_mass{1000};                 // mass
+  T m_G{0.0};                     // Gravity Acceleration
+  std::pair<T, T> m_v0{T{}, T{}}; // Initial velocity
 
   // Simulation properties
   T m_currentTime{0.0};  // Current time
   T m_dt{0.0};           // Time step
   T m_duration{10.0};    // Duration of simulation
-  Index m_interval{100}; // Output interval
   Index m_nSteps{0};     // Number of steps
-  T m_xloc{0.0};         // Position of surveying
-  T m_v0{0.0};           // Initial velocity
+  Index m_interval{100}; // Output interval
 
-  // Analytical solution (if available)
-  std::function<T(T)> m_analyticSolution;
-  // Behavior law
-  std::function<T(T)> m_law;
+  // // Behavior law
+  // std::function<T(T)> m_law;
+
   //  Mesh
   Mesh2D<T> m_mesh{};
 
   // Nodes n
   Vector<T> mass_n{};
   // Vector<T> position_n{}; // Don't get used
-  Vector<Vector<T>> velocity_n{};
-  Vector<Vector<T>> acceleration_n{};
-  Vector<Vector<T>> momentum_n{};
-  Vector<Vector<char>> velocityConstrained_n{};
-  Vector<Vector<char>> accelerationConstrained_n{};
-  Vector<Vector<char>> momentumConstrained_n{};
-  Vector<Vector<char>> forceConstrained_n{};
+  Vector<std::pair<T, T>> velocity_n{};
+  Vector<std::pair<T, T>> acceleration_n{};
+  Vector<std::pair<T, T>> momentum_n{};
+
+  Vector<std::pair<char, char>> velocityConstrained_n{};
+  Vector<std::pair<char, char>> accelerationConstrained_n{};
+  Vector<std::pair<char, char>> momentumConstrained_n{};
+  Vector<std::pair<char, char>> forceConstrained_n{};
 
   // Constraint values (so constraints can be set anytime and enforced later)
-  Vector<Vector<T>> velocityConstraintValue_n{};
-  Vector<Vector<T>> accelerationConstraintValue_n{};
-  Vector<Vector<T>> momentumConstraintValue_n{};
-  Vector<Vector<T>> forceConstraintValue_n{};
-  Vector<Vector<T>> bodyForce_n{}, tractionForce_n{};
+  Vector<std::pair<T, T>> velocityConstraintValue_n{};
+  Vector<std::pair<T, T>> accelerationConstraintValue_n{};
+  Vector<std::pair<T, T>> momentumConstraintValue_n{};
+  Vector<std::pair<T, T>> forceConstraintValue_n{};
+  Vector<std::pair<T, T>> bodyForce_n{}, tractionForce_n{};
   // Nodal external forces
-  Vector<Vector<T>> forceExternal_n{}, forceInternal_n{}, forceTotal{};
+  Vector<std::pair<T, T>> forceExternal_n{}, forceInternal_n{}, forceTotal{};
 
   // Material Points p
   std::pair<T, T> minCorner, maxCorner{};
-  Vector<T> volume_p{};               // Volume
-  Vector<T> mass_p{};                 // Mass
-  Vector<Vector<T>> position_p{};     // Position
-  Vector<Vector<T>> velocity_p{};     // Velocity
-  Vector<Vector<T>> momentum_p{};     // Momentum
-  Vector<Vector<T>> displacement_p{}; // Displacement
-  Matrix<T, 2, 2> stress_p{}, strain_p{}, strain_rate_p{},
+  Vector<T> volume_p{};                     // Volume
+  Vector<T> mass_p{};                       // Mass
+  Vector<std::pair<T, T>> position_p{};     // Position
+  Vector<std::pair<T, T>> velocity_p{};     // Velocity
+  Vector<std::pair<T, T>> momentum_p{};     // Momentum
+  Vector<std::pair<T, T>> displacement_p{}; // Displacement
+  Vector<Matrix<T, 2, 2>> stress_p{}, strain_p{}, deformGradient_p{},
       dStrain_p{}; // Stress + strain
 
 public:
   // Constructor
-  MPM2D(T E, T rho, T length, T height, Index nx, Index ny, T v0, T dt,
-        T duration, T xloc, std::pair<T, T> minCorner,
-        std::pair<T, T> maxCorner, T MP_size)
-      : m_E{E}, m_rho{rho}, m_length{length}, m_v0{v0}, m_dt{dt},
-        m_duration{duration}, m_xloc{xloc}, m_mass{rho * length},
-        m_volume{length * 1.0},
-        m_mesh{Mesh2D<T>{length, height, nx, ny, [ minCorner[0], minCorner[1]
-        ],
-                         [ x1, y1 ], MP_size}} {
+  MPM2D(T E, T nu, T rho, T mu, T phi, T c, T K0,
+        const std::pair<T, T> &minCorner, const std::pair<T, T> &maxCorner,
+        T dt, T duration, T v0)
+      : m_E{E}, m_nu{nu}, m_rho{rho}, m_mu{mu}, m_phi{phi}, m_c{c}, m_K0{K0},
+        m_v0{v0}, m_dt{dt}, m_duration{duration},
+        m_nSteps{static_cast<Index>(duration / dt)} m_volume{
+            constexpr_fabs((maxCorner.first - minCorner.first) *
+                           (maxCorner.second - minCorner.second))},
+        m_mass{rho * m_volume},
+        m_mesh{Mesh2D<T>{
+            {length, height}, {nx, ny}, minCorner, maxCorner, MP_size}} {
     // Check critical time
     T c = std::sqrt(m_E / rho);
-    T dt_crit = m_length / c;
+    T dt_crit = (m_length < m_height ? m_length : m_height) / c;
     assert((dt_crit / 10.0) >= dt &&
-           "Time step isn't satisfied CFL condition (too big)");
-    m_nSteps = static_cast<Index>(duration / dt);
+           "dt doesn't satisfied CFL condition (too big)");
 
     // Initialize nodal vectors
-    mass_n.resize(nNodes, T{});
-    // position_n.resize(nNodes, T{});
-    velocity_n.resize(nNodes, T{});
-    acceleration_n.resize(nNodes, T{});
-    momentum_n.resize(nNodes, T{});
+    mass_n.resize(nNodes);
+    // position_n.resize(nNodes, Vector<T>{});
+    velocity_n.resize(nNodes, std::pair<T, T>{0, 0});
+    acceleration_n.resize(nNodes, std::pair<T, T>{0, 0});
+    momentum_n.resize(nNodes, std::pair<T, T>{0, 0});
 
-    velocityConstrained_n.resize(nNodes, 0);
-    accelerationConstrained_n.resize(nNodes, 0);
-    momentumConstrained_n.resize(nNodes, 0);
-    forceConstrained_n.resize(nNodes, 0);
-    velocityConstraintValue_n.resize(nNodes, T{});
-    accelerationConstraintValue_n.resize(nNodes, T{});
-    momentumConstraintValue_n.resize(nNodes, T{});
-    forceConstraintValue_n.resize(nNodes, T{});
+    velocityConstrained_n.resize(nNodes, std::pair<char, char>{0, 0});
+    accelerationConstrained_n.resize(nNodes, std::pair<char, char>{0, 0});
+    momentumConstrained_n.resize(nNodes, std::pair<char, char>{0, 0});
+    forceConstrained_n.resize(nNodes, std::pair<char, char>{0, 0});
+    velocityConstraintValue_n.resize(nNodes, std::pair<T, T>{0, 0});
+    accelerationConstraintValue_n.resize(nNodes, std::pair<T, T>{0, 0});
+    momentumConstraintValue_n.resize(nNodes, std::pair<T, T>{0, 0});
+    forceConstraintValue_n.resize(nNodes, std::pair<T, T>{0, 0});
 
-    bodyForce_n.resize(nNodes, T{});
-    tractionForce_n.resize(nNodes, T{});
-    forceExternal_n.resize(nNodes, T{});
-    forceInternal_n.resize(nNodes, T{});
-    forceTotal.resize(nNodes, T{});
+    bodyForce_n.resize(nNodes, std::pair<T, T>{0, 0});
+    tractionForce_n.resize(nNodes, std::pair<T, T>{0, 0});
+    forceExternal_n.resize(nNodes, std::pair<T, T>{0, 0});
+    forceInternal_n.resize(nNodes, std::pair<T, T>{0, 0});
+    forceTotal.resize(nNodes, std::pair<T, T>{0, 0});
 
     // Initialize MP vectors
     Index nMPs = m_mesh.getNumMPs();
@@ -524,39 +524,38 @@ public:
     mass_p.resize(nMPs, m_mass / nMPs); // MP's mass is constant
     // position_p.resize(nMPs);
     position_p = m_mesh.getMPCoords(); // Initialize position of MPs
-    velocity_p.resize(nMPs, m_v0);     // Initial velocity
-    momentum_p.resize(nMPs, T{});
-    stress_p.resize(nMPs, T{});
-    strain_p.resize(nMPs, T{});
-    strain_rate_p.resize(nMPs, T{});
-    dStrain_p.resize(nMPs, T{});
+    momentum_p.resize(nMPs, std::pair<T, T>{0, 0}); // Compute later
+    velocity_p.resize(nMPs, m_v0);                  // Initial velocity
+
+    stress_p.resize(nMPs, Matrix<T, 2, 2>::zero);
+    strain_p.resize(nMPs, Matrix<T, 2, 2>::zero);
+    deformGradient_p.resize(nMPs, Matrix<T, 2, 2>::identity);
+    dStrain_p.resize(nMPs, Matrix<T, 2, 2>::zero);
 
     m_mesh.print();
   };
 
   // Other defaults
-  MPM1D() = default;
-  MPM1D(const MPM1D &) = default;
-  MPM1D(MPM1D &&) = default;
-  MPM1D &operator=(const MPM1D &) = default;
-  MPM1D &operator=(MPM1D &&) = default;
-  ~MPM1D() = default;
+  MPM2D() = default;
+  MPM2D(const MPM2D &) = default;
+  MPM2D(MPM2D &&) = default;
+  MPM2D &operator=(const MPM2D &) = default;
+  MPM2D &operator=(MPM2D &&) = default;
+  ~MPM2D() = default;
 
   // Getters
   T getE() const { return m_E; }
   T getG() const { return m_G; }
   T getRho() const { return m_rho; }
   T getMass() const { return m_mass; }
-  T getLength() const { return m_length; }
   T getVolume() const { return m_volume; }
   T getCurrentTime() const { return m_currentTime; }
   T getTimeStep() const { return m_dt; }
   T getDuration() const { return m_duration; }
   T getNumSteps() const { return m_nSteps; }
-  T getSurveyLoc() const { return m_xloc; }
   T getIniVelo() const { return m_v0; }
 
-  const Mesh1D<T> &getMesh() const { return m_mesh; }
+  const Mesh2D<T> &getMesh() const { return m_mesh; }
   Index getNumNodes() const { return m_mesh.getNumNodes(); }
   Index getNumElements() const { return m_mesh.getNumElements(); }
   Index getNumMps() const { return m_mesh.getNumMPs(); }
@@ -582,9 +581,7 @@ public:
   void setCurrentTime(T value) { m_currentTime = value; }
   void setE(T E) { m_E = E; }
   void setG(T G) { m_G = G; } // Set G if considering gravity
-  void setAnalyticSolution(std::function<T(T)> sol) {
-    m_analyticSolution = sol;
-  }
+
   void setComportmentLaw(std::function<T(T)> law) { m_law = law; }
   void setMPvelocity(Index p, T value) { velocity_p[p] = value; }
 
@@ -753,8 +750,7 @@ public:
         // Attention: x1-x2 belong to nodes (their positions don't get
         // updated), while the velocity is measured at MPs (updated at t+dt)
         strain_rate_p[p] =
-            dN1_dx(x1, x2) * velocity_n[n1] + dN2_dx(x1, x2) *
-            velocity_n[n2];
+            dN1_dx(x1, x2) * velocity_n[n1] + dN2_dx(x1, x2) * velocity_n[n2];
         dStrain_p[p] = strain_rate_p[p] * m_dt;
         strain_p[p] += dStrain_p[p];
 
@@ -774,7 +770,7 @@ public:
     m_mesh.setMPCoords(position_p); // Saving the updated MPs' position to
     Mesh
 
-    mass_n.resetZero();
+        mass_n.resetZero();
     momentum_n.resetZero();
     velocity_n.resetZero();
     acceleration_n.resetZero();
@@ -796,8 +792,7 @@ public:
 
     std::cout << "\n=== Comparison with Analytical Solution ===\n";
     std::cout << std::setw(10) << "Time" << std::setw(15) << "x_numerical"
-              << std::setw(15) << "x_exact" << std::setw(15) << "Error" <<
-              '\n';
+              << std::setw(15) << "x_exact" << std::setw(15) << "Error" << '\n';
     std::cout << std::string(55, '-') << '\n';
 
     // Find MP closest to m_xloc
