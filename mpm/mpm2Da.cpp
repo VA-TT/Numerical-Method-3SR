@@ -11,8 +11,8 @@ int main() {
   const double E = 100000.0;
   const double v = 0.3;
   const double rho = 3600.0;
-  const double mu = 0.385;
-  const double phi = 30;
+  const double mu = 0.385; // wall-obstacle
+  const double phi = 30;   // internal friction andgle (in degree)
   const double c = 1;
   const double K0 = 0.5;
 
@@ -21,11 +21,13 @@ int main() {
   const double duration = 1.0;
   const double interval = 200;
   const double t = 0;
-  const double g = 4.8;
+  const double g = 4.8; //?
 
   const double L = 1.0;
   const double nx = 20;
   const double ny = 20;
+  const double dx = L / nx;
+  const double dy = L / ny;
 
   // Computational parameters
   const double c = std::sqrt(E / rho);
@@ -36,30 +38,14 @@ int main() {
 
   // Particles per cell
   const Index ppc = 2;
-  const Index nparticles = nelements * ppc; // 26 particles total
+  const double spacing = dx / ppc;
 
-  // Position to track (particle closest to center, left of center)
-  const Index pmid = 12;       // MP[12] at x=12.1795 (closest to center)
-  const double xloc = 0.5 * L; // x = 12.5 (center of domain)
-
-  // Wave parameters
-  const double beta1 = constants::pi / (2.0 * L);
-  const double omega1 = beta1 * c;
-
-  // Analytic result for standing wave
-  auto analytic_v = [&](double x, double time) {
-    return v0 * std::sin(beta1 * x) * std::cos(omega1 * time);
-  };
-  auto analytic_x = [&](double x0, double time) {
-    return x0 + (v0 / omega1) * std::sin(beta1 * x0) * std::sin(omega1 * time);
-  };
-
-  // Set up MPM1D grid: 14 nodes, 13 elements, 2 MPs per element
-  using Beam = MPM1D<double, 14, 2>;
-  Beam beam(E, rho, L, v0, dt, duration, xloc);
-  beam.setG(0.0);
-  beam.setE(E);
-  beam.setComportmentLaw({});
+  // Set up MPM2D grid: 14 nodes, 13 elements, 2 MPs per element
+  using collapse2D = MPM2D<double>;
+  collapse2D collumn(E, rho, L, v0, dt, duration, xloc);
+  collumn.setG(0.0);
+  collumn.setE(E);
+  collumn.setComportmentLaw({});
 
   // Output files
   std::ofstream hist("mpm1Dc_history.txt");
@@ -69,19 +55,19 @@ int main() {
   stress_strain << "# time\tstress\tstrain\n";
 
   // Set non-uniform initial velocity: v(x) = v0 * sin(beta1 * x)
-  for (Index p = 0; p < beam.getNumMps(); ++p) {
-    double x_p = beam.getMPposition(p);
-    beam.setMPvelocity(p, v0 * std::sin(beta1 * x_p));
+  for (Index p = 0; p < collumn.getNumMps(); ++p) {
+    double x_p = collumn.getMPposition(p);
+    collumn.setMPvelocity(p, v0 * std::sin(beta1 * x_p));
   }
 
   // Set boundary conditions
-  beam.setNodalVeloConstraint(0, 0.0);
-  beam.setNodalMomentumConstraint(0, 0.0);
-  beam.setNodalForceConstraint(0, 0.0);
+  collumn.setNodalVeloConstraint(0, 0.0);
+  collumn.setNodalMomentumConstraint(0, 0.0);
+  collumn.setNodalForceConstraint(0, 0.0);
 
   // Track middle particle
   const Index tracked_mp = pmid;
-  const double x0_tracked = beam.getMPposition(tracked_mp);
+  const double x0_tracked = collumn.getMPposition(tracked_mp);
 
   std::cout << "=== C++ MPM Standing Wave (mpm1Dc - " << ppc
             << " particles/element) ===\n";
@@ -89,42 +75,42 @@ int main() {
             << "\n";
   std::cout << "c=" << c << ", beta1=" << beta1 << ", omega1=" << omega1
             << "\n";
-  std::cout << "dt=" << dt << ", nsteps=" << beam.getNumSteps() << "\n";
-  std::cout << "Total particles: " << beam.getNumMps() << " (" << ppc
+  std::cout << "dt=" << dt << ", nsteps=" << collumn.getNumSteps() << "\n";
+  std::cout << "Total particles: " << collumn.getNumMps() << " (" << ppc
             << " per element)\n";
   std::cout << "Tracking MP[" << tracked_mp << "] at x=" << x0_tracked
             << " (domain center=" << xloc << ")\n";
-  std::cout << "Initial velocity: v=" << beam.getMPvelocity(tracked_mp)
+  std::cout << "Initial velocity: v=" << collumn.getMPvelocity(tracked_mp)
             << " (expected: " << v0 * std::sin(beta1 * x0_tracked) << ")\n\n";
 
   // Initial state (t=0)
   {
-    const double x_num = beam.getMPposition(tracked_mp);
-    const double v_num = beam.getMPvelocity(tracked_mp);
+    const double x_num = collumn.getMPposition(tracked_mp);
+    const double v_num = collumn.getMPvelocity(tracked_mp);
     const double x_ana = x0_tracked;                        // Initial position
     const double v_ana = v0 * std::sin(beta1 * x0_tracked); // Initial velocity
     hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << x_num << '\t'
          << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
 
     stress_strain << std::fixed << std::setprecision(10) << 0.0 << '\t'
-                  << beam.getMPstress(tracked_mp) << '\t'
-                  << beam.getMPstrain(tracked_mp) << '\n';
+                  << collumn.getMPstress(tracked_mp) << '\t'
+                  << collumn.getMPstrain(tracked_mp) << '\n';
   }
 
   // Time integration loop
-  for (Index step = 0; step < beam.getNumSteps(); ++step) {
-    double time = (step + 1) * beam.getTimeStep();
+  for (Index step = 0; step < collumn.getNumSteps(); ++step) {
+    double time = (step + 1) * collumn.getTimeStep();
 
     // MPM algorithm
-    beam.setupMP();
-    beam.p2n();
-    beam.nodalEquilibrium();
-    beam.n2p();
-    beam.resetMesh();
+    collumn.setupMP();
+    collumn.p2n();
+    collumn.nodalEquilibrium();
+    collumn.n2p();
+    collumn.resetMesh();
 
     // Record results
-    const double x_num = beam.getMPposition(tracked_mp);
-    const double v_num = beam.getMPvelocity(tracked_mp);
+    const double x_num = collumn.getMPposition(tracked_mp);
+    const double v_num = collumn.getMPvelocity(tracked_mp);
     const double x_ana = analytic_x(x0_tracked, time);
     const double v_ana = analytic_v(x0_tracked, time);
 
@@ -132,10 +118,10 @@ int main() {
          << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
 
     stress_strain << std::fixed << std::setprecision(10) << time << '\t'
-                  << beam.getMPstress(tracked_mp) << '\t'
-                  << beam.getMPstrain(tracked_mp) << '\n';
+                  << collumn.getMPstress(tracked_mp) << '\t'
+                  << collumn.getMPstrain(tracked_mp) << '\n';
 
-    if (step < 5 || step % 1000 == 0 || step == beam.getNumSteps() - 1) {
+    if (step < 5 || step % 1000 == 0 || step == collumn.getNumSteps() - 1) {
       std::cout << std::fixed << std::setprecision(6);
       std::cout << "t=" << time << " | Num: x=" << x_num << " v=" << v_num
                 << " | Ana: x=" << x_ana << " v=" << v_ana
