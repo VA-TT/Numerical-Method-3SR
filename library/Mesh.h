@@ -36,6 +36,7 @@ public:
     m_nodes_initial.resize(m_nNodes);
     m_activeNodes.resize(m_nNodes);
     m_connectivity.resize(m_nElements);
+    m_mpElementId.resize(m_MPs);
 
     T lx{m_length / m_nElements};
     for (Index i{0}; i < m_nNodes; ++i) {
@@ -226,19 +227,22 @@ public:
 template <typename T> class Mesh2D {
 private:
   T m_length{}, m_height{};
-  T m_MP_size{}; // MP spacing / particle size used for square-grid MPs
   Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{}, m_nMPs{}; // numbers
+
   Vector<std::pair<T, T>> m_nodes{}; // All node coordinates as (x, y) pairs
   Vector<std::pair<T, T>> m_nodes_initial{}; // Initial configuration for reset
-  Vector<std::pair<T, T>> m_MPs{};           // Material Points coordinates
   Vector<char> m_activeNodes{};   // Track which nodes contain Material Points
   Vector<T> m_nodes_x, m_nodes_y; // Node coordinates vector
   Vector<T> m_nodes_x_initial, m_nodes_y_initial; // Initial nodal coordinates
-  Vector<T> m_MP_x_initial, m_MP_y_initial;       // Initial MP coordinates
-  Vector<T> m_MP_x, m_MP_y;                       // MP coordinates
+
   Vector<Index> m_mpElementId{};          // Cached element ID for each MP
   Vector<Vector<Index>> m_connectivity{}; // Elements representing
   static constexpr Index idError = -1;
+
+  T m_MP_size{}; // MP spacing / particle size used for square-grid MPs
+  Vector<std::pair<T, T>> m_MPs{};          // Material Points coordinates
+  Vector<T> m_MP_x, m_MP_y;                 // MP coordinates
+  Vector<T> m_MP_x_initial, m_MP_y_initial; // Initial MP coordinates
 
 public:
   // Constructor
@@ -254,11 +258,11 @@ public:
     m_nodes.resize(m_nNodes);
     m_nodes_initial.resize(m_nNodes);
     m_activeNodes.resize(m_nNodes);
-    m_connectivity.resize(m_nElements);
     m_nodes_x.resize(m_nNodes);
     m_nodes_y.resize(m_nNodes);
     m_nodes_x_initial.resize(m_nNodes);
     m_nodes_y_initial.resize(m_nNodes);
+    m_connectivity.resize(m_nElements, idError);
 
     T dx = length / (nx - 1);
     T dy = height / (ny - 1);
@@ -343,6 +347,7 @@ public:
       m_MPs.reserve(m_nMPs);
       m_MP_x.reserve(m_nMPs);
       m_MP_y.reserve(m_nMPs);
+      m_mpElementId.resize(m_nMPs, idError);
       for (Index j{0}; j < npy; ++j) {
         for (Index i{0}; i < npx; ++i) {
           T x = x0 + MP_size / 2 + i * MP_size;
