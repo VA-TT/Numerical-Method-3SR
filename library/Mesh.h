@@ -4,6 +4,7 @@
 #include "Vector.h"
 #include "comparison.h"
 #include "parentElement.h"
+#include <array>
 #include <cassert>
 #include <iostream>
 #include <utility>
@@ -142,6 +143,12 @@ public:
     assert(mp_positions.size() == m_nMPs &&
            "Size mismatch: mp_positions must match mesh MP count");
     m_MPs = mp_positions;
+    if (m_mpElementId.size() != m_nMPs) {
+      m_mpElementId.resize(m_nMPs, idError);
+    }
+    for (Index p{0}; p < m_nMPs; ++p) {
+      m_mpElementId[p] = findCageID(m_MPs[p]);
+    }
   }
 
   void setMPCoord(Index p, T x) {
@@ -232,7 +239,8 @@ private:
 
   Vector<std::pair<T, T>> m_nodes{}; // All node coordinates as (x, y) pairs
   Vector<std::pair<T, T>> m_nodes_initial{}; // Initial configuration for reset
-  Vector<char> m_activeNodes{}; // Track which nodes contain Material Points
+  Vector<char> m_activeNodes{};    // Track which nodes contain Material Points
+  Vector<char> m_activeElements{}; // Track which elements contain MPs
   Vector<T> m_nodes_x{}, m_nodes_y{}; // Node coordinates vector
   Vector<T> m_nodes_x_initial{},
       m_nodes_y_initial{}; // Initial nodal coordinates
@@ -245,6 +253,7 @@ private:
   Vector<T> m_MP_x{}, m_MP_y{};                 // MP coordinates
   Vector<T> m_MP_x_initial{}, m_MP_y_initial{}; // Initial MP coordinates
   Vector<Index> m_mpElementId{};                // Cached element ID for each MP
+  Vector<Vector<Index>> m_mpsInElement{};       // MPs grouped per element
 
   void generateMPGridPerElement(Index nMPperEle) {
     if (nMPperEle <= 0) {
@@ -379,6 +388,8 @@ public:
     m_nodes_x_initial.resize(m_nNodes);
     m_nodes_y_initial.resize(m_nNodes);
     m_activeNodes.resize(m_nNodes);
+    m_activeElements.resize(m_nElements);
+    m_mpsInElement.resize(m_nElements);
     m_connectivity.resize(m_nElements);
 
     T dx = length / (nx - 1);
@@ -699,6 +710,32 @@ public:
     return m_connectivity[elemID];
   }
 
+  // Returns {x_nodes, y_nodes} by value (size 4 each) for Q4 element mapping
+  std::pair<Vector<T>, Vector<T>> getElementNodes(Index elemID) const {
+    assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
+    const auto &conn = m_connectivity[elemID];
+    Vector<T> x_nodes(4);
+    Vector<T> y_nodes(4);
+    for (Index i{0}; i < 4; ++i) {
+      const Index nodeID = conn[i];
+      assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
+      x_nodes[i] = m_nodes_x[nodeID];
+      y_nodes[i] = m_nodes_y[nodeID];
+    }
+    return {x_nodes, y_nodes};
+  }
+
+  inline bool isActiveElement(Index elemID) const {
+    assert(elemID < m_nElements);
+    return m_activeElements[elemID] != 0;
+  }
+
+  inline const Vector<Index> &getMPsInElement(Index elemID) const {
+    assert(elemID < m_nElements);
+    assert(static_cast<Index>(m_mpsInElement.size()) == m_nElements);
+    return m_mpsInElement[elemID];
+  }
+
   // Get node coordinates by ID
   std::pair<T, T> getNodeCoor(Index nodeID) const {
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
@@ -822,16 +859,12 @@ public:
       m_activeNodes.resize(m_nNodes);
     }
     m_activeNodes.resetZero();
-
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
     for (Index p{0}; p < m_nMPs; ++p) {
-      Index elemID = m_mpElementId[p];
-      if (elemID == idError) {
-        elemID = findCageID(m_MP_x[p], m_MP_y[p], elemID);
-        m_mpElementId[p] = elemID;
-      }
+      const Index elemID = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
+      m_mpElementId[p] = elemID;
       if (elemID != idError) {
         const auto &conn = m_connectivity[elemID];
         for (Index i{0}; i < 4; ++i) {
@@ -844,6 +877,33 @@ public:
   bool isActiveNode(Index nodeID) const {
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
     return m_activeNodes[nodeID] != 0;
+  }
+
+  inline void activateElements() {
+    if (m_activeElements.size() != m_nElements) {
+      m_activeElements.resize(m_nElements);
+    }
+    m_activeElements.resetZero();
+
+    if (m_mpElementId.size() != m_nMPs) {
+      m_mpElementId.resize(m_nMPs, idError);
+    }
+
+    if (m_mpsInElement.size() != m_nElements) {
+      m_mpsInElement.resize(m_nElements);
+    }
+    for (Index e{0}; e < m_nElements; ++e) {
+      m_mpsInElement[e].resize(0);
+    }
+
+    for (Index p = 0; p < m_nMPs; ++p) {
+      const Index elemID = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
+      m_mpElementId[p] = elemID;
+      if (elemID != idError) {
+        m_activeElements[elemID] = 1;
+        m_mpsInElement[elemID].push_back(p);
+      }
+    }
   }
 };
 //////// WHAT HAPPENS IF THE MPs IS PERFECTLY LANDS ON THE NODE? ////////

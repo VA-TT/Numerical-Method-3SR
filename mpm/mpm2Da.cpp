@@ -21,7 +21,7 @@ int main() {
   const double duration = 1.0;
   const double interval = 200;
   const double t = 0;
-  const double g = 4.8; //?
+  const double g = 4.8;
 
   const double L = 1.0;
   const double H = 1.0;
@@ -35,8 +35,8 @@ int main() {
   const double MP_size = dx / ppc;
 
   // MP domain
-  const std::pair<double, double> minCorner{0.0125, 0.0125};
-  const std::pair<double, double> maxCorner{0.3125, 0.3125};
+  const std::pair<double, double> minCorner{0.0, 0.0};
+  const std::pair<double, double> maxCorner{0.3, 0.3};
 
   // Computational parameters
   const double c = std::sqrt(E / rho);
@@ -51,7 +51,7 @@ int main() {
   using collapse2D = MPM2D<double, L, H, nx, ny, MP_size>;
   collapse2D collumn(E, nu, rho, mu, phi, c, K0, minCorner, maxCorner, dt,
                      duration, v0);
-  collumn.setG(4.8); // G=9.81
+  collumn.setG(-9.81); // G=-9.81
   collumn.setE(E);
   collumn.setComportmentLaw({});
 

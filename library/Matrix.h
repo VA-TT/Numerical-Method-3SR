@@ -61,7 +61,7 @@ public:
   static Matrix identity() {
     Matrix result{};
     for (Index i = 0; i < std::min(nRows, nCols); ++i)
-      result(i, i) = 1.0;
+      result(i, i) = T{1};
     return result;
   }
   void resetIdentity() { (*this) = Matrix::identity(); }
@@ -91,6 +91,99 @@ public:
   constexpr Index getCols() const { return nCols; }
   constexpr Index getRows() const { return nRows; }
   constexpr Index length() const { return nRows * nCols; }
+
+  // Getters for engineering tensor
+  T &xx() {
+    static_assert(nRows >= 1 && nCols >= 1, "xx() requires size >= 1x1");
+    return (*this)(0, 0);
+  }
+  const T &xx() const {
+    static_assert(nRows >= 1 && nCols >= 1, "xx() requires size >= 1x1");
+    return (*this)(0, 0);
+  }
+
+  T &xy() {
+    static_assert(nRows >= 1 && nCols >= 2, "xy() requires size >= 1x2");
+    return (*this)(0, 1);
+  }
+  const T &xy() const {
+    static_assert(nRows >= 1 && nCols >= 2, "xy() requires size >= 1x2");
+    return (*this)(0, 1);
+  }
+
+  T &yx() {
+    static_assert(nRows >= 2 && nCols >= 1, "yx() requires size >= 2x1");
+    return (*this)(1, 0);
+  }
+  const T &yx() const {
+    static_assert(nRows >= 2 && nCols >= 1, "yx() requires size >= 2x1");
+    return (*this)(1, 0);
+  }
+
+  // Backward-compatible alias (typo kept): prefer yx().
+  T &Yx() {
+    static_assert(nRows >= 2 && nCols >= 1, "Yx() requires size >= 2x1");
+    return yx();
+  }
+  const T &Yx() const {
+    static_assert(nRows >= 2 && nCols >= 1, "Yx() requires size >= 2x1");
+    return yx();
+  }
+
+  T &yy() {
+    static_assert(nRows >= 2 && nCols >= 2, "yy() requires size >= 2x2");
+    return (*this)(1, 1);
+  }
+  const T &yy() const {
+    static_assert(nRows >= 2 && nCols >= 2, "yy() requires size >= 2x2");
+    return (*this)(1, 1);
+  }
+
+  // 3D components (only available for matrices that are at least 3x3)
+  T &xz() {
+    static_assert(nRows >= 1 && nCols >= 3, "xz() requires size >= 1x3");
+    return (*this)(0, 2);
+  }
+  const T &xz() const {
+    static_assert(nRows >= 1 && nCols >= 3, "xz() requires size >= 1x3");
+    return (*this)(0, 2);
+  }
+
+  T &yz() {
+    static_assert(nRows >= 2 && nCols >= 3, "yz() requires size >= 2x3");
+    return (*this)(1, 2);
+  }
+  const T &yz() const {
+    static_assert(nRows >= 2 && nCols >= 3, "yz() requires size >= 2x3");
+    return (*this)(1, 2);
+  }
+
+  T &zx() {
+    static_assert(nRows >= 3 && nCols >= 1, "zx() requires size >= 3x1");
+    return (*this)(2, 0);
+  }
+  const T &zx() const {
+    static_assert(nRows >= 3 && nCols >= 1, "zx() requires size >= 3x1");
+    return (*this)(2, 0);
+  }
+
+  T &zy() {
+    static_assert(nRows >= 3 && nCols >= 2, "zy() requires size >= 3x2");
+    return (*this)(2, 1);
+  }
+  const T &zy() const {
+    static_assert(nRows >= 3 && nCols >= 2, "zy() requires size >= 3x2");
+    return (*this)(2, 1);
+  }
+
+  T &zz() {
+    static_assert(nRows >= 3 && nCols >= 3, "zz() requires size >= 3x3");
+    return (*this)(2, 2);
+  }
+  const T &zz() const {
+    static_assert(nRows >= 3 && nCols >= 3, "zz() requires size >= 3x3");
+    return (*this)(2, 2);
+  }
 
   // Reference to row(i)
   std::span<T> row(Index i) {
@@ -131,8 +224,8 @@ public:
     for (Index i = 0; i < nRows; ++i) {
       out << "|";
       for (Index j = 0; j < nCols; ++j) {
-        if (approximatelyEqualAbsRel(matrix(i, j), T{0.0}))
-          out << std::setw(tab) << T{0.0};
+        if (approximatelyEqualAbsRel(matrix(i, j), T{0}))
+          out << std::setw(tab) << T{0};
         else
           out << std::setw(tab) << matrix(i, j);
       }
@@ -331,7 +424,7 @@ public:
         concatenateMatrixHorizontal(*this,
                                     Matrix<T, nRows, nCols>::identity())};
     // check det first
-    if (approximatelyEqualAbsRel(det(*this), 0.0)) {
+    if (approximatelyEqualAbsRel(det(*this), T{0})) {
       throw std::invalid_argument("Determinant of Matrix is 0, hence matrix is "
                                   "singular and cannot be inverted.");
     }
@@ -344,12 +437,12 @@ public:
         // std::endl; std::cout << augmentedMatrix << std::endl;
       }
       T pivot{augmentedMatrix(pivotIndex, pivotIndex)};
-      if (approximatelyEqualAbsRel(pivot, 0.0)) {
+      if (approximatelyEqualAbsRel(pivot, T{})) {
         throw std::runtime_error("Matrix is singular and cannot be inverted.");
       }
       auto pivotSpan = augmentedMatrix.row(pivotIndex);
       // Normalize pivot in place
-      if (!approximatelyEqualAbsRel(pivot, 1.0)) {
+      if (!approximatelyEqualAbsRel(pivot, T{1})) {
         for (auto &val : pivotSpan)
           val /= pivot;
         // std::cout << "Normalize row " << pivotIndex << " by pivot = " <<
@@ -365,7 +458,7 @@ public:
         T factor = augmentedMatrix(
             i, pivotIndex); // no need to /pivot as pivot = 1.0 already
         // Skip value under or above the pilot that are 0.0
-        if (approximatelyEqualAbsRel(factor, 0.0))
+        if (approximatelyEqualAbsRel(factor, T{}))
           continue;
 
         // std::cout << "Eliminate row " << i << " using pivot row " <<
@@ -391,7 +484,7 @@ public:
     for (Index i = 0; i < nRows; ++i) {
       for (Index j = 0; j < nCols; ++j) {
         if (i != j) {
-          if (!approximatelyEqualAbsRel((*this)(i, j), T{0.0})) {
+          if (!approximatelyEqualAbsRel((*this)(i, j), T{0})) {
             return false;
           }
         }
@@ -404,7 +497,7 @@ public:
     for (Index i = 0; i < nRows; ++i) {
       for (Index j = 0; j < nCols; ++j) {
         if (i > j) {
-          if (!approximatelyEqualAbsRel((*this)(i, j), T{0.0})) {
+          if (!approximatelyEqualAbsRel((*this)(i, j), T{0})) {
             return false;
           }
         }
@@ -417,7 +510,7 @@ public:
     for (Index i = 0; i < nRows; ++i) {
       for (Index j = 0; j < nCols; ++j) {
         if (i < j) {
-          if (!approximatelyEqualAbsRel((*this)(i, j), T{0.0})) {
+          if (!approximatelyEqualAbsRel((*this)(i, j), T{0})) {
             return false;
           }
         }
@@ -753,6 +846,15 @@ Matrix<T, R1, C2> operator*(const Matrix<T, R1, C1> &m1,
   return result;
 }
 
+// Matrix-vector multiplication (m * v)
+template <typename T, Index R, Index C>
+Vector<T> operator*(const Matrix<T, R, C> &m, const Vector<T> &v) {
+  assert(v.size() == C && "Vector size must match matrix column count.");
+  const Matrix<T, C, 1> col{v};
+  const Matrix<T, R, 1> result = m * col;
+  return static_cast<Vector<T>>(result); // uses Matrix::operator Vector<T>()
+}
+
 // Orthogonal bool function
 template <typename T, Index R1, Index C1, Index R2, Index C2>
 bool arePairOrthogonal(const Matrix<T, R1, C1> &m1,
@@ -770,7 +872,7 @@ Index mostZeroRow(const Matrix<T, nRows, nCols> &m) {
   Index index{0};
   for (Index i{0}; i < nRows; i++) {
     for (const auto &element : m.row(i)) {
-      if (approximatelyEqualAbsRel(element, 0.0))
+      if (approximatelyEqualAbsRel(element, T{}))
         ++exceed0[i];
     }
   }
@@ -826,7 +928,7 @@ T det(const Matrix<T, nRows, nCols> &m) {
     Index rowNum{mostZeroRow(m)};
     for (Index j = 0; j < nCols; ++j) {
       T a = m(rowNum, j);
-      if (approximatelyEqualAbsRel(a, 0.0))
+      if (approximatelyEqualAbsRel(a, T{}))
         continue;
       int sign = ((rowNum + j) % 2 == 0) ? 1 : -1; // (-1)^(row+col)
       Matrix<T, nRows - 1, nCols - 1> sub = m.subMatrix(rowNum, j);

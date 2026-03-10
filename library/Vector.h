@@ -68,6 +68,36 @@ public:
     return static_cast<Index>(m_elements.size());
   }
 
+  // Convenience coordinate accessors (useful when the Vector stores 2D/3D
+  // coordinates). These are runtime-checked because Vector is dynamically
+  // sized.
+  T &x() {
+    assert(size() >= 1 && "x() requires size() >= 1");
+    return (*this)[0];
+  }
+  const T &x() const {
+    assert(size() >= 1 && "x() requires size() >= 1");
+    return (*this)[0];
+  }
+
+  T &y() {
+    assert(size() >= 2 && "y() requires size() >= 2");
+    return (*this)[1];
+  }
+  const T &y() const {
+    assert(size() >= 2 && "y() requires size() >= 2");
+    return (*this)[1];
+  }
+
+  T &z() {
+    assert(size() >= 3 && "z() requires size() >= 3");
+    return (*this)[2];
+  }
+  const T &z() const {
+    assert(size() >= 3 && "z() requires size() >= 3");
+    return (*this)[2];
+  }
+
   T &at(Index i) {
     if (i < 0)
       throw std::out_of_range("Negative index not allowed");
@@ -118,8 +148,8 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const Vector<T> &v) {
     os << "[";
     for (Index i = 0; i < v.size(); ++i) {
-      if (approximatelyEqualAbsRel(v[i], T{0.0}))
-        os << T{0.0};
+      if (approximatelyEqualAbsRel(v[i], T{0}))
+        os << T{0};
       else
         os << v[i];
       if (i < v.size() - 1)
@@ -138,6 +168,9 @@ public:
       (*this)[i] += other[i];
     return *this;
   }
+
+  Vector &operator-=(const Vector<T> &other) { return *this += -other; }
+
   // Projection on another vector
   Vector projection(const Vector &other) const {
     return normalize(other) * dotProduct(*this, normalize(other));
@@ -224,7 +257,7 @@ template <typename T> Vector<T> operator-(const Vector<T> &v) {
 
 // Scalar multiplication (vector / scalar)
 template <typename T> Vector<T> operator/(const Vector<T> &v, const T &k) {
-  assert(!approximatelyEqualAbsRel(k, 0.0) &&
+  assert(!approximatelyEqualAbsRel(k, T{0}) &&
          "Can't divide by a number approximate to 0.");
   return v * (T{1} / k);
 }
@@ -306,14 +339,14 @@ template <typename T> T magnitude(const Vector<T> &v) {
 // Normalize to Unit vector
 template <typename T> Vector<T> normalize(const Vector<T> &v) {
   T mag = magnitude(v);
-  if (approximatelyEqualAbsRel(mag, T{0.0}))
+  if (approximatelyEqualAbsRel(mag, T{0}))
     throw std::invalid_argument("Cannot normalize zero vector.");
   return v * (T{1.0} / mag);
 }
 
 template <typename T> T transpose(const Vector<T> &v) {
   T mag = magnitude(v);
-  if (approximatelyEqualAbsRel(mag, T{0.0}))
+  if (approximatelyEqualAbsRel(mag, T{0}))
     throw std::invalid_argument("Cannot normalize zero vector.");
   return v * (T{1.0} / mag);
 }
