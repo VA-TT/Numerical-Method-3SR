@@ -4,105 +4,91 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 int main() {
-  Timer t;
+  Timer timer;
   // Material properties
   const double E = 100000.0;
   const double nu = 0.3;
   const double rho = 3600.0;
   const double mu = 0.385; // wall-obstacle
   const double phi = 30;   // internal friction andgle (in degree)
-  const double c = 1;
+  const double cohesion = 1.0;
   const double K0 = 0.5;
 
   // Analysis setting
-  const double dt = 0.0001;
   const double duration = 1.0;
-  const double interval = 200;
-  const double t = 0;
-  const double g = 4.8;
 
-  const double L = 1.0;
-  const double H = 1.0;
-  const Index nx = 20;
-  const Index ny = 20;
-  const double dx = L / nx;
-  const double dy = H / ny;
+  // Grid definition (must be constexpr to be used in MPM2D template args)
+  static constexpr double L = 1.0;
+  static constexpr double H = 1.0;
+  static constexpr Index nx = 20;
+  static constexpr Index ny = 20;
+  static constexpr double dx = L / static_cast<double>(nx);
+  static constexpr double dy = H / static_cast<double>(ny);
 
   // Particles per cell
-  const Index ppc = 2;
-  const double MP_size = dx / ppc;
+  static constexpr Index ppc = 2;
+  static constexpr double MP_size = dx / static_cast<double>(ppc);
 
   // MP domain
   const std::pair<double, double> minCorner{0.0, 0.0};
   const std::pair<double, double> maxCorner{0.3, 0.3};
 
-  // Computational parameters
-  const double c = std::sqrt(E / rho);
-  const Index nelements = 13;
-  const double dx = L / nelements;
-  const double dt_crit = dx / c;
+  // Computational parameters (CFL-ish)
+  const double c_wave = std::sqrt(E / rho);
+  const double dt_crit = std::min(dx, dy) / c_wave;
   const double dt = 0.1 * dt_crit;
 
-  const double v0 = 0.1;
+  const double v0 = 0.0;
 
   // Set up MPM2D grid: 14 nodes, 13 elements, 2 MPs per element
   using collapse2D = MPM2D<double, L, H, nx, ny, MP_size>;
-  collapse2D collumn(E, nu, rho, mu, phi, c, K0, minCorner, maxCorner, dt,
-                     duration, v0);
+  collapse2D collumn(E, nu, rho, mu, phi, cohesion, K0, minCorner, maxCorner,
+                     dt, duration, v0);
   collumn.setG(-9.81); // G=-9.81
   collumn.setE(E);
-  collumn.setComportmentLaw({});
+  collumn.setComportmentLaw(std::function<double(double)>{});
 
   // Output files
-  std::ofstream hist("mpm1Dc_history.txt");
-  hist << "# time\tx_num\tv_num\tx_ana\tv_ana\n";
+  std::ofstream hist("mpm2Da_history.txt");
+  hist << "# time\tx\ty\tstress_xx\tstrain_xx\n";
 
-  std::ofstream stress_strain("mpm1Dc_stress_strain.txt");
-  stress_strain << "# time\tstress\tstrain\n";
-
-  // Set non-uniform initial velocity: v(x) = v0 * sin(beta1 * x)
-  for (Index p = 0; p < collumn.getNumMps(); ++p) {
-    double x_p = collumn.getMPposition(p);
-    collumn.setMPvelocity(p, v0 * std::sin(beta1 * x_p));
+  // Simple boundary condition: clamp bottom nodes
+  for (const Index nodeID : collumn.getMesh().bottomNodes()) {
+    collumn.setNodalVeloConstraint(nodeID, 0.0);
   }
 
-  // Set boundary conditions
-  collumn.setNodalVeloConstraint(0, 0.0);
-  collumn.setNodalMomentumConstraint(0, 0.0);
-  collumn.setNodalForceConstraint(0, 0.0);
+  // Track a representative particle
+  const Index tracked_mp =
+      collumn.getNumMps() > 0 ? collumn.getNumMps() / 2 : 0;
 
-  // Track middle particle
-  const Index tracked_mp = pmid;
-  const double x0_tracked = collumn.getMPposition(tracked_mp);
-
-  std::cout << "=== C++ MPM Standing Wave (mpm1Dc - " << ppc
-            << " particles/element) ===\n";
-  std::cout << "L=" << L << ", E=" << E << ", rho=" << rho << ", v0=" << v0
-            << "\n";
-  std::cout << "c=" << c << ", beta1=" << beta1 << ", omega1=" << omega1
-            << "\n";
+  std::cout << "=== C++ MPM2D (mpm2Da) ===\n";
+  std::cout << "L=" << L << ", H=" << H << ", E=" << E << ", rho=" << rho
+            << ", mu=" << mu << "\n";
   std::cout << "dt=" << dt << ", nsteps=" << collumn.getNumSteps() << "\n";
-  std::cout << "Total particles: " << collumn.getNumMps() << " (" << ppc
-            << " per element)\n";
-  std::cout << "Tracking MP[" << tracked_mp << "] at x=" << x0_tracked
-            << " (domain center=" << xloc << ")\n";
-  std::cout << "Initial velocity: v=" << collumn.getMPvelocity(tracked_mp)
-            << " (expected: " << v0 * std::sin(beta1 * x0_tracked) << ")\n\n";
+  std::cout << "Total particles: " << collumn.getNumMps() << "\n";
+  std::cout << "Tracking MP[" << tracked_mp << "]\n\n";
+
+  // VTK output (ParaView): particles_000000.vtk, particles_000010.vtk, ...
+  // Set vtkInterval = 1 to export every step.
+  const Index vtkInterval = 10;
+  auto exportVTK = [&](Index frame) {
+    std::ostringstream name;
+    name << "particles_" << std::setw(6) << std::setfill('0')
+         << static_cast<long long>(frame) << ".vtk";
+    collumn.exportResult(name.str());
+  };
 
   // Initial state (t=0)
   {
-    const double x_num = collumn.getMPposition(tracked_mp);
-    const double v_num = collumn.getMPvelocity(tracked_mp);
-    const double x_ana = x0_tracked;                        // Initial position
-    const double v_ana = v0 * std::sin(beta1 * x0_tracked); // Initial velocity
-    hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << x_num << '\t'
-         << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
+    const auto mp = collumn.getMesh().getMPCoord(tracked_mp);
+    hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << mp.first
+         << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
+         << collumn.getMPstrain(tracked_mp) << '\n';
 
-    stress_strain << std::fixed << std::setprecision(10) << 0.0 << '\t'
-                  << collumn.getMPstress(tracked_mp) << '\t'
-                  << collumn.getMPstrain(tracked_mp) << '\n';
+    exportVTK(0);
   }
 
   // Time integration loop
@@ -116,32 +102,26 @@ int main() {
     collumn.n2p();
     collumn.resetMesh();
 
+    if (vtkInterval > 0 && ((step + 1) % vtkInterval == 0)) {
+      exportVTK(step + 1);
+    }
+
     // Record results
-    const double x_num = collumn.getMPposition(tracked_mp);
-    const double v_num = collumn.getMPvelocity(tracked_mp);
-    const double x_ana = analytic_x(x0_tracked, time);
-    const double v_ana = analytic_v(x0_tracked, time);
-
-    hist << std::fixed << std::setprecision(10) << time << '\t' << x_num << '\t'
-         << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
-
-    stress_strain << std::fixed << std::setprecision(10) << time << '\t'
-                  << collumn.getMPstress(tracked_mp) << '\t'
-                  << collumn.getMPstrain(tracked_mp) << '\n';
+    const auto mp = collumn.getMesh().getMPCoord(tracked_mp);
+    hist << std::fixed << std::setprecision(10) << time << '\t' << mp.first
+         << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
+         << collumn.getMPstrain(tracked_mp) << '\n';
 
     if (step < 5 || step % 1000 == 0 || step == collumn.getNumSteps() - 1) {
       std::cout << std::fixed << std::setprecision(6);
-      std::cout << "t=" << time << " | Num: x=" << x_num << " v=" << v_num
-                << " | Ana: x=" << x_ana << " v=" << v_ana
-                << " | Err: Δx=" << std::abs(x_num - x_ana)
-                << " Δv=" << std::abs(v_num - v_ana) << '\n';
+      std::cout << "t=" << time << " | MP[" << tracked_mp << "]: x=" << mp.first
+                << " y=" << mp.second
+                << " | stress_xx=" << collumn.getMPstress(tracked_mp) << '\n';
     }
   }
 
   hist.close();
-  stress_strain.close();
-  std::cout << "\n✓ Results saved to: mpm1Dc_history.txt\n";
-  std::cout << "✓ Stress-strain data saved to: mpm1Dc_stress_strain.txt\n";
-  std::cout << "✓ Computation time: " << t.elapsed() << " s\n";
+  std::cout << "\n✓ Results saved to: mpm2Da_history.txt\n";
+  std::cout << "✓ Computation time: " << timer.elapsed() << " s\n";
   return 0;
 }

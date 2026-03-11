@@ -39,10 +39,15 @@ public:
   // Vector 0
   static Vector<T> zero(Index n) { return Vector<T>(n); }
 
-  // Đưa mọi phần tử về 0, giữ nguyên kích thước
+  // Reset all vallu to 0 default
   void resetZero() {
-    for (auto &e : m_elements)
-      e = T{};
+    for (auto &e : m_elements) {
+      if constexpr (requires(T &x) { x.resetZero(); }) {
+        e.resetZero();
+      } else {
+        e = T{};
+      }
+    }
   }
   // // Constructor 3D (x, y, z)
   // Vector(const T& x, const T& y, const T& z) : m_elements{x, y, z} {}

@@ -1,6 +1,12 @@
 import numpy as np 
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+
+# Optional progress bar: fall back to plain iteration if tqdm isn't installed.
+try:
+    from tqdm import tqdm  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    def tqdm(iterable, *args, **kwargs):
+        return iterable
 
 def elasticity_matrix(youngs_modulus: float, poissons_ratio: float, stress_state: str) -> np.ndarray:
     """Compute the elasticity (stiffness) matrix for an isotropic elastic material.
@@ -495,7 +501,7 @@ for istep in tqdm(range(nsteps), desc="Simulating"):
     
     
     # Boundary conditions
-    # 0. Update nodal kinematics (nodal mass, momentum -> particles)
+    # 0. Update nodal kinematics (particles -> nodal)
     # 1. Velocity & acceleration to 0
     # 2. Compute nodal force.
     #   * First, map particle body force to nodal body force

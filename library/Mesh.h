@@ -179,9 +179,6 @@ public:
   // Reset to initial configuration
   void nodalReset() { m_nodes = m_nodes_initial; } // Excluding MPs
 
-  // Backward-compatible name used by some tests
-  void resetMesh() { nodalReset(); }
-
   // MPM helper function: Find element containing position x
   Index findCageID(T x) const {
     for (Index e{0}; e < m_nElements; ++e) {
@@ -481,6 +478,16 @@ public:
   const Vector<std::pair<T, T>> &getNodes() const { return m_nodes; }
   const Vector<std::pair<T, T>> &getMPCoords() const { return m_MPs; }
 
+  // Convenience API: return MP coords as Vector<T>{x,y} for math operations.
+  Vector<Vector<T>> getMPCoordsVec() const {
+    Vector<Vector<T>> out;
+    out.resize(m_MPs.size());
+    for (Index p{0}; p < m_nMPs; ++p) {
+      out[p] = Vector<T>{m_MPs[p].first, m_MPs[p].second};
+    }
+    return out;
+  }
+
   // Backward-compatible name used by tests
   const Vector<Index> &getConnectivity(Index elemID) const {
     return getEleConnectivity(elemID);
@@ -617,6 +624,63 @@ public:
     }
     return ids;
   }
+
+  // Boundary node sets filtered by active nodes.
+  // Useful when applying BCs that must only target nodes participating in
+  // the current time step (i.e., nodes connected to MPs).
+  Vector<Index> bottomActiveNodes(double absEps = 1e-8,
+                                  double relEps = 1e-8) const {
+    Vector<Index> ids;
+    for (Index i{0}; i < m_nNodes; ++i) {
+      if (!isActiveNode(i))
+        continue;
+      const double y = static_cast<double>(m_nodes_y[i]);
+      if (y < absEps || approximatelyEqualAbsRel(y, 0.0, absEps, relEps))
+        ids.push_back(i);
+    }
+    return ids;
+  }
+
+  Vector<Index> topActiveNodes(double absEps = 1e-8,
+                               double relEps = 1e-8) const {
+    Vector<Index> ids;
+    const double H = static_cast<double>(m_height);
+    for (Index i{0}; i < m_nNodes; ++i) {
+      if (!isActiveNode(i))
+        continue;
+      const double y = static_cast<double>(m_nodes_y[i]);
+      if (y > H - absEps || approximatelyEqualAbsRel(y, H, absEps, relEps))
+        ids.push_back(i);
+    }
+    return ids;
+  }
+
+  Vector<Index> leftActiveNodes(double absEps = 1e-8,
+                                double relEps = 1e-8) const {
+    Vector<Index> ids;
+    for (Index i{0}; i < m_nNodes; ++i) {
+      if (!isActiveNode(i))
+        continue;
+      const double x = static_cast<double>(m_nodes_x[i]);
+      if (x < absEps || approximatelyEqualAbsRel(x, 0.0, absEps, relEps))
+        ids.push_back(i);
+    }
+    return ids;
+  }
+
+  Vector<Index> rightActiveNodes(double absEps = 1e-8,
+                                 double relEps = 1e-8) const {
+    Vector<Index> ids;
+    const double L = static_cast<double>(m_length);
+    for (Index i{0}; i < m_nNodes; ++i) {
+      if (!isActiveNode(i))
+        continue;
+      const double x = static_cast<double>(m_nodes_x[i]);
+      if (x > L - absEps || approximatelyEqualAbsRel(x, L, absEps, relEps))
+        ids.push_back(i);
+    }
+    return ids;
+  }
   // MP setters
   void setMPCoord(Index p, T x, T y) {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
@@ -654,6 +718,23 @@ public:
       m_MP_x[p] = mp_positions[p].first;
       m_MP_y[p] = mp_positions[p].second;
       m_mpElementId[p] = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
+    }
+  }
+
+  // Convenience overload: set MP coords from Vector<T>{x,y}.
+  void setMPCoords(const Vector<Vector<T>> &mp_positions) {
+    assert(mp_positions.size() == m_nMPs &&
+           "Size mismatch: mp_positions must match mesh MP count");
+    if (m_mpElementId.size() != m_nMPs) {
+      m_mpElementId.resize(m_nMPs, idError);
+    }
+    for (Index p{0}; p < m_nMPs; ++p) {
+      const T x = mp_positions[p].x();
+      const T y = mp_positions[p].y();
+      m_MP_x[p] = x;
+      m_MP_y[p] = y;
+      m_MPs[p] = {x, y};
+      m_mpElementId[p] = findCageID(x, y, m_mpElementId[p]);
     }
   }
 
@@ -813,7 +894,7 @@ public:
   }
 
   // Reset to initial configuration
-  void resetMesh() {
+  void nodalReset() {
     m_nodes = m_nodes_initial;
     m_nodes_x = m_nodes_x_initial;
     m_nodes_y = m_nodes_y_initial;

@@ -12,12 +12,14 @@
 #include <iostream>
 // Range of 1D parent element Sr: [-1,1] -> mapping to [x1,x2] physical element
 // First order polynomial shape function using Lagrange's basis in range [-1,1]
-template <typename T> inline auto N1(const T &xi) { return (1 - xi) / 2; }
-template <typename T> inline auto N2(const T &xi) { return (1 + xi) / 2; }
 
 // Backward-compatible 1D names
-template <typename T> inline auto N1_ref(const T &xi) { return N1(xi); }
-template <typename T> inline auto N2_ref(const T &xi) { return N2(xi); }
+template <typename T> inline auto N1_ref(const T &xi) { return (1 - xi) / 2; }
+template <typename T> inline auto N2_ref(const T &xi) { return (1 + xi) / 2; }
+
+template <class T> inline std::array<T, 4> N_array(const T &xi) {
+  return {N1_ref(xi), N2_ref(xi), N3_ref(xi), N4_ref(xi)};
+}
 
 // Discretizing x = phi(xi) = x1 N1(xi) + x2 N2(xi) = J*xi + M = xi *
 // (x2-x1)/2 + (x2+x1)/2
@@ -102,6 +104,10 @@ template <typename T> inline auto N3_ref(const T &xi, const T &eta) {
 }
 template <typename T> inline auto N4_ref(const T &xi, const T &eta) {
   return N4(xi, eta);
+}
+
+template <class T> inline std::array<T, 4> N_Q4(const T &xi, const T &eta) {
+  return {N1_ref(xi, eta), N2_ref(xi, eta), N3_ref(xi, eta), N4_ref(xi, eta)};
 }
 
 // Derivatives of shape functions with respect to xi
@@ -263,7 +269,7 @@ inline double integrationGauss2D_ref(
 
 // Compute derivatives of shape functions in physical coordinates
 template <typename T>
-std::pair<Vector<T>, Vector<T>> dNdxdy(T xi, T eta, const Vector<T> &x_nodes,
+std::pair<Vector<T>, Vector<T>> gradientN(T xi, T eta, const Vector<T> &x_nodes,
                                        const Vector<T> &y_nodes) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
