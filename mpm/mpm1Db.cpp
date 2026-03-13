@@ -1,5 +1,6 @@
 #include "../library/MPM.h"
 #include "../library/clock.h"
+#include "../library/ioDirectory.h"
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -78,6 +79,11 @@ int main() {
   std::cout << "Initial velocity: v=" << beam.getMPvelocity(tracked_mp)
             << " (expected: " << v0 * std::sin(beta1 * x0_tracked) << ")\n\n";
 
+  // VTK output (ParaView): mpm/data1D/particles_000000.vtk and mesh_000000.vtk
+  // (relative to where the executable is).
+  const Index vtkInterval = 10;
+  const std::filesystem::path vtkDir = ioFile::vtkOutputDir("data1D");
+
   // Initial state (t=0)
   {
     const double x_num = beam.getMPposition(tracked_mp);
@@ -90,6 +96,8 @@ int main() {
     stress_strain << std::fixed << std::setprecision(10) << 0.0 << '\t'
                   << beam.getMPstress(tracked_mp) << '\t'
                   << beam.getMPstrain(tracked_mp) << '\n';
+
+    beam.exportVTKFrame(vtkDir, 0);
   }
 
   // Time integration loop
@@ -102,6 +110,10 @@ int main() {
     beam.nodalEquilibrium();
     beam.n2p();
     beam.resetMesh();
+
+    if (vtkInterval > 0 && ((step + 1) % vtkInterval == 0)) {
+      beam.exportVTKFrame(vtkDir, step + 1);
+    }
 
     // Record results
     const double x_num = beam.getMPposition(tracked_mp);

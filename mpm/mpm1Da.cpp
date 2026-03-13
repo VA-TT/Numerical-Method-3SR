@@ -1,5 +1,6 @@
 #include "../library/MPM.h"
 #include "../library/clock.h"
+#include "../library/ioDirectory.h"
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -33,7 +34,7 @@ int main() {
   beam.setComportmentLaw({}); // Tangential Operator
 
   // Output files
-  std::ofstream hist("mpm1D_history.txt");
+  std::ofstream hist("mpm1Da_history.txt");
   hist << "# time\tx_num\tv_num\tx_ana\tv_ana\n";
 
   std::ofstream stress_strain("mpm1D_stress_strain.txt");
@@ -60,6 +61,11 @@ int main() {
             << "] at x=" << beam.getMPposition(tracked_mp) << " (xloc=" << xloc
             << ")\n\n";
 
+  // VTK output (ParaView): mpm/data1D/particles_000000.vtk and mesh_000000.vtk
+  // (relative to where the executable is).
+  const Index vtkInterval = 10;
+  const std::filesystem::path vtkDir = ioFile::vtkOutputDir("data1D");
+
   // Initial state (t=0) to the output file
   {
     const double x_num = beam.getMPposition(tracked_mp);
@@ -72,6 +78,8 @@ int main() {
     stress_strain << std::fixed << std::setprecision(10) << 0.0 << '\t'
                   << beam.getMPstress(tracked_mp) << '\t'
                   << beam.getMPstrain(tracked_mp) << '\n';
+
+    beam.exportVTKFrame(vtkDir, 0);
   }
 
   // Time integration loop
@@ -84,6 +92,10 @@ int main() {
     beam.nodalEquilibrium();
     beam.n2p();
     beam.resetMesh();
+
+    if (vtkInterval > 0 && ((step + 1) % vtkInterval == 0)) {
+      beam.exportVTKFrame(vtkDir, step + 1);
+    }
 
     // Record results
     const double x_num = beam.getMPposition(tracked_mp);

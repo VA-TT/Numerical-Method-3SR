@@ -10,11 +10,14 @@
 #include "physicConstants.h"
 #include "signFunction.h"
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <system_error>
 #include <vector>
 
 template <typename T, Index nNodes, Index nMPperEle> class MPM1D {
@@ -423,11 +426,25 @@ public:
               << std::scientific << error << '\n';
   }
 
-  void exportResult(const std::string &filename = "mpm1D_results.txt") {
+  void exportResult(const std::string &filename = "mpm1D_results.vtk") {
     const std::string vtkFile =
         endsWith(filename, ".vtk")
             ? filename
             : withExtensionReplaced(filename, ".txt", ".vtk");
+
+    // Also export the background grid mesh (nodes + elements) to a sibling
+    // file. Default naming:
+    //   - if vtkFile contains "particles_" => replace it by "mesh_"
+    //   - else => append "_mesh" before the extension
+    std::string meshFile = vtkFile;
+    if (const std::size_t pos = meshFile.rfind("particles_");
+        pos != std::string::npos) {
+      meshFile.replace(pos, std::string("particles_").size(), "mesh_");
+    } else if (endsWith(meshFile, ".vtk")) {
+      meshFile = meshFile.substr(0, meshFile.size() - 4) + "_mesh.vtk";
+    } else {
+      meshFile += "_mesh.vtk";
+    }
 
     std::ofstream vtk(vtkFile);
     if (!vtk)
@@ -467,7 +484,91 @@ public:
     for (Index p = 0; p < nPoints; ++p) {
       vtk << p_volume[p] << "\n";
     }
+
+    // ---- Mesh grid export (VTK legacy, UNSTRUCTURED_GRID) ----
+    std::ofstream mesh(meshFile);
+    if (!mesh)
+      throw std::runtime_error("MPM1D::exportResult: cannot open mesh file: " +
+                               meshFile);
+
+    const Index numNodes = m_mesh.getNumNodes();
+    const Index numElems = m_mesh.getNumElements();
+
+    mesh << "# vtk DataFile Version 3.0\n";
+    mesh << "MPM1D background grid\n";
+    mesh << "ASCII\n";
+    mesh << "DATASET UNSTRUCTURED_GRID\n";
+    mesh << "POINTS " << numNodes << " double\n";
+    for (Index i = 0; i < numNodes; ++i) {
+      mesh << m_mesh.nodeCoords()[i] << " 0 0\n";
+    }
+
+    // Each line cell: "2 n1 n2" => 3 integers per element
+    mesh << "CELLS " << numElems << " " << (numElems * 3) << "\n";
+    for (Index e = 0; e < numElems; ++e) {
+      const auto &conn = m_mesh.getEleConnectivity(e);
+      mesh << "2 " << conn[0] << " " << conn[1] << "\n";
+    }
+
+    // VTK cell type for line = 3
+    mesh << "CELL_TYPES " << numElems << "\n";
+    for (Index e = 0; e < numElems; ++e) {
+      mesh << "3\n";
+    }
+
+    mesh << "POINT_DATA " << numNodes << "\n";
+
+    mesh << "SCALARS active int 1\n";
+    mesh << "LOOKUP_TABLE default\n";
+    const auto &active = m_mesh.getActiveNodes();
+    for (Index i = 0; i < numNodes; ++i) {
+      const int a = (i < active.size() && active[i] != 0) ? 1 : 0;
+      mesh << a << "\n";
+    }
+
+    mesh << "SCALARS mass double 1\n";
+    mesh << "LOOKUP_TABLE default\n";
+    for (Index i = 0; i < numNodes; ++i) {
+      const T m = (i < n_mass.size()) ? n_mass[i] : T{0};
+      mesh << m << "\n";
+    }
+
+    mesh << "VECTORS velocity double\n";
+    for (Index i = 0; i < numNodes; ++i) {
+      const T v = (i < n_velocity.size()) ? n_velocity[i] : T{0};
+      mesh << v << " 0 0\n";
+    }
+
+    mesh << "VECTORS acceleration double\n";
+    for (Index i = 0; i < numNodes; ++i) {
+      const T a = (i < n_acceleration.size()) ? n_acceleration[i] : T{0};
+      mesh << a << " 0 0\n";
+    }
+
+    mesh << "VECTORS force_total double\n";
+    for (Index i = 0; i < numNodes; ++i) {
+      const T f = (i < n_forceTotal.size()) ? n_forceTotal[i] : T{0};
+      mesh << f << " 0 0\n";
+    }
+
+    mesh << "VECTORS momentum double\n";
+    for (Index i = 0; i < numNodes; ++i) {
+      const T p = (i < n_momentum.size()) ? n_momentum[i] : T{0};
+      mesh << p << " 0 0\n";
+    }
   }
+
+  void exportVTKFrame(const std::filesystem::path &outputDir, Index frame,
+                      int padWidth = 6) {
+    std::error_code ec;
+    std::filesystem::create_directories(outputDir, ec);
+
+    std::ostringstream name;
+    name << "particles_" << std::setw(padWidth) << std::setfill('0')
+         << static_cast<long long>(frame) << ".vtk";
+    exportResult((outputDir / name.str()).string());
+  }
+  
   void applyBC() {}
   void timeIntegration() {}
 };
@@ -500,11 +601,11 @@ private:
   Vector<T> m_v0{T{}, T{}};        // Initial velocity
 
   // Simulation properties
-  T m_currentTime{0.0};  // Current time
-  T m_dt{0.0};           // Time step
-  T m_duration{10.0};    // Duration of simulation
-  Index m_nSteps{0};     // Number of steps
-  Index m_interval{100}; // Output interval
+  T m_currentTime{0.0}; // Current time
+  T m_dt{0.0};          // Time step
+  T m_duration{10.0};   // Duration of simulation
+  Index m_nSteps{0};    // Number of steps
+  Index m_interval{10}; // Output interval
 
   // Behavior law (stress increment from strain increment)
   std::function<Matrix<T, 2, 2>(const Matrix<T, 2, 2> &)> m_law;
@@ -631,7 +732,7 @@ public:
       m_totalEnergy0 += m_G * p_position[p].y() * p_mass[p];
     }
 
-    m_mesh.print();
+    // m_mesh.print();
   };
 
   // Other defaults
@@ -995,7 +1096,7 @@ public:
 
     // Update nodal velocity from momentum and enforce velocity constraints
     for (Index i{0}; i < getNumNodes(); ++i) {
-      if (m_mesh.isActiveNode(i) && n_mass[i] != T{}) {
+      if (m_mesh.isActiveNode(i) && !approximatelyEqualAbsRel(n_mass[i], T{})) {
         n_velocity[i] = n_momentum[i] / n_mass[i];
       }
     }
@@ -1093,11 +1194,25 @@ public:
     m_mesh.nodalReset();
   }
 
-  void exportResult(const std::string &filename = "mpm2D_results.txt") {
+  void exportResult(const std::string &filename = "mpm2D_results.vtk") {
     const std::string vtkFile =
         endsWith(filename, ".vtk")
             ? filename
             : withExtensionReplaced(filename, ".txt", ".vtk");
+
+    // Also export the background grid mesh (nodes + elements) to a sibling
+    // file. Default naming:
+    //   - if vtkFile contains "particles_" => replace it by "mesh_"
+    //   - else => append "_mesh" before the extension
+    std::string meshFile = vtkFile;
+    if (const std::size_t pos = meshFile.rfind("particles_");
+        pos != std::string::npos) {
+      meshFile.replace(pos, std::string("particles_").size(), "mesh_");
+    } else if (endsWith(meshFile, ".vtk")) {
+      meshFile = meshFile.substr(0, meshFile.size() - 4) + "_mesh.vtk";
+    } else {
+      meshFile += "_mesh.vtk";
+    }
 
     std::ofstream vtk(vtkFile);
     if (!vtk)
@@ -1158,6 +1273,111 @@ public:
       vtk << e.yx() << " " << e.yy() << " 0\n";
       vtk << "0 0 0\n";
     }
+
+    // ---- Mesh grid export (VTK legacy, UNSTRUCTURED_GRID) ----
+    std::ofstream mesh(meshFile);
+    if (!mesh)
+      throw std::runtime_error("MPM2D::exportResult: cannot open mesh file: " +
+                               meshFile);
+
+    const Index nNodes = m_mesh.getNumNodes();
+    const Index nElems = m_mesh.getNumElements();
+
+    mesh << "# vtk DataFile Version 3.0\n";
+    mesh << "MPM2D background grid\n";
+    mesh << "ASCII\n";
+    mesh << "DATASET UNSTRUCTURED_GRID\n";
+    mesh << "POINTS " << nNodes << " double\n";
+    for (Index i = 0; i < nNodes; ++i) {
+      const auto [x, y] = m_mesh.getNodeCoor(i);
+      mesh << x << " " << y << " 0\n";
+    }
+
+    // Each quad cell line: "4 n1 n2 n3 n4" => 5 integers per element
+    mesh << "CELLS " << nElems << " " << (nElems * 5) << "\n";
+    for (Index e = 0; e < nElems; ++e) {
+      const auto &conn = m_mesh.getEleConnectivity(e);
+      mesh << "4 " << conn[0] << " " << conn[1] << " " << conn[2] << " "
+           << conn[3] << "\n";
+    }
+
+    // VTK cell type for quad = 9
+    mesh << "CELL_TYPES " << nElems << "\n";
+    for (Index e = 0; e < nElems; ++e) {
+      mesh << "9\n";
+    }
+
+    mesh << "POINT_DATA " << nNodes << "\n";
+
+    mesh << "SCALARS active int 1\n";
+    mesh << "LOOKUP_TABLE default\n";
+    const auto &active = m_mesh.getActiveNodes();
+    for (Index i = 0; i < nNodes; ++i) {
+      const int a = (i < active.size() && active[i] != 0) ? 1 : 0;
+      mesh << a << "\n";
+    }
+
+    mesh << "SCALARS mass double 1\n";
+    mesh << "LOOKUP_TABLE default\n";
+    for (Index i = 0; i < nNodes; ++i) {
+      const T m = (i < n_mass.size()) ? n_mass[i] : T{0};
+      mesh << m << "\n";
+    }
+
+    mesh << "VECTORS velocity double\n";
+    for (Index i = 0; i < nNodes; ++i) {
+      const T vx = (i < n_velocity.size() && n_velocity[i].size() > 0)
+                       ? n_velocity[i][0]
+                       : T{0};
+      const T vy = (i < n_velocity.size() && n_velocity[i].size() > 1)
+                       ? n_velocity[i][1]
+                       : T{0};
+      mesh << vx << " " << vy << " 0\n";
+    }
+
+    mesh << "VECTORS acceleration double\n";
+    for (Index i = 0; i < nNodes; ++i) {
+      const T ax = (i < n_acceleration.size() && n_acceleration[i].size() > 0)
+                       ? n_acceleration[i][0]
+                       : T{0};
+      const T ay = (i < n_acceleration.size() && n_acceleration[i].size() > 1)
+                       ? n_acceleration[i][1]
+                       : T{0};
+      mesh << ax << " " << ay << " 0\n";
+    }
+
+    mesh << "VECTORS force_total double\n";
+    for (Index i = 0; i < nNodes; ++i) {
+      const T fx = (i < n_forceTotal.size() && n_forceTotal[i].size() > 0)
+                       ? n_forceTotal[i][0]
+                       : T{0};
+      const T fy = (i < n_forceTotal.size() && n_forceTotal[i].size() > 1)
+                       ? n_forceTotal[i][1]
+                       : T{0};
+      mesh << fx << " " << fy << " 0\n";
+    }
+
+    mesh << "VECTORS momentum double\n";
+    for (Index i = 0; i < nNodes; ++i) {
+      const T px = (i < n_momentum.size() && n_momentum[i].size() > 0)
+                       ? n_momentum[i][0]
+                       : T{0};
+      const T py = (i < n_momentum.size() && n_momentum[i].size() > 1)
+                       ? n_momentum[i][1]
+                       : T{0};
+      mesh << px << " " << py << " 0\n";
+    }
+  }
+
+  void exportVTKFrame(const std::filesystem::path &outputDir, Index frame,
+                      int padWidth = 6) {
+    std::error_code ec;
+    std::filesystem::create_directories(outputDir, ec);
+
+    std::ostringstream name;
+    name << "particles_" << std::setw(padWidth) << std::setfill('0')
+         << static_cast<long long>(frame) << ".vtk";
+    exportResult((outputDir / name.str()).string());
   }
   void timeIntegration() {}
 };

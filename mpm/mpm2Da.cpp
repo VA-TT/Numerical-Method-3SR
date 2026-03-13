@@ -1,5 +1,6 @@
 #include "../library/MPM.h"
 #include "../library/clock.h"
+#include "../library/ioDirectory.h"
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -71,15 +72,10 @@ int main() {
   std::cout << "Total particles: " << collumn.getNumMps() << "\n";
   std::cout << "Tracking MP[" << tracked_mp << "]\n\n";
 
-  // VTK output (ParaView): particles_000000.vtk, particles_000010.vtk, ...
-  // Set vtkInterval = 1 to export every step.
+  // VTK output (ParaView): mpm/data2D/particles_000000.vtk and mesh_000000.vtk
+  // (relative to where the executable is).
   const Index vtkInterval = 10;
-  auto exportVTK = [&](Index frame) {
-    std::ostringstream name;
-    name << "particles_" << std::setw(6) << std::setfill('0')
-         << static_cast<long long>(frame) << ".vtk";
-    collumn.exportResult(name.str());
-  };
+  const std::filesystem::path vtkDir = ioFile::vtkOutputDir("data2D");
 
   // Initial state (t=0)
   {
@@ -88,7 +84,7 @@ int main() {
          << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';
 
-    exportVTK(0);
+    collumn.exportVTKFrame(vtkDir, 0);
   }
 
   // Time integration loop
@@ -103,7 +99,7 @@ int main() {
     collumn.resetMesh();
 
     if (vtkInterval > 0 && ((step + 1) % vtkInterval == 0)) {
-      exportVTK(step + 1);
+      collumn.exportVTKFrame(vtkDir, step + 1);
     }
 
     // Record results
