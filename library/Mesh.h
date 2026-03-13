@@ -4,8 +4,10 @@
 #include "Vector.h"
 #include "comparison.h"
 #include "parentElement.h"
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <utility>
 
@@ -365,8 +367,97 @@ private:
                          maxCorner.second, MP_size);
   }
 
-  // To be implemented
-  void generateCircleMPgrid() {}
+  // Generate MPs on a grid and keep only points inside a circle.
+  // Grid origin is aligned to MP_size (like: origin =
+  // floor(center/MP_size)*MP_size) so results are stable regardless of the
+  // circle center.
+  void generateCircleMPgrid(const std::pair<T, T> &center, T radius,
+                            T MP_size) {
+    m_MP_size = MP_size;
+
+    if (!(MP_size > T{0}) || !(radius > T{0})) {
+      m_nMPs = 0;
+      m_MPs = Vector<std::pair<T, T>>{};
+      m_MP_x = Vector<T>{};
+      m_MP_y = Vector<T>{};
+      m_MP_x_initial = Vector<T>{};
+      m_MP_y_initial = Vector<T>{};
+      m_mpElementId = Vector<Index>{};
+      return;
+    }
+
+    const auto floorToSpacing = [&](T v) -> T {
+      const double dv = static_cast<double>(v);
+      const double ds = static_cast<double>(MP_size);
+      return static_cast<T>(std::floor(dv / ds) * ds);
+    };
+
+    const T gridOriginX = floorToSpacing(center.first);
+    const T gridOriginY = floorToSpacing(center.second);
+
+    const T xmin = gridOriginX - radius;
+    const T ymin = gridOriginY - radius;
+    const T xmax = gridOriginX + radius;
+    const T ymax = gridOriginY + radius;
+
+    // Regenerate MPs: clear previous state first
+    m_MPs = Vector<std::pair<T, T>>{};
+    m_MP_x = Vector<T>{};
+    m_MP_y = Vector<T>{};
+    m_mpElementId = Vector<Index>{};
+
+    const double dx = static_cast<double>(xmax - xmin);
+    const double dy = static_cast<double>(ymax - ymin);
+    const double ds = static_cast<double>(MP_size);
+    if (!(dx >= 0.0) || !(dy >= 0.0) || !(ds > 0.0)) {
+      m_nMPs = 0;
+      m_MP_x_initial = Vector<T>{};
+      m_MP_y_initial = Vector<T>{};
+      return;
+    }
+
+    const Index nxPts = static_cast<Index>(std::floor(dx / ds)) + 1;
+    const Index nyPts = static_cast<Index>(std::floor(dy / ds)) + 1;
+
+    const double pi = std::acos(-1.0);
+    const double approxCount =
+        (pi * static_cast<double>(radius) * static_cast<double>(radius)) /
+        (ds * ds);
+    const Index reserveCount =
+        static_cast<Index>(std::max(0.0, approxCount * 1.1));
+    m_MPs.reserve(reserveCount);
+    m_MP_x.reserve(reserveCount);
+    m_MP_y.reserve(reserveCount);
+
+    const double cx = static_cast<double>(center.first);
+    const double cy = static_cast<double>(center.second);
+    const double r2 = static_cast<double>(radius) * static_cast<double>(radius);
+
+    for (Index j{0}; j < nyPts; ++j) {
+      const double y = static_cast<double>(ymin) + static_cast<double>(j) * ds;
+      for (Index i{0}; i < nxPts; ++i) {
+        const double x =
+            static_cast<double>(xmin) + static_cast<double>(i) * ds;
+        const double dxp = x - cx;
+        const double dyp = y - cy;
+        if (dxp * dxp + dyp * dyp <= r2) {
+          m_MP_x.push_back(static_cast<T>(x));
+          m_MP_y.push_back(static_cast<T>(y));
+          m_MPs.push_back({static_cast<T>(x), static_cast<T>(y)});
+        }
+      }
+    }
+
+    m_nMPs = static_cast<Index>(m_MPs.size());
+    m_MP_x_initial = m_MP_x;
+    m_MP_y_initial = m_MP_y;
+
+    // Initialize cached element IDs for MPs
+    m_mpElementId.resize(m_nMPs, idError);
+    for (Index p{0}; p < m_nMPs; ++p) {
+      m_mpElementId[p] = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
+    }
+  }
 
 public:
   // Constructors
@@ -457,6 +548,15 @@ public:
       : Mesh2D(length, height, nx, ny) {
     assert(nMPperEle > 0 && "nMPperEle must be > 0");
     generateMPGridPerElement(nMPperEle);
+  }
+
+  // 3) Explicit full-parameter circle constructor
+  Mesh2D(T length, T height, Index nx, Index ny, const std::pair<T, T> &center,
+         T radius, T MP_size)
+      : Mesh2D(length, height, nx, ny) {
+    if ((MP_size > T{0}) && (radius > T{0})) {
+      generateCircleMPgrid(center, radius, MP_size);
+    }
   }
 
   // Other defaults

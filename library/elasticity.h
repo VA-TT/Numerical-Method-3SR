@@ -1,5 +1,5 @@
-#ifndef HOOKE_ELASTIC_H
-#define HOOKE_ELASTIC_H
+#ifndef HOOKE_ELASTICITY_H
+#define HOOKE_ELASTICITY_H
 
 #include "Matrix.h"
 #include "physicConstants.h"

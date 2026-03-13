@@ -1,10 +1,10 @@
 #ifndef MATERIAL_POINT_METHOD_H
 #define MATERIAL_POINT_METHOD_H
 
-#include "Elasticity.h"
 #include "Matrix.h"
 #include "Mesh.h"
 #include "Vector.h"
+#include "elasticity.h"
 #include "gaussQuadrature.h"
 #include "parentElement.h"
 #include "physicConstants.h"
@@ -568,7 +568,7 @@ public:
          << static_cast<long long>(frame) << ".vtk";
     exportResult((outputDir / name.str()).string());
   }
-  
+
   void applyBC() {}
   void timeIntegration() {}
 };
@@ -605,7 +605,7 @@ private:
   T m_dt{0.0};          // Time step
   T m_duration{10.0};   // Duration of simulation
   Index m_nSteps{0};    // Number of steps
-  Index m_interval{10}; // Output interval
+  // Index m_interval{10}; // Output interval
 
   // Behavior law (stress increment from strain increment)
   std::function<Matrix<T, 2, 2>(const Matrix<T, 2, 2> &)> m_law;
@@ -638,6 +638,7 @@ private:
 
   // Material Points p
   Vector<T> p_volume{};           // Volume
+  Vector<T> p_volume0{};          // Initial volume (for large-strain update)
   Vector<T> p_mass{};             // Mass
   Vector<Vector<T>> p_position{}; // Position
   Vector<Vector<T>> p_velocity{}; // Velocity
@@ -717,6 +718,7 @@ public:
 
     // Initialize MP vectors
     p_volume.resize(nMPs, m_volume / nMPs);
+    p_volume0.resize(nMPs, m_volume / nMPs);
     p_mass.resize(nMPs, m_mass / nMPs); // MP's mass is constant
     p_position = m_mesh.getMPCoordsVec();
     p_momentum.resize(nMPs, Vector<T>{0, 0}); // Compute later
@@ -1127,6 +1129,7 @@ public:
       const T N3 = N3_ref(xi, eta);
       const T N4 = N4_ref(xi, eta);
 
+      // Update particles' velocity , position and momentum
       const Vector<T> a_next = N1_ref(xi, eta) * n_acceleration[n1] +
                                N2_ref(xi, eta) * n_acceleration[n2] +
                                N3_ref(xi, eta) * n_acceleration[n3] +
@@ -1140,7 +1143,7 @@ public:
       p_position[p] += v_next * m_dt;
       p_momentum[p] = p_mass[p] * p_velocity[p];
 
-      // Strain rate from nodal velocities (small strain)
+      // Update stress and strain
       const auto [dN_dx, dN_dy] = gradientN(xi, eta, x_nodes, y_nodes);
       Matrix<T, 2, 2> L = Matrix<T, 2, 2>::zero();
 
@@ -1149,25 +1152,76 @@ public:
         L += tensorProduct<2, 2>(n_velocity[nodeID],
                                  Vector<T>{dN_dx[a], dN_dy[a]});
       }
+      // // Strain rate from nodal velocities (small strain)
+      // p_strainRate[p] = Matrix<T, 2, 2>::zero();
+      // p_strainRate[p].xx() = L.xx();
+      // p_strainRate[p].yy() = L.yy();
+      // const T shear = T{0.5} * (L.xy() + L.yx());
+      // p_strainRate[p].xy() = shear;
+      // p_strainRate[p].yx() = shear;
 
+      // p_dStrain[p] = p_strainRate[p] * m_dt;
+      // p_strain[p] += p_dStrain[p];
+
+      // if (m_law) {
+      //   p_stress[p] += m_law(p_dStrain[p]);
+      // } else {
+      //   p_stress[p] += m_E * p_dStrain[p];
+      // }
+
+      // // 2D volume/area update (small strain): J ≈ 1 + tr(dε)
+      // p_volume[p] *= (T{1} + p_dStrain[p].xx() + p_dStrain[p].yy());
+
+      // Large-strain kinematics:
+      //   F_{n+1} = F_n (I + L dt)
+      //   V = det(F) V0
+      p_deformGradient[p] =
+          p_deformGradient[p] * (Matrix<T, 2, 2>::identity() + L * m_dt);
+      const T J = det(p_deformGradient[p]);
+      p_volume[p] = J * p_volume0[p];
+
+      // Strain increment (small-strain measure) from nodal velocities:
+      //   dε = sym(L) dt
+      // This matches the Python reference (dEps = dt * 0.5 * (Lp + Lp.T)).
       p_strainRate[p] = Matrix<T, 2, 2>::zero();
       p_strainRate[p].xx() = L.xx();
       p_strainRate[p].yy() = L.yy();
       const T shear = T{0.5} * (L.xy() + L.yx());
       p_strainRate[p].xy() = shear;
       p_strainRate[p].yx() = shear;
-
       p_dStrain[p] = p_strainRate[p] * m_dt;
-      p_strain[p] += p_dStrain[p];
 
       if (m_law) {
+        // Custom constitutive law: returns stress increment Δσ for given Δε.
+        p_strain[p] += p_dStrain[p];
         p_stress[p] += m_law(p_dStrain[p]);
       } else {
-        p_stress[p] += m_E * p_dStrain[p];
-      }
+        // Default: Drucker–Prager return mapping (same structure as Python).
+        const Matrix<T, 3, 3> D = elasticityMatrix(m_E, m_nu, "planeStrain");
+        const auto [alpha, k] = druckerPrager(m_phi, m_c);
 
-      // 2D volume/area update (small strain): J ≈ 1 + tr(dε)
-      p_volume[p] *= (T{1} + p_dStrain[p].xx() + p_dStrain[p].yy());
+        const Vector<T> stress_n{p_stress[p].xx(), p_stress[p].yy(),
+                                 p_stress[p].xy()};
+        const Vector<T> strain_n{p_strain[p].xx(), p_strain[p].yy(),
+                                 p_strain[p].xy()};
+        const Vector<T> strain_increment{p_dStrain[p].xx(), p_dStrain[p].yy(),
+                                         p_dStrain[p].xy()};
+
+        const auto [stress_updated, strain_updated, _delta_lambda] =
+            updateStressStrainDruckerPrager(stress_n, strain_n,
+                                            strain_increment, D, alpha, k,
+                                            "planeStrain", m_nu);
+
+        p_stress[p].xx() = stress_updated[0];
+        p_stress[p].yy() = stress_updated[1];
+        p_stress[p].xy() = stress_updated[2];
+        p_stress[p].yx() = stress_updated[2];
+
+        p_strain[p].xx() = strain_updated[0];
+        p_strain[p].yy() = strain_updated[1];
+        p_strain[p].xy() = strain_updated[2];
+        p_strain[p].yx() = strain_updated[2];
+      }
     }
   }
 
