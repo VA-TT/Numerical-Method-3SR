@@ -1,56 +1,64 @@
 
 
-function run(vx0, vy0, dt)
-{
+let trajectory = [];
+let t = 0;
+let dt = 0.02;
+let vx0 = 40.0;
+let vy0 = 80.0;
+let gx = 0;
+let gy = -9.81;
+let ballRadius = 8;
+let simDone = false;
+
+function run(vx0, vy0, dt) {
     let x = 0;
     let y = 0;
     let vx = vx0;
     let vy = vy0;
-    let gx = 0;
-    let gy = -9.81;
-
-    stroke(0);
-    strokeWeight(1.5);
-
-    while (y >= 0.0 && x <= width)
-    {
-        let prev_x = x;
-        let prev_y = y;
-
-        //Euler time integration
+    trajectory = [];
+    while (y >= 0.0 && x <= width) {
+        trajectory.push({x: x, y: y});
+        // Euler time integration
         x += vx * dt;
         y += vy * dt;
-
         vx += gx * dt;
         vy += gy * dt;
-
-        //draw line of trajectory
-        line(prev_x, height - prev_y, x, height - y);
     }
-
-    stroke(255, 0, 0);
-    strokeWeight(2);
-    line(0, height, vx0, height - vy0);
+    simDone = true;
 }
 
 
-function setup()
-{
+function setup() {
     createCanvas(500, 300);
     background(240);
-
-    run(20.0, 80.0, 40.0);
+    run(vx0, vy0, dt);
+    t = 0;
 }
 
-function draw()
-{
+function draw() {
     background(255);
 
-    x = x + 10;
-    if (x > 250) x = -250;
+    // Vẽ quỹ đạo
+    stroke(0, 0, 255);
+    strokeWeight(2);
+    noFill();
+    beginShape();
+    for (let i = 0; i < trajectory.length; i++) {
+        vertex(trajectory[i].x, height - trajectory[i].y);
+    }
+    endShape();
 
-    fill(255, 0, 0);
-    noStroke();
-    circle(250 + x, 150, 110);
+    // Vẽ viên đạn di chuyển theo quỹ đạo
+    if (trajectory.length > 0) {
+        let idx = min(floor(t), trajectory.length - 1);
+        let px = trajectory[idx].x;
+        let py = trajectory[idx].y;
+        fill(255, 0, 0);
+        noStroke();
+        ellipse(px, height - py, ballRadius * 2, ballRadius * 2);
+        if (idx < trajectory.length - 1) {
+            t += 1;
+        }
+    }
 }
 
