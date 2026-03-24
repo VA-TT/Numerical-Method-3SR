@@ -77,37 +77,6 @@ def generate_rectangular_particles(origin, length, height, spacing):
     return points
 
 
-def generate_circle_particles(center: list, radius: float, spacing: float) -> np.ndarray:
-    """Generate a set of particle coordinates within a circle.
-
-    Args:
-        center: [x, y] coordinates of the circle center.
-        radius: Radius of the circle.
-        spacing: Grid spacing between particles.
-
-    Returns:
-        Array of particle positions, each row as [x, y].
-    """
-    center_array = np.array(center, dtype=float)
-    # Determine grid origin so that the grid is consistent regardless of the circle center.
-    grid_origin = (center_array // spacing) * spacing
-
-    # Define grid limits based on the circle radius.
-    xmin, ymin = grid_origin - radius
-    xmax, ymax = grid_origin + radius
-
-    # Generate grid points.
-    x_coords = np.arange(xmin, xmax + spacing, spacing)
-    y_coords = np.arange(ymin, ymax + spacing, spacing)
-    Xp, Yp = np.meshgrid(x_coords, y_coords)
-    Xp = Xp.flatten()
-    Yp = Yp.flatten()
-
-    # Keep only points that lie inside the circle.
-    inside = (Xp - center_array[0]) ** 2 + (Yp - center_array[1]) ** 2 <= radius**2
-    return np.vstack([Xp[inside], Yp[inside]]).T
-
-
 def particle_element_mapping(particle_positions: np.ndarray, cell_width: float, cell_height: float,
                              n_ele_x: int, n_elements: int):
     """Map each particle to an element based on its position.
