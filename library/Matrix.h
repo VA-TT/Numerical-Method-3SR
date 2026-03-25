@@ -36,7 +36,7 @@ private:
 public:
   // Constructors, Destructors
   Matrix(std::initializer_list<T> list) {
-    assert(static_cast<int>(list.size()) == nRows * nCols);
+    assert(static_cast<Index>(list.size()) == nRows * nCols);
     std::copy(list.begin(), list.end(), m_elements.begin());
   }
   Matrix() = default;
