@@ -44,7 +44,7 @@ public:
   // Vector 0
   static Vector<T> zero(Index n) { return Vector<T>(n); }
 
-  // Reset all vallu to 0 default
+  // Reset all value to 0 default
   void resetZero() {
     for (auto &e : m_elements) {
       if constexpr (requires(T &x) { x.resetZero(); }) {
@@ -54,10 +54,8 @@ public:
       }
     }
   }
-  // // Constructor 3D (x, y, z)
-  // Vector(const T& x, const T& y, const T& z) : m_elements{x, y, z} {}
 
-  // Signed indexing với assert
+  // Signed indexing
   auto &operator[](Index i) {
     assert(i >= 0 && "Negative index not allowed");
     assert(static_cast<std::size_t>(i) < m_elements.size() &&
@@ -205,8 +203,7 @@ public:
   }
 };
 
-/////////////////////////////////// END OF VECTOR CLASS
-//////////////////////////////////////////
+////////////////// END OF VECTOR CLASS /////////////////////////////
 // Vector operators
 template <typename T>
 bool operator==(const Vector<T> &v1, const Vector<T> &v2) {
@@ -430,23 +427,22 @@ public:
   Vector &operator=(Vector &&) = default;
   ~Vector() = default;
 
-  // Constructor with length n of elements which are 0
-  explicit Vector(std::size_t n) : m_elements(n, T{}) {}
-
-  // // Constructor with length n of elements which are value
-  Vector(std::size_t n, const T &value) : m_elements(n, value) {}
-
   // Constructor with initializer_list
   Vector(std::initializer_list<T> list) {
     assert(static_cast<Index>(list.size()) == n);
     std::copy(list.begin(), list.end(), m_elements.begin());
   }
-  Vector(std::initializer_list<T> list) : m_elements(list) {}
+
+  // // Constructor with length n of elements which are value
+  Vector(const T &value) {
+    for (auto &e : m_elements)
+      e = value;
+  }
 
   // Vector 0
-  static Vector<T> zero(Index n) { return Vector<T>(n); }
+  static Vector<T, n> zero() { return Vector<T, n>{}; }
 
-  // Reset all vallu to 0 default
+  // Reset all vallue to 0 default
   void resetZero() {
     for (auto &e : m_elements) {
       if constexpr (requires(T &x) { x.resetZero(); }) {
@@ -456,26 +452,23 @@ public:
       }
     }
   }
-  // // Constructor 3D (x, y, z)
-  // Vector(const T& x, const T& y, const T& z) : m_elements{x, y, z} {}
 
-  // Signed indexing với assert
+  // Signed indexing
   auto &operator[](Index i) {
     assert(i >= 0 && "Negative index not allowed");
     assert(static_cast<std::size_t>(i) < m_elements.size() &&
            "Index out of bounds");
-    return m_elements.data()[static_cast<std::size_t>(i)];
+    return m_elements[static_cast<std::size_t>(i)];
   }
 
   const auto &operator[](Index i) const {
     assert(i >= 0 && "Negative index not allowed");
     assert(static_cast<std::size_t>(i) < m_elements.size() &&
            "Index out of bounds");
-    return m_elements.data()[static_cast<std::size_t>(i)];
+    return m_elements[static_cast<std::size_t>(i)];
   }
 
   // Size functions
-  // constexpr std::size_t size() const noexcept { return m_elements.size(); }
   constexpr Index size() const noexcept {
     return static_cast<Index>(m_elements.size());
   }
@@ -510,54 +503,14 @@ public:
     return (*this)[2];
   }
 
-  T &at(Index i) {
-    if (i < 0)
-      throw std::out_of_range("Negative index not allowed");
-    return m_elements.at(static_cast<std::size_t>(i));
-  }
-
-  const T &at(Index i) const {
-    if (i < 0)
-      throw std::out_of_range("Negative index not allowed");
-    return m_elements.at(static_cast<std::size_t>(i));
-  }
-
   // Iterators
   auto begin() { return m_elements.begin(); }
   auto end() { return m_elements.end(); }
   auto begin() const { return m_elements.begin(); }
   auto end() const { return m_elements.end(); }
 
-  // Resize + Reserve vector
-  void resize(Index n) {
-    assert(n >= 0 && "Negative size not allowed");
-    m_elements.resize(static_cast<std::size_t>(n));
-  }
-  void resize(Index n, const T &value) {
-    assert(n >= 0 && "Negative size not allowed");
-    m_elements.resize(static_cast<std::size_t>(n), value);
-  }
-  void reserve(Index n) {
-    assert(n >= 0 && "Negative reserve not allowed");
-    m_elements.reserve(static_cast<std::size_t>(n));
-  }
-
-  // Add element
-  void push_back(const T &value) { m_elements.push_back(value); }
-
-  // Access last element
-  T &back() {
-    assert(!m_elements.empty() && "Cannot call back() on empty vector");
-    return m_elements.back();
-  }
-
-  const T &back() const {
-    assert(!m_elements.empty() && "Cannot call back() on empty vector");
-    return m_elements.back();
-  }
-
   // Print
-  friend std::ostream &operator<<(std::ostream &os, const Vector<T> &v) {
+  friend std::ostream &operator<<(std::ostream &os, const Vector<T, n> &v) {
     os << "[";
     for (Index i = 0; i < v.size(); ++i) {
       if (approximatelyEqualAbsRel(v[i], T{0}))
@@ -572,7 +525,7 @@ public:
   }
 
   //+= operator
-  Vector &operator+=(const Vector<T> &other) {
+  Vector &operator+=(const Vector<T, n> &other) {
     if (this->size() != other.size())
       throw std::invalid_argument(
           "Vectors must have the same dimension for operator+=.");
@@ -581,7 +534,7 @@ public:
     return *this;
   }
 
-  Vector &operator-=(const Vector<T> &other) { return *this += -other; }
+  Vector &operator-=(const Vector<T, n> &other) { return *this += -other; }
 
   // Projection on another vector
   Vector projection(const Vector &other) const {
@@ -607,11 +560,10 @@ public:
   }
 };
 
-/////////////////////////////////// END OF VECTOR CLASS
-//////////////////////////////////////////
+/////////////////////// END OF VECTOR CLASS/////////////////////
 // Vector operators
-template <typename T>
-bool operator==(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+bool operator==(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   if (v1.size() != v2.size())
     return false;
   for (Index i = 0; i < v1.size(); ++i) {
@@ -621,62 +573,66 @@ bool operator==(const Vector<T> &v1, const Vector<T> &v2) {
   return true;
 }
 
-template <typename T>
-bool operator!=(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+bool operator!=(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   return !(v1 == v2);
 }
 
-template <typename T>
-Vector<T> operator+(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+Vector<T, n> operator+(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   if (v1.size() != v2.size())
     throw std::invalid_argument("Vectors must have the same dimension.");
 
-  Vector<T> result(v1.size());
+  Vector<T, n> result(v1.size());
   for (Index i = 0; i < v1.size(); ++i)
     result[i] = v1[i] + v2[i];
   return result;
 }
 
 // Scalar multiplication (scalar * vector)
-template <typename T> Vector<T> operator*(const T &k, const Vector<T> &v) {
-  Vector<T> result(v.size());
+template <typename T, Index n>
+Vector<T, n> operator*(const T &k, const Vector<T, n> &v) {
+  Vector<T, n> result{};
   for (Index i = 0; i < v.size(); ++i)
     result[i] = k * v[i];
   return result;
 }
 
 // Scalar multiplication (vector * scalar)
-template <typename T> Vector<T> operator*(const Vector<T> &v, const T &k) {
+template <typename T, Index n>
+Vector<T, n> operator*(const Vector<T, n> &v, const T &k) {
   return k * v;
 }
 
 // Element-wise multiplication
-template <typename T>
-Vector<T> operator*(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+Vector<T, n> operator*(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   assert(
       v1.size() == v2.size() &&
       "Can't perfom element-wised mulplication on 2 different-sized vectors!");
-  Vector<T> result(v1.size());
+  Vector<T, n> result(v1.size());
   for (Index i = 0; i < v1.size(); ++i)
     result[i] = v1[i] * v2[i];
   return result;
 }
 
 // Unary minus
-template <typename T> Vector<T> operator-(const Vector<T> &v) {
+template <typename T, Index n> Vector<T, n> operator-(const Vector<T, n> &v) {
   return T{-1} * v;
 }
 
 // Scalar multiplication (vector / scalar)
-template <typename T> Vector<T> operator/(const Vector<T> &v, const T &k) {
+template <typename T, Index n>
+Vector<T, n> operator/(const Vector<T, n> &v, const T &k) {
   assert(!approximatelyEqualAbsRel(k, T{0}) &&
          "Can't divide by a number approximate to 0.");
   return v * (T{1} / k);
 }
 
 // Scalar divide (scalar/vector)
-template <typename T> Vector<T> operator/(const T &k, const Vector<T> &v) {
-  Vector<T> result(v.size());
+template <typename T, Index n>
+Vector<T, n> operator/(const T &k, const Vector<T, n> &v) {
+  Vector<T, n> result{};
   for (Index i = 0; i < v.size(); ++i) {
     assert(!approximatelyEqualAbsRel(v[i], T{}) && "Division by zero!");
     result[i] = k / v[i];
@@ -685,21 +641,22 @@ template <typename T> Vector<T> operator/(const T &k, const Vector<T> &v) {
 }
 
 // Element-wised divide
-template <typename T>
-Vector<T> operator/(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+Vector<T, n> operator/(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   assert(v1.size() == v2.size() &&
          "Can't perfom element-wised division on 2 different-sized vectors!");
   return v1 * (T{1} / v2);
 }
 
 // Vector subtraction
-template <typename T>
-Vector<T> operator-(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+Vector<T, n> operator-(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   return v1 + (-v2);
 }
 
 // Dot product
-template <typename T> T dotProduct(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+T dotProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   if (v1.size() != v2.size())
     throw std::invalid_argument("Vectors must have the same dimension.");
 
@@ -710,13 +667,13 @@ template <typename T> T dotProduct(const Vector<T> &v1, const Vector<T> &v2) {
 }
 
 // Cross product (3D)
-template <typename T>
-Vector<T> crossProduct(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+Vector<T, n> crossProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   if (v1.size() != 3 || v2.size() != 3)
     throw std::invalid_argument(
         "Cross product is only defined for 3D vectors.");
   // Method 1
-  Vector<T> result(3);
+  Vector<T, n> result(3);
   result[0] = v1[1] * v2[2] - v1[2] * v2[1];
   result[1] = v1[2] * v2[0] - v1[0] * v2[2];
   result[2] = v1[0] * v2[1] - v1[1] * v2[0];
@@ -724,14 +681,14 @@ Vector<T> crossProduct(const Vector<T> &v1, const Vector<T> &v2) {
 }
 
 // Cross product (3D) - Method 2 using Levi-Civita
-template <typename T>
-Vector<T> crossProduct2(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+Vector<T, n> crossProduct2(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   if (v1.size() != 3 || v2.size() != 3)
     throw std::invalid_argument(
         "Cross product is only defined for 3D vectors.");
 
   // Method 2: Using Levi-Civita symbol
-  Vector<T> result(3);
+  Vector<T, n> result(3);
   for (Index i = 0; i < 3; ++i) {
     result[i] = T{0}; // Initialize to zero
     for (Index j = 0; j < 3; ++j) {
@@ -744,19 +701,19 @@ Vector<T> crossProduct2(const Vector<T> &v1, const Vector<T> &v2) {
 }
 
 // Vector magnitude/norm
-template <typename T> T magnitude(const Vector<T> &v) {
+template <typename T, Index n> T magnitude(const Vector<T, n> &v) {
   return std::sqrt(dotProduct(v, v));
 }
 
 // Normalize to Unit vector
-template <typename T> Vector<T> normalize(const Vector<T> &v) {
+template <typename T, Index n> Vector<T, n> normalize(const Vector<T, n> &v) {
   T mag = magnitude(v);
   if (approximatelyEqualAbsRel(mag, T{0}))
     throw std::invalid_argument("Cannot normalize zero vector.");
   return v * (T{1.0} / mag);
 }
 
-template <typename T> T transpose(const Vector<T> &v) {
+template <typename T, Index n> T transpose(const Vector<T, n> &v) {
   T mag = magnitude(v);
   if (approximatelyEqualAbsRel(mag, T{0}))
     throw std::invalid_argument("Cannot normalize zero vector.");
@@ -764,35 +721,38 @@ template <typename T> T transpose(const Vector<T> &v) {
 }
 
 // Angle functions
-template <typename T> T angleRad(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+T angleRad(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   return std::acos(dotProduct(v1, v2) / (magnitude(v1) * magnitude(v2)));
 }
 
-template <typename T> T angleDegree(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+T angleDegree(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   const T PI = T{3.14159265358979323846};
   return angleRad(v1, v2) * T{180} / PI;
 }
 
-template <typename T>
-bool isPerpendicular(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+bool isPerpendicular(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   return approximatelyEqualAbsRel(dotProduct(v1, v2), T{});
 }
 
-template <typename T>
-bool isParallel(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T, Index n>
+bool isParallel(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   return approximatelyEqualAbsRel(magnitude(crossProduct(v1, v2)), T{});
 }
 
 // flatten: 2D -> 1D (row-major)
-template <typename T>
-Vector<T> flatten(const Vector<Vector<T>> &twoDVect, Index nRows, Index nCols) {
+template <typename T, Index n>
+Vector<T, n> flatten(const Vector<Vector<T, n>> &twoDVect, Index nRows,
+                     Index nCols) {
   if (static_cast<Index>(twoDVect.size()) != nRows)
     throw std::invalid_argument("flatten: nRows mismatch");
   for (Index r = 0; r < nRows; ++r)
     if (static_cast<Index>(twoDVect[r].size()) != nCols)
       throw std::invalid_argument("flatten: nCols mismatch");
 
-  Vector<T> flat(nRows * nCols);
+  Vector<T, n> flat(nRows * nCols);
   for (Index i = 0; i < nRows; ++i)
     for (Index j = 0; j < nCols; ++j)
       flat[i * nCols + j] = twoDVect[i][j];
@@ -800,12 +760,12 @@ Vector<T> flatten(const Vector<Vector<T>> &twoDVect, Index nRows, Index nCols) {
 }
 
 // unflatten: 1D -> 2D (row-major)
-template <typename T>
-Vector<Vector<T>> unflatten(const Vector<T> &oneDVect, Index nRows,
-                            Index nCols) {
+template <typename T, Index n>
+Vector<Vector<T, n>> unflatten(const Vector<T, n> &oneDVect, Index nRows,
+                               Index nCols) {
   if (static_cast<Index>(oneDVect.size()) != nRows * nCols)
     throw std::invalid_argument("unflatten: size mismatch");
-  Vector<Vector<T>> twoDVect(nRows);
+  Vector<Vector<T, n>> twoDVect(nRows);
   for (Index i = 0; i < nRows; ++i) {
     twoDVect[i].resize(static_cast<std::size_t>(nCols));
     for (Index j = 0; j < nCols; ++j)
