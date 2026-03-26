@@ -76,9 +76,7 @@ public:
     return static_cast<Index>(m_elements.size());
   }
 
-  // Convenience coordinate accessors (useful when the Vector stores 2D/3D
-  // coordinates). These are runtime-checked because Vector is dynamically
-  // sized.
+  // Convenience coordinate accessors for 2D/3D Vectors
   T &x() {
     assert(size() >= 1 && "x() requires size() >= 1");
     return (*this)[0];
@@ -181,7 +179,8 @@ public:
 
   // Projection on another vector
   Vector projection(const Vector &other) const {
-    return normalize(other) * dotProduct(*this, normalize(other));
+    Vector unit{normalize(other)};
+    return unit * dotProduct(*this, unit);
   }
 
   // Sort in-place. Default: descending order.
@@ -348,14 +347,7 @@ template <typename T> Vector<T> normalize(const Vector<T> &v) {
   T mag = magnitude(v);
   if (approximatelyEqualAbsRel(mag, T{0}))
     throw std::invalid_argument("Cannot normalize zero vector.");
-  return v * (T{1.0} / mag);
-}
-
-template <typename T> T transpose(const Vector<T> &v) {
-  T mag = magnitude(v);
-  if (approximatelyEqualAbsRel(mag, T{0}))
-    throw std::invalid_argument("Cannot normalize zero vector.");
-  return v * (T{1.0} / mag);
+  return v * (T{1} / mag);
 }
 
 // Angle functions
@@ -412,7 +404,6 @@ Vector<Vector<T>> unflatten(const Vector<T> &oneDVect, Index nRows,
 ///////////////////////////////////////////////////
 /////////////// STATIC CLASS VECTOR ///////////////
 ///////////////////////////////////////////////////
-
 template <typename T, Index n> class Vector {
 private:
   static_assert(n > 0 && "Number of rows and columns must be greater than 0!");
@@ -434,7 +425,7 @@ public:
   }
 
   // // Constructor with length n of elements which are value
-  Vector(const T &value) {
+  explicit Vector(const T &value) {
     for (auto &e : m_elements)
       e = value;
   }
@@ -456,50 +447,44 @@ public:
   // Signed indexing
   auto &operator[](Index i) {
     assert(i >= 0 && "Negative index not allowed");
-    assert(static_cast<std::size_t>(i) < m_elements.size() &&
-           "Index out of bounds");
+    assert(static_cast<std::size_t>(i) < n && "Index out of bounds");
     return m_elements[static_cast<std::size_t>(i)];
   }
 
   const auto &operator[](Index i) const {
     assert(i >= 0 && "Negative index not allowed");
-    assert(static_cast<std::size_t>(i) < m_elements.size() &&
-           "Index out of bounds");
+    assert(static_cast<std::size_t>(i) < n && "Index out of bounds");
     return m_elements[static_cast<std::size_t>(i)];
   }
 
   // Size functions
-  constexpr Index size() const noexcept {
-    return static_cast<Index>(m_elements.size());
-  }
+  constexpr Index size() const noexcept { return static_cast<Index>(n); }
 
-  // Convenience coordinate accessors (useful when the Vector stores 2D/3D
-  // coordinates). These are runtime-checked because Vector is dynamically
-  // sized.
+  // Convenience coordinate accessors for 2D/3D Vectors
   T &x() {
-    assert(size() >= 1 && "x() requires size() >= 1");
+    static_assert(n >= 1 && "x() requires size() >= 1");
     return (*this)[0];
   }
   const T &x() const {
-    assert(size() >= 1 && "x() requires size() >= 1");
+    static_assert(n >= 1 && "x() requires size() >= 1");
     return (*this)[0];
   }
 
   T &y() {
-    assert(size() >= 2 && "y() requires size() >= 2");
+    static_assert(n >= 2 && "y() requires size() >= 2");
     return (*this)[1];
   }
   const T &y() const {
-    assert(size() >= 2 && "y() requires size() >= 2");
+    static_assert(n >= 2 && "y() requires size() >= 2");
     return (*this)[1];
   }
 
   T &z() {
-    assert(size() >= 3 && "z() requires size() >= 3");
+    static_assert(n >= 3 && "z() requires size() >= 3");
     return (*this)[2];
   }
   const T &z() const {
-    assert(size() >= 3 && "z() requires size() >= 3");
+    static_assert(n >= 3 && "z() requires size() >= 3");
     return (*this)[2];
   }
 
@@ -512,12 +497,12 @@ public:
   // Print
   friend std::ostream &operator<<(std::ostream &os, const Vector<T, n> &v) {
     os << "[";
-    for (Index i = 0; i < v.size(); ++i) {
+    for (Index i = 0; i < n; ++i) {
       if (approximatelyEqualAbsRel(v[i], T{0}))
         os << T{0};
       else
         os << v[i];
-      if (i < v.size() - 1)
+      if (i < n - 1)
         os << ", ";
     }
     os << "]";
@@ -526,10 +511,7 @@ public:
 
   //+= operator
   Vector &operator+=(const Vector<T, n> &other) {
-    if (this->size() != other.size())
-      throw std::invalid_argument(
-          "Vectors must have the same dimension for operator+=.");
-    for (Index i{0}; i < this->size(); ++i)
+    for (Index i{0}; i < n; ++i)
       (*this)[i] += other[i];
     return *this;
   }
@@ -538,7 +520,8 @@ public:
 
   // Projection on another vector
   Vector projection(const Vector &other) const {
-    return normalize(other) * dotProduct(*this, normalize(other));
+    Vector<T, n> unit = normalize(other);
+    return unit * dotProduct(*this, unit);
   }
 
   // Sort in-place. Default: descending order.
@@ -562,11 +545,11 @@ public:
 
 /////////////////////// END OF VECTOR CLASS/////////////////////
 // Vector operators
-template <typename T, Index n>
-bool operator==(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  if (v1.size() != v2.size())
+template <typename T, Index n1, Index n2>
+bool operator==(const Vector<T, n1> &v1, const Vector<T, n2> &v2) {
+  if (n1 != n2)
     return false;
-  for (Index i = 0; i < v1.size(); ++i) {
+  for (Index i = 0; i < n1; ++i) {
     if (!approximatelyEqualAbsRel(v1[i], v2[i]))
       return false;
   }
@@ -580,11 +563,8 @@ bool operator!=(const Vector<T, n> &v1, const Vector<T, n> &v2) {
 
 template <typename T, Index n>
 Vector<T, n> operator+(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  if (v1.size() != v2.size())
-    throw std::invalid_argument("Vectors must have the same dimension.");
-
-  Vector<T, n> result(v1.size());
-  for (Index i = 0; i < v1.size(); ++i)
+  Vector<T, n> result{};
+  for (Index i = 0; i < n; ++i)
     result[i] = v1[i] + v2[i];
   return result;
 }
@@ -593,7 +573,7 @@ Vector<T, n> operator+(const Vector<T, n> &v1, const Vector<T, n> &v2) {
 template <typename T, Index n>
 Vector<T, n> operator*(const T &k, const Vector<T, n> &v) {
   Vector<T, n> result{};
-  for (Index i = 0; i < v.size(); ++i)
+  for (Index i = 0; i < n; ++i)
     result[i] = k * v[i];
   return result;
 }
@@ -607,11 +587,8 @@ Vector<T, n> operator*(const Vector<T, n> &v, const T &k) {
 // Element-wise multiplication
 template <typename T, Index n>
 Vector<T, n> operator*(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  assert(
-      v1.size() == v2.size() &&
-      "Can't perfom element-wised mulplication on 2 different-sized vectors!");
-  Vector<T, n> result(v1.size());
-  for (Index i = 0; i < v1.size(); ++i)
+  Vector<T, n> result{};
+  for (Index i = 0; i < n; ++i)
     result[i] = v1[i] * v2[i];
   return result;
 }
@@ -633,7 +610,7 @@ Vector<T, n> operator/(const Vector<T, n> &v, const T &k) {
 template <typename T, Index n>
 Vector<T, n> operator/(const T &k, const Vector<T, n> &v) {
   Vector<T, n> result{};
-  for (Index i = 0; i < v.size(); ++i) {
+  for (Index i = 0; i < n; ++i) {
     assert(!approximatelyEqualAbsRel(v[i], T{}) && "Division by zero!");
     result[i] = k / v[i];
   }
@@ -643,8 +620,6 @@ Vector<T, n> operator/(const T &k, const Vector<T, n> &v) {
 // Element-wised divide
 template <typename T, Index n>
 Vector<T, n> operator/(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  assert(v1.size() == v2.size() &&
-         "Can't perfom element-wised division on 2 different-sized vectors!");
   return v1 * (T{1} / v2);
 }
 
@@ -657,11 +632,8 @@ Vector<T, n> operator-(const Vector<T, n> &v1, const Vector<T, n> &v2) {
 // Dot product
 template <typename T, Index n>
 T dotProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  if (v1.size() != v2.size())
-    throw std::invalid_argument("Vectors must have the same dimension.");
-
   T result{};
-  for (Index i = 0; i < v1.size(); ++i)
+  for (Index i = 0; i < n; ++i)
     result += v1[i] * v2[i];
   return result;
 }
@@ -669,11 +641,9 @@ T dotProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
 // Cross product (3D)
 template <typename T, Index n>
 Vector<T, n> crossProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  if (v1.size() != 3 || v2.size() != 3)
-    throw std::invalid_argument(
-        "Cross product is only defined for 3D vectors.");
+  static_assert(n == 3, "Cross product only for 3D vectors");
   // Method 1
-  Vector<T, n> result(3);
+  Vector<T, 3> result{};
   result[0] = v1[1] * v2[2] - v1[2] * v2[1];
   result[1] = v1[2] * v2[0] - v1[0] * v2[2];
   result[2] = v1[0] * v2[1] - v1[1] * v2[0];
@@ -683,12 +653,9 @@ Vector<T, n> crossProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
 // Cross product (3D) - Method 2 using Levi-Civita
 template <typename T, Index n>
 Vector<T, n> crossProduct2(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  if (v1.size() != 3 || v2.size() != 3)
-    throw std::invalid_argument(
-        "Cross product is only defined for 3D vectors.");
-
+  static_assert(n == 3, "Cross product only for 3D vectors");
   // Method 2: Using Levi-Civita symbol
-  Vector<T, n> result(3);
+  Vector<T, 3> result{};
   for (Index i = 0; i < 3; ++i) {
     result[i] = T{0}; // Initialize to zero
     for (Index j = 0; j < 3; ++j) {
@@ -710,14 +677,7 @@ template <typename T, Index n> Vector<T, n> normalize(const Vector<T, n> &v) {
   T mag = magnitude(v);
   if (approximatelyEqualAbsRel(mag, T{0}))
     throw std::invalid_argument("Cannot normalize zero vector.");
-  return v * (T{1.0} / mag);
-}
-
-template <typename T, Index n> T transpose(const Vector<T, n> &v) {
-  T mag = magnitude(v);
-  if (approximatelyEqualAbsRel(mag, T{0}))
-    throw std::invalid_argument("Cannot normalize zero vector.");
-  return v * (T{1.0} / mag);
+  return v * (T{1} / mag);
 }
 
 // Angle functions
@@ -740,38 +700,6 @@ bool isPerpendicular(const Vector<T, n> &v1, const Vector<T, n> &v2) {
 template <typename T, Index n>
 bool isParallel(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   return approximatelyEqualAbsRel(magnitude(crossProduct(v1, v2)), T{});
-}
-
-// flatten: 2D -> 1D (row-major)
-template <typename T, Index n>
-Vector<T, n> flatten(const Vector<Vector<T, n>> &twoDVect, Index nRows,
-                     Index nCols) {
-  if (static_cast<Index>(twoDVect.size()) != nRows)
-    throw std::invalid_argument("flatten: nRows mismatch");
-  for (Index r = 0; r < nRows; ++r)
-    if (static_cast<Index>(twoDVect[r].size()) != nCols)
-      throw std::invalid_argument("flatten: nCols mismatch");
-
-  Vector<T, n> flat(nRows * nCols);
-  for (Index i = 0; i < nRows; ++i)
-    for (Index j = 0; j < nCols; ++j)
-      flat[i * nCols + j] = twoDVect[i][j];
-  return flat;
-}
-
-// unflatten: 1D -> 2D (row-major)
-template <typename T, Index n>
-Vector<Vector<T, n>> unflatten(const Vector<T, n> &oneDVect, Index nRows,
-                               Index nCols) {
-  if (static_cast<Index>(oneDVect.size()) != nRows * nCols)
-    throw std::invalid_argument("unflatten: size mismatch");
-  Vector<Vector<T, n>> twoDVect(nRows);
-  for (Index i = 0; i < nRows; ++i) {
-    twoDVect[i].resize(static_cast<std::size_t>(nCols));
-    for (Index j = 0; j < nCols; ++j)
-      twoDVect[i][j] = oneDVect[i * nCols + j];
-  }
-  return twoDVect;
 }
 
 #endif
