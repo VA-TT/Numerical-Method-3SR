@@ -7,7 +7,7 @@ class Grain
         this.radius = radius;
 
         this.xpos = xpos;
-        this.ypos = ypos;
+this.ypos = ypos;
         this.rot = 0.0;
         this.vx = 0.0;
         this.vy = 0.0;
@@ -15,7 +15,7 @@ class Grain
         this.fx = 0.0;
         this.fy = 0.0;
         this.frot = 0.0;
-        
+
     }
 
     draw()

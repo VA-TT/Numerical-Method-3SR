@@ -3,6 +3,7 @@
 
 #include "comparison.h" //Approximative Comparsion
 #include "kroneckerDelta_LeviCivita.h"
+#include "physicConstants.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -364,8 +365,7 @@ template <typename T> T angleRad(const Vector<T> &v1, const Vector<T> &v2) {
 }
 
 template <typename T> T angleDegree(const Vector<T> &v1, const Vector<T> &v2) {
-  const T PI = T{3.14159265358979323846};
-  return angleRad(v1, v2) * T{180} / PI;
+  return angleRad(v1, v2) * T{180} / T{constants::pi};
 }
 
 template <typename T>
@@ -707,8 +707,7 @@ T angleRad(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) {
 
 template <typename T, Index n>
 T angleDegree(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) {
-  const T PI = T{3.14159265358979323846};
-  return angleRad(v1, v2) * T{180} / PI;
+  return angleRad(v1, v2) * T{180} / T{constants::pi};
 }
 
 template <typename T, Index n>
