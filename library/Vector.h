@@ -14,11 +14,20 @@
 #include <vector>
 
 using Index = std::ptrdiff_t; // typedef
+constexpr Index dynamic = -1;
 
 ///////////////////////////////////////////////////
 /////////////// DYNAMIC CLASS VECTOR //////////////
 ///////////////////////////////////////////////////
 
+// Consider integrated to Class (dynamic+static) into 1 by using is_static flag
+// template <typename T, Index n = dynamic> class Vector {}
+// static constexpr bool is_static = (n != Dynamic);
+// if constexpr (Vector<T, n>::is_static) {
+//   // vector static
+// } else {
+//   // vector dynamic
+// }
 template <typename T> class Vector {
 private:
   std::vector<T> m_elements{};
@@ -247,9 +256,8 @@ template <typename T> Vector<T> operator*(const Vector<T> &v, const T &k) {
 // Element-wise multiplication
 template <typename T>
 Vector<T> operator*(const Vector<T> &v1, const Vector<T> &v2) {
-  assert(
-      v1.size() == v2.size() &&
-      "Can't perfom element-wised mulplication on 2 different-sized vectors!");
+  assert(v1.size() == v2.size() && "Can't perfom element-wised mulplication "
+                                   "on 2 different-sized vectors!");
   Vector<T> result(v1.size());
   for (Index i = 0; i < v1.size(); ++i)
     result[i] = v1[i] * v2[i];
@@ -402,36 +410,36 @@ Vector<Vector<T>> unflatten(const Vector<T> &oneDVect, Index nRows,
 }
 
 ///////////////////////////////////////////////////
-/////////////// STATIC CLASS VECTOR ///////////////
+/////////////// STATIC CLASS StaticVector ///////////////
 ///////////////////////////////////////////////////
-template <typename T, Index n> class Vector {
+template <typename T, Index n> class StaticVector {
 private:
   static_assert(n > 0 && "Number of rows and columns must be greater than 0!");
   std::array<T, n> m_elements{};
 
 public:
   // Default Constructors
-  Vector() = default;
-  Vector(const Vector &) = default;
-  Vector(Vector &&) = default;
-  Vector &operator=(const Vector &) = default;
-  Vector &operator=(Vector &&) = default;
-  ~Vector() = default;
+  StaticVector() = default;
+  StaticVector(const StaticVector &) = default;
+  StaticVector(StaticVector &&) = default;
+  StaticVector &operator=(const StaticVector &) = default;
+  StaticVector &operator=(StaticVector &&) = default;
+  ~StaticVector() = default;
 
   // Constructor with initializer_list
-  Vector(std::initializer_list<T> list) {
+  StaticVector(std::initializer_list<T> list) {
     assert(static_cast<Index>(list.size()) == n);
     std::copy(list.begin(), list.end(), m_elements.begin());
   }
 
   // // Constructor with length n of elements which are value
-  explicit Vector(const T &value) {
+  explicit StaticVector(const T &value) {
     for (auto &e : m_elements)
       e = value;
   }
 
-  // Vector 0
-  static Vector<T, n> zero() { return Vector<T, n>{}; }
+  // StaticVector 0
+  static StaticVector<T, n> zero() { return StaticVector<T, n>{}; }
 
   // Reset all vallue to 0 default
   void resetZero() {
@@ -460,7 +468,7 @@ public:
   // Size functions
   constexpr Index size() const noexcept { return static_cast<Index>(n); }
 
-  // Convenience coordinate accessors for 2D/3D Vectors
+  // Convenience coordinate accessors for 2D/3D StaticVectors
   T &x() {
     static_assert(n >= 1 && "x() requires size() >= 1");
     return (*this)[0];
@@ -495,7 +503,8 @@ public:
   auto end() const { return m_elements.end(); }
 
   // Print
-  friend std::ostream &operator<<(std::ostream &os, const Vector<T, n> &v) {
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const StaticVector<T, n> &v) {
     os << "[";
     for (Index i = 0; i < n; ++i) {
       if (approximatelyEqualAbsRel(v[i], T{0}))
@@ -510,17 +519,19 @@ public:
   }
 
   //+= operator
-  Vector &operator+=(const Vector<T, n> &other) {
+  StaticVector &operator+=(const StaticVector<T, n> &other) {
     for (Index i{0}; i < n; ++i)
       (*this)[i] += other[i];
     return *this;
   }
 
-  Vector &operator-=(const Vector<T, n> &other) { return *this += -other; }
+  StaticVector &operator-=(const StaticVector<T, n> &other) {
+    return *this += -other;
+  }
 
-  // Projection on another vector
-  Vector projection(const Vector &other) const {
-    Vector<T, n> unit = normalize(other);
+  // Projection on another StaticVector
+  StaticVector projection(const StaticVector &other) const {
+    StaticVector<T, n> unit = normalize(other);
     return unit * dotProduct(*this, unit);
   }
 
@@ -536,17 +547,17 @@ public:
   }
 
   // Return a sorted copy. Default: descending order.
-  Vector sorted(bool descending = true) const {
-    Vector copy = *this;
+  StaticVector sorted(bool descending = true) const {
+    StaticVector copy = *this;
     copy.sort(descending);
     return copy;
   }
 };
 
-/////////////////////// END OF VECTOR CLASS/////////////////////
-// Vector operators
+/////////////////////// END OF StaticVector CLASS/////////////////////
+// StaticVector operators
 template <typename T, Index n1, Index n2>
-bool operator==(const Vector<T, n1> &v1, const Vector<T, n2> &v2) {
+bool operator==(const StaticVector<T, n1> &v1, const StaticVector<T, n2> &v2) {
   if (n1 != n2)
     return false;
   for (Index i = 0; i < n1; ++i) {
@@ -557,59 +568,62 @@ bool operator==(const Vector<T, n1> &v1, const Vector<T, n2> &v2) {
 }
 
 template <typename T, Index n>
-bool operator!=(const Vector<T, n> &v1, const Vector<T, n> &v2) {
+bool operator!=(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) {
   return !(v1 == v2);
 }
 
 template <typename T, Index n>
-Vector<T, n> operator+(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  Vector<T, n> result{};
+StaticVector<T, n> operator+(const StaticVector<T, n> &v1,
+                             const StaticVector<T, n> &v2) {
+  StaticVector<T, n> result{};
   for (Index i = 0; i < n; ++i)
     result[i] = v1[i] + v2[i];
   return result;
 }
 
-// Scalar multiplication (scalar * vector)
+// Scalar multiplication (scalar * StaticVector)
 template <typename T, Index n>
-Vector<T, n> operator*(const T &k, const Vector<T, n> &v) {
-  Vector<T, n> result{};
+StaticVector<T, n> operator*(const T &k, const StaticVector<T, n> &v) {
+  StaticVector<T, n> result{};
   for (Index i = 0; i < n; ++i)
     result[i] = k * v[i];
   return result;
 }
 
-// Scalar multiplication (vector * scalar)
+// Scalar multiplication (StaticVector * scalar)
 template <typename T, Index n>
-Vector<T, n> operator*(const Vector<T, n> &v, const T &k) {
+StaticVector<T, n> operator*(const StaticVector<T, n> &v, const T &k) {
   return k * v;
 }
 
 // Element-wise multiplication
 template <typename T, Index n>
-Vector<T, n> operator*(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  Vector<T, n> result{};
+StaticVector<T, n> operator*(const StaticVector<T, n> &v1,
+                             const StaticVector<T, n> &v2) {
+  StaticVector<T, n> result{};
   for (Index i = 0; i < n; ++i)
     result[i] = v1[i] * v2[i];
   return result;
 }
 
 // Unary minus
-template <typename T, Index n> Vector<T, n> operator-(const Vector<T, n> &v) {
+template <typename T, Index n>
+StaticVector<T, n> operator-(const StaticVector<T, n> &v) {
   return T{-1} * v;
 }
 
-// Scalar multiplication (vector / scalar)
+// Scalar multiplication (StaticVector / scalar)
 template <typename T, Index n>
-Vector<T, n> operator/(const Vector<T, n> &v, const T &k) {
+StaticVector<T, n> operator/(const StaticVector<T, n> &v, const T &k) {
   assert(!approximatelyEqualAbsRel(k, T{0}) &&
          "Can't divide by a number approximate to 0.");
   return v * (T{1} / k);
 }
 
-// Scalar divide (scalar/vector)
+// Scalar divide (scalar/StaticVector)
 template <typename T, Index n>
-Vector<T, n> operator/(const T &k, const Vector<T, n> &v) {
-  Vector<T, n> result{};
+StaticVector<T, n> operator/(const T &k, const StaticVector<T, n> &v) {
+  StaticVector<T, n> result{};
   for (Index i = 0; i < n; ++i) {
     assert(!approximatelyEqualAbsRel(v[i], T{}) && "Division by zero!");
     result[i] = k / v[i];
@@ -619,19 +633,21 @@ Vector<T, n> operator/(const T &k, const Vector<T, n> &v) {
 
 // Element-wised divide
 template <typename T, Index n>
-Vector<T, n> operator/(const Vector<T, n> &v1, const Vector<T, n> &v2) {
+StaticVector<T, n> operator/(const StaticVector<T, n> &v1,
+                             const StaticVector<T, n> &v2) {
   return v1 * (T{1} / v2);
 }
 
-// Vector subtraction
+// StaticVector subtraction
 template <typename T, Index n>
-Vector<T, n> operator-(const Vector<T, n> &v1, const Vector<T, n> &v2) {
+StaticVector<T, n> operator-(const StaticVector<T, n> &v1,
+                             const StaticVector<T, n> &v2) {
   return v1 + (-v2);
 }
 
 // Dot product
 template <typename T, Index n>
-T dotProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
+T dotProduct(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) {
   T result{};
   for (Index i = 0; i < n; ++i)
     result += v1[i] * v2[i];
@@ -640,10 +656,11 @@ T dotProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
 
 // Cross product (3D)
 template <typename T, Index n>
-Vector<T, n> crossProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  static_assert(n == 3, "Cross product only for 3D vectors");
+StaticVector<T, n> crossProduct(const StaticVector<T, n> &v1,
+                                const StaticVector<T, n> &v2) {
+  static_assert(n == 3, "Cross product only for 3D StaticVectors");
   // Method 1
-  Vector<T, 3> result{};
+  StaticVector<T, 3> result{};
   result[0] = v1[1] * v2[2] - v1[2] * v2[1];
   result[1] = v1[2] * v2[0] - v1[0] * v2[2];
   result[2] = v1[0] * v2[1] - v1[1] * v2[0];
@@ -652,10 +669,11 @@ Vector<T, n> crossProduct(const Vector<T, n> &v1, const Vector<T, n> &v2) {
 
 // Cross product (3D) - Method 2 using Levi-Civita
 template <typename T, Index n>
-Vector<T, n> crossProduct2(const Vector<T, n> &v1, const Vector<T, n> &v2) {
-  static_assert(n == 3, "Cross product only for 3D vectors");
+StaticVector<T, n> crossProduct2(const StaticVector<T, n> &v1,
+                                 const StaticVector<T, n> &v2) {
+  static_assert(n == 3, "Cross product only for 3D StaticVectors");
   // Method 2: Using Levi-Civita symbol
-  Vector<T, 3> result{};
+  StaticVector<T, 3> result{};
   for (Index i = 0; i < 3; ++i) {
     result[i] = T{0}; // Initialize to zero
     for (Index j = 0; j < 3; ++j) {
@@ -667,38 +685,40 @@ Vector<T, n> crossProduct2(const Vector<T, n> &v1, const Vector<T, n> &v2) {
   return result;
 }
 
-// Vector magnitude/norm
-template <typename T, Index n> T magnitude(const Vector<T, n> &v) {
+// StaticVector magnitude/norm
+template <typename T, Index n> T magnitude(const StaticVector<T, n> &v) {
   return std::sqrt(dotProduct(v, v));
 }
 
-// Normalize to Unit vector
-template <typename T, Index n> Vector<T, n> normalize(const Vector<T, n> &v) {
+// Normalize to Unit StaticVector
+template <typename T, Index n>
+StaticVector<T, n> normalize(const StaticVector<T, n> &v) {
   T mag = magnitude(v);
   if (approximatelyEqualAbsRel(mag, T{0}))
-    throw std::invalid_argument("Cannot normalize zero vector.");
+    throw std::invalid_argument("Cannot normalize zero StaticVector.");
   return v * (T{1} / mag);
 }
 
 // Angle functions
 template <typename T, Index n>
-T angleRad(const Vector<T, n> &v1, const Vector<T, n> &v2) {
+T angleRad(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) {
   return std::acos(dotProduct(v1, v2) / (magnitude(v1) * magnitude(v2)));
 }
 
 template <typename T, Index n>
-T angleDegree(const Vector<T, n> &v1, const Vector<T, n> &v2) {
+T angleDegree(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) {
   const T PI = T{3.14159265358979323846};
   return angleRad(v1, v2) * T{180} / PI;
 }
 
 template <typename T, Index n>
-bool isPerpendicular(const Vector<T, n> &v1, const Vector<T, n> &v2) {
+bool isPerpendicular(const StaticVector<T, n> &v1,
+                     const StaticVector<T, n> &v2) {
   return approximatelyEqualAbsRel(dotProduct(v1, v2), T{});
 }
 
 template <typename T, Index n>
-bool isParallel(const Vector<T, n> &v1, const Vector<T, n> &v2) {
+bool isParallel(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) {
   return approximatelyEqualAbsRel(magnitude(crossProduct(v1, v2)), T{});
 }
 
