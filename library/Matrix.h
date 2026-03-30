@@ -603,6 +603,12 @@ public:
     return v;
   }
 
+  StaticVector<Matrix, 2> symmetricDecomposition const() {
+    return {
+      0.5 * (*this + this->transpose()), 0.5 * (*this - this->transpose())
+    }
+  }
+
   // StaticVector<T, nRows> getColVector(Index j) const {
   //   StaticVector<T, nRows> v{};
   //   for (Index i = 0; i < nRows; ++i)
