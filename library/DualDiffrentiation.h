@@ -1,6 +1,7 @@
-#ifndef DUAL_CLASS_DIFFERENTIATION
-#define DUAL_CLASS_DIFFERENTIATION
+#ifndef DUAL_CLASS_DIFFERENTIATION_H
+#define DUAL_CLASS_DIFFERENTIATION_H
 
+#include "Vector.h"
 #include <cmath>
 #include <functional>
 #include <iostream>
@@ -99,7 +100,7 @@ inline Dual operator/(double a, const Dual &d) {
   return Dual{a / d.getVal(), -a * d.getDer() / (d.getVal() * d.getVal())};
 }
 
-// Generic automatic differentiation - accepts any callable
+// Generic automatic differentiation
 template <typename Func, typename T = double>
 auto automaticDiff(Func func, T x0) -> double {
   Dual d{static_cast<double>(x0), 1.0};
@@ -107,6 +108,7 @@ auto automaticDiff(Func func, T x0) -> double {
   return static_cast<double>(result.getDer());
 }
 
+// Help to create container (array) of type dual lambda
 template <typename T = double>
 T automaticDiff(std::function<Dual(Dual)> func, T x0) {
   Dual d{x0};
@@ -116,15 +118,14 @@ T automaticDiff(std::function<Dual(Dual)> func, T x0) {
 
 // Compute gradient of a scalar function f(x,y) using forward-mode Dual.
 // The callable `func` must accept two Dual arguments and return a Dual.
+// e.g: auto energy = [](Dual x, Dual y) {return x * x + y * y;};
 template <typename Func>
-std::pair<double, double> gradient2D(Func func, double x0, double y0) {
-  // partial w.r.t x: seed x with derivative 1, y with 0
+std::pair<double, double> grad2D(Func func, double x0, double y0) {
   Dual x_dx{x0, 1.0};
   Dual y_dx{y0, 0.0};
   Dual r_x = func(x_dx, y_dx);
   double dfdx = r_x.getDer();
 
-  // partial w.r.t y: seed x with 0, y with 1
   Dual x_dy{x0, 0.0};
   Dual y_dy{y0, 1.0};
   Dual r_y = func(x_dy, y_dy);
@@ -133,11 +134,127 @@ std::pair<double, double> gradient2D(Func func, double x0, double y0) {
   return {dfdx, dfdy};
 }
 
+using ScalarFunction = std::function<Dual(Dual, Dual, Dual)>;
+StaticVector<double, 3> grad3D(ScalarFunction f, double x0, double y0,
+                               double z0) {
+  // df/dx
+  Dual x_dx{x0, 1.0};
+  Dual y_dx{y0, 0.0};
+  Dual z_dx{z0, 0.0};
+  Dual r_x = f(x_dx, y_dx, z_dx);
+  double dfdx = r_x.getDer();
+
+  // df/dy
+  Dual x_dy{x0, 0.0};
+  Dual y_dy{y0, 1.0};
+  Dual z_dy{z0, 0.0};
+  Dual r_y = f(x_dy, y_dy, z_dy);
+  double dfdy = r_y.getDer();
+
+  // df/dz
+  Dual x_dz{x0, 0.0};
+  Dual y_dz{y0, 0.0};
+  Dual z_dz{z0, 1.0};
+  Dual r_z = f(x_dz, y_dz, z_dz);
+  double dfdz = r_z.getDer();
+
+  return {dfdx, dfdy, dfdz};
+}
+
+using VectorFunction = std::function<StaticVector<Dual, 3>(Dual, Dual, Dual)>;
+double div3D(VectorFunction u, double x0, double y0, double z0) {
+
+  // u_x,x
+  Dual x_dx{x0, 1.0};
+  Dual y_dx{y0, 0.0};
+  Dual z_dx{z0, 0.0};
+  auto u_dualX = u(x_dx, y_dx, z_dx);
+  double du1dx = u_dualX.x().getDer();
+
+  // u_y,y
+  Dual x_dy{x0, 0.0};
+  Dual y_dy{y0, 1.0};
+  Dual z_dy{z0, 0.0};
+  auto u_dualY = u(x_dy, y_dy, z_dy);
+  double du2dy = u_dualY.y().getDer();
+
+  // u_z,z
+  Dual x_dz{x0, 0.0};
+  Dual y_dz{y0, 0.0};
+  Dual z_dz{z0, 1.0};
+  auto u_dualZ = u(x_dz, y_dz, z_dz);
+  double du3dz = u_dualZ.z().getDer();
+
+  return du1dx + du2dy + du3dz;
+}
+
+using VectorFunction = std::function<StaticVector<Dual, 3>(Dual, Dual, Dual)>;
+StaticVector<double, 3> curl3D(VectorFunction u, double x0, double y0,
+                               double z0) {
+  // du_i/dx
+  Dual x_dx{x0, 1.0};
+  Dual y_dx{y0, 0.0};
+  Dual z_dx{z0, 0.0};
+  auto u_dualX = u(x_dx, y_dx, z_dx);
+  double du2dx = u_dualX.y().getDer();
+  double du3dx = u_dualX.z().getDer();
+
+  // du_i/dy
+  Dual x_dy{x0, 0.0};
+  Dual y_dy{y0, 1.0};
+  Dual z_dy{z0, 0.0};
+  auto u_dualY = u(x_dy, y_dy, z_dy);
+  double du1dy = u_dualY.x().getDer();
+  double du3dy = u_dualY.z().getDer();
+
+  // du_i/dz
+  Dual x_dz{x0, 0.0};
+  Dual y_dz{y0, 0.0};
+  Dual z_dz{z0, 1.0};
+  auto u_dualZ = u(x_dz, y_dz, z_dz);
+  double du1dz = u_dualZ.x().getDer();
+  double du2dz = u_dualZ.y().getDer();
+
+  return {du3dy - du2dz, du1dz - du3dx, du2dx - du1dy};
+}
+
+// Laplacian scalar
+double laplacian3D(ScalarFunction f, double x0, double y0, double z0) {
+  return div3D(grad3D(f, x0, y0, z0), x0, y0, z0);
+}
+// Laplacian vector
+StaticVector<double, 3> laplacian(VectorFunction u, double x0, double y0,
+                                  double z0) {
+  StaticVector<double, 3> uLap;
+  for (int i = 0; i < 3; i++) {
+    auto ui = [u, i](Dual x, Dual y, Dual z) -> Dual { return u(x, y, z)[i]; };
+    uLap[i] = laplacian3D(ui, x0, y0, z0); // laplacian scalar
+  }
+  return uLap;
+}
+
 #endif
-// int main()
-// {
-//     double x0{std::numbers::pi * 0.5};
-//     std::cout << "f(x0) = " << myFunc(x0) << '\n';
-//     std::cout << "f'(x0) = " << automaticDiff(x0) << '\n';
-//     return 0;
-// }
+
+#if 0
+int main() {
+  double x0{std::numbers::pi * 0.5};
+  std::cout << "f(x0) = " << myFunc(x0) << '\n';
+  std::cout << "f'(x0) = " << automaticDiff(x0) << '\n';
+  auto F = [](Dual x, Dual y, Dual z) {
+    return StaticVector<Dual, 3>{
+        x * x, // Fx
+        y * y, // Fy
+        z * z  // Fz
+    };
+  };
+
+  double div = divergence3D(F, 1.0, 2.0, 3.0);
+
+  auto u = [](Dual x, Dual y, Dual z) {
+    return StaticVector<Dual, 3>{y, -x, z * z};
+  };
+
+  auto c = curl3D(u, 1.0, 2.0, 3.0);
+  return 0;
+}
+#endif
