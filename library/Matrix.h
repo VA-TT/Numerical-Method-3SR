@@ -1,5 +1,5 @@
-#ifndef MY_MATRIX_CLASS
-#define MY_MATRIX_CLASS
+#ifndef MY_MATRIX_CLASS_H
+#define MY_MATRIX_CLASS_H
 
 // Consider return m_elements[(i - 1) * nCols + (j - 1)]; in order to accessing
 // the matrices with index starting from 1 in mathematic
