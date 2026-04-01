@@ -1,5 +1,5 @@
-#ifndef MY_VECTOR_CLASS
-#define MY_VECTOR_CLASS
+#ifndef MY_VECTOR_CLASS_H
+#define MY_VECTOR_CLASS_H
 
 #include "comparison.h" //Approximative Comparsion
 #include "kroneckerDelta_LeviCivita.h"
@@ -15,15 +15,16 @@
 #include <vector>
 
 using Index = std::ptrdiff_t; // typedef
-constexpr Index dynamic = -1;
 
-template <typename T, Index n> class StaticVector;
+template <typename T, Index n>
+class StaticVector; // class' declaration, definition below
 
 ///////////////////////////////////////////////////
 /////////////// DYNAMIC CLASS VECTOR //////////////
 ///////////////////////////////////////////////////
 
 // Consider integrated to Class (dynamic+static) into 1 by using is_static flag
+// constexpr Index dynamic = -1;
 // template <typename T, Index n = dynamic> class DynamicVector {}
 // static constexpr bool is_static = (n != Dynamic);
 // if constexpr (DynamicVector<T, n>::is_static) {

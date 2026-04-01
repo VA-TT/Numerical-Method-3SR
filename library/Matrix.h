@@ -745,6 +745,11 @@ public:
     return T{0.5} * (trace(*this) * trace(*this) - trace((*this) * (*this)));
   }
   T thirdInvariant() const { return det(*this); }
+
+  StaticVector<T, 3> invariants(const) {
+    return {this->firstInvariant(), this->secondInvariant(),
+            this->thirdInvariant()};
+  }
 };
 
 /////////////////////////// END OF MATRIX CLASS//////////////////////////
