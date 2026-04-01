@@ -46,7 +46,7 @@ template <typename T, Index ngw, Index ngh> class DEM2D {
 private:
   constexpr Index m_npc{ngh * ngh};
   StaticVector<Particle2D<T>, m_npc> m_particles {}
-  Vector<Particle2D<T>> m_interactions {}
+  DynamicVector<Particle2D<T>> m_interactions {}
   T m_z{};       // Nombre de coordination
   T m_e{};       // Indice de vide
   T m_I{};       // Nombre d'inertie

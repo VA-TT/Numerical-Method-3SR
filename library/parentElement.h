@@ -125,13 +125,13 @@ inline auto dN4_deta = [](auto xi, auto eta) { return 0.25 * (1 - xi); };
 // Mapping from parent [-1,1]x[-1,1] to physical coordinates
 // x = sum(N_i * x_i) = N · x_nodes, y = sum(N_i * y_i) = N · y_nodes
 template <typename T>
-std::pair<T, T> physicCoor(T xi, T eta, const Vector<T> &x_nodes,
-                           const Vector<T> &y_nodes) {
+std::pair<T, T> physicCoor(T xi, T eta, const DynamicVector<T> &x_nodes,
+                           const DynamicVector<T> &y_nodes) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 
   // Evaluate all shape functions at (xi, eta)
-  Vector<T> N(4);
+  DynamicVector<T> N(4);
   N[0] = N1_ref(xi, eta);
   N[1] = N2_ref(xi, eta);
   N[2] = N3_ref(xi, eta);
@@ -145,15 +145,15 @@ std::pair<T, T> physicCoor(T xi, T eta, const Vector<T> &x_nodes,
 // Jacobian matrix for 2D element: J = [dx/dxi  dx/deta]
 //                                     [dy/dxi  dy/deta]
 template <typename T>
-Matrix<T, 2, 2> Jacobian(T xi, T eta, const Vector<T> &x_nodes,
-                         const Vector<T> &y_nodes) {
+Matrix<T, 2, 2> Jacobian(T xi, T eta, const DynamicVector<T> &x_nodes,
+                         const DynamicVector<T> &y_nodes) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 
   Matrix<T, 2, 2> J;
 
   // Evaluate all derivatives at (xi, eta)
-  Vector<T> dN_dxi(4), dN_deta(4);
+  DynamicVector<T> dN_dxi(4), dN_deta(4);
   dN_dxi[0] = dN1_dxi(xi, eta);
   dN_dxi[1] = dN2_dxi(xi, eta);
   dN_dxi[2] = dN3_dxi(xi, eta);
@@ -180,8 +180,8 @@ Matrix<T, 2, 2> Jacobian(T xi, T eta, const Vector<T> &x_nodes,
 // Inverse mapping: (x,y) -> (xi,eta) - Optimized for rectangular elements
 // For general quadrilaterals, falls back to Newton-Raphson
 template <typename T>
-std::pair<T, T> parentCoor(T x, T y, const Vector<T> &x_nodes,
-                           const Vector<T> &y_nodes, int maxIter = 20,
+std::pair<T, T> parentCoor(T x, T y, const DynamicVector<T> &x_nodes,
+                           const DynamicVector<T> &y_nodes, int maxIter = 20,
                            T tol = 1e-10) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
@@ -240,7 +240,7 @@ std::pair<T, T> parentCoor(T x, T y, const Vector<T> &x_nodes,
 // 2D Gauss quadrature integration on reference element [-1,1]x[-1,1]
 // Computes: int_{-1}^{1} int_{-1}^{1} f(xi,eta) * det(J) dxi deta
 inline double integrationGauss2D_ref(
-    const Vector<double> &x_nodes, const Vector<double> &y_nodes,
+    const DynamicVector<double> &x_nodes, const DynamicVector<double> &y_nodes,
     std::function<double(double, double)> f_xi_eta, int n = 2) {
   using namespace gaussQuadrature;
 
@@ -269,8 +269,8 @@ inline double integrationGauss2D_ref(
 
 // Compute derivatives of shape functions in physical coordinates
 template <typename T>
-std::pair<Vector<T>, Vector<T>> gradientN(T xi, T eta, const Vector<T> &x_nodes,
-                                       const Vector<T> &y_nodes) {
+std::pair<DynamicVector<T>, DynamicVector<T>> gradientN(T xi, T eta, const DynamicVector<T> &x_nodes,
+                                       const DynamicVector<T> &y_nodes) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 
@@ -296,7 +296,7 @@ std::pair<Vector<T>, Vector<T>> gradientN(T xi, T eta, const Vector<T> &x_nodes,
   Matrix<T, 2, 4> dN_physical = J_inv * dN_parent;
 
   // Extract results
-  Vector<T> dN_dx(4), dN_dy(4);
+  DynamicVector<T> dN_dx(4), dN_dy(4);
   for (int i = 0; i < 4; ++i) {
     dN_dx[i] = dN_physical(0, i);
     dN_dy[i] = dN_physical(1, i);

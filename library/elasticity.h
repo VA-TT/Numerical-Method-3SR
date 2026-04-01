@@ -48,7 +48,8 @@ Matrix<T, 3, 3> elasticityMatrix(T E, T nu,
 }
 
 template <typename T, Index nRows, Index nCols>
-Vector<T> principalStress(const Matrix<T, nRows, nCols> &stress_tensor) {
+StaticVector<T, nRows>
+principalStress(const Matrix<T, nRows, nCols> &stress_tensor) {
   assert(stress_tensor.isSymmetric() && "Stress tensor should be symmetric!");
   auto [principalSigmas, V] = stress_tensor.eigen();
   return principalSigmas.sorted(true); // sigma1 >= sigma2 >= sigma3
@@ -99,7 +100,7 @@ std::pair<T, T> invariants(const Matrix<T, nRows, nCols> &stress_tensor,
 }
 
 template <typename T>
-std::pair<T, T> invariants(const Vector<T> &stress,
+std::pair<T, T> invariants(const DynamicVector<T> &stress,
                            std::string_view type = "planeStrain",
                            T nu = T{0.33}) {
   assert(stress.size() >= 3 && "invariants: stress must be [xx, yy, xy]");
@@ -131,7 +132,7 @@ std::pair<T, T> invariants(const Vector<T> &stress,
 }
 
 template <typename T>
-T druckerPragerYield(const Vector<T> &stress, T alpha, T k,
+T druckerPragerYield(const DynamicVector<T> &stress, T alpha, T k,
                      std::string_view stressCondition = "planeStrain",
                      T nu = T{0.33}) {
   const auto [I1, J2] = invariants(stress, stressCondition, nu);
@@ -139,8 +140,8 @@ T druckerPragerYield(const Vector<T> &stress, T alpha, T k,
 }
 
 template <typename T>
-Vector<T>
-druckerPragerGradient(const Vector<T> &stress, T alpha,
+DynamicVector<T>
+druckerPragerGradient(const DynamicVector<T> &stress, T alpha,
                       std::string_view stressCondition = "planeStrain",
                       T nu = T{0.33}) {
   assert(stress.size() >= 3 &&
@@ -154,60 +155,61 @@ druckerPragerGradient(const Vector<T> &stress, T alpha,
 
   const T denom = std::sqrt(J2);
   if (approximatelyEqualAbsRel(static_cast<double>(denom), 0.0)) {
-    return Vector<T>{alpha, alpha, T{0}};
+    return DynamicVector<T>{alpha, alpha, T{0}};
   }
 
   const T dfdx = alpha + (sigma_x - sigma_y) / denom;
   const T dfdy = alpha - (sigma_x - sigma_y) / denom;
   const T dftau = (T{2} * tau_xy) / denom;
-  return Vector<T>{dfdx, dfdy, dftau};
+  return DynamicVector<T>{dfdx, dfdy, dftau};
 }
 
 template <typename T>
-std::tuple<Vector<T>, Vector<T>, T> updateStressStrainDruckerPrager(
-    const Vector<T> &stress_n, const Vector<T> &strain_n,
-    const Vector<T> &strain_increment, const Matrix<T, 3, 3> &D, T alpha, T k,
-    std::string_view stressCondition = "planeStrain", T nu = T{0.33}) {
+std::tuple<DynamicVector<T>, DynamicVector<T>, T>
+updateStressStrainDruckerPrager(
+    const DynamicVector<T> &stress_n, const DynamicVector<T> &strain_n,
+    const DynamicVector<T> &strain_increment, const Matrix<T, 3, 3> &D, T alpha,
+    T k, std::string_view stressCondition = "planeStrain", T nu = T{0.33}) {
   assert(stress_n.size() >= 3 && strain_n.size() >= 3 &&
          strain_increment.size() >= 3 &&
          "updateStressStrainDruckerPrager: stress/strain must be size 3");
 
-  auto applyD = [&](const Vector<T> &v) {
-    Matrix<T, 3, 1> v_m{Vector<T>{v[0], v[1], v[2]}};
+  auto applyD = [&](const DynamicVector<T> &v) {
+    Matrix<T, 3, 1> v_m{DynamicVector<T>{v[0], v[1], v[2]}};
     Matrix<T, 3, 1> out_m = D * v_m;
-    return Vector<T>(out_m);
+    return DynamicVector<T>(out_m);
   };
 
-  const Vector<T> stress_trial =
-      Vector<T>{stress_n[0], stress_n[1], stress_n[2]} +
+  const DynamicVector<T> stress_trial =
+      DynamicVector<T>{stress_n[0], stress_n[1], stress_n[2]} +
       applyD(strain_increment);
 
   const T f_trial =
       druckerPragerYield(stress_trial, alpha, k, stressCondition, nu);
   if (f_trial <= T{0}) {
-    const Vector<T> strain_updated =
-        Vector<T>{strain_n[0], strain_n[1], strain_n[2]} +
-        Vector<T>{strain_increment[0], strain_increment[1],
-                  strain_increment[2]};
+    const DynamicVector<T> strain_updated =
+        DynamicVector<T>{strain_n[0], strain_n[1], strain_n[2]} +
+        DynamicVector<T>{strain_increment[0], strain_increment[1],
+                         strain_increment[2]};
     return {stress_trial, strain_updated, T{0}};
   }
 
-  const Vector<T> df_sigma =
+  const DynamicVector<T> df_sigma =
       druckerPragerGradient(stress_trial, alpha, stressCondition, nu);
-  const Vector<T> D_df = applyD(df_sigma);
+  const DynamicVector<T> D_df = applyD(df_sigma);
   const T H = dotProduct(df_sigma, D_df);
 
   if (approximatelyEqualAbsRel(static_cast<double>(H), 0.0)) {
-    return {stress_trial, Vector<T>{strain_n[0], strain_n[1], strain_n[2]},
-            T{0}};
+    return {stress_trial,
+            DynamicVector<T>{strain_n[0], strain_n[1], strain_n[2]}, T{0}};
   }
 
   const T delta_lambda = f_trial / H;
-  const Vector<T> stress_updated = stress_trial - delta_lambda * D_df;
+  const DynamicVector<T> stress_updated = stress_trial - delta_lambda * D_df;
 
-  const Vector<T> plastic_strain_increment = delta_lambda * df_sigma;
-  const Vector<T> strain_updated =
-      Vector<T>{strain_n[0], strain_n[1], strain_n[2]} +
+  const DynamicVector<T> plastic_strain_increment = delta_lambda * df_sigma;
+  const DynamicVector<T> strain_updated =
+      DynamicVector<T>{strain_n[0], strain_n[1], strain_n[2]} +
       plastic_strain_increment;
   return {stress_updated, strain_updated, delta_lambda};
 }

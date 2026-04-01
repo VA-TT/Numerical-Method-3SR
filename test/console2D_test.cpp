@@ -24,25 +24,25 @@ namespace modelParameters {
 constexpr Index n{2}; // number of equilibrium equations
 
 // Unit vectors
-Vector<double> i1{1.0, 0.0};
-Vector<double> i2{0.0, 1.0};
+DynamicVector<double> i1{1.0, 0.0};
+DynamicVector<double> i2{0.0, 1.0};
 
 // Bar's parameters
 double E{25e9}; // Module Young
 double a{10.0}; // Distance between node 0 and 1 = bar length
 
-Vector<double> x0{(i1 * a + i2 * a)};
+DynamicVector<double> x0{(i1 * a + i2 * a)};
 double l01{magnitude(x0)};          // length bar 1
 double l02{magnitude(x0 - a * i2)}; // length bar 2
 double force{150e3};                // Imposed Force
 double theta{20}; // Inclined angle of the force with relative to vertical
 double thetaRadian{theta * std::numbers::pi / 180}; // converte to radian
 
-Vector<double> f1{force * std::sin(thetaRadian) *
+DynamicVector<double> f1{force * std::sin(thetaRadian) *
                   i1}; // force's horizontal component
-Vector<double> f2{-force * std::cos(thetaRadian) *
+DynamicVector<double> f2{-force * std::cos(thetaRadian) *
                   i2}; // force's vertical component
-Vector<double> externalForce{f1 + f2};
+DynamicVector<double> externalForce{f1 + f2};
 
 // Section dimension
 double b1{0.02}, h1{0.05};
@@ -80,20 +80,20 @@ int main() {
   int iteration{0};
 
   std::vector<int> iteration_array;
-  std::vector<Vector<double>> deltaX_array;
+  std::vector<DynamicVector<double>> deltaX_array;
   iteration_array.reserve(max_iteration);
   deltaX_array.reserve(max_iteration);
-  Vector<double> deltaX(2);
-  Vector<double> Fk(2);
+  DynamicVector<double> deltaX(2);
+  DynamicVector<double> Fk(2);
 
   std::cout << "=== Newton-Raphson Iteration ===" << std::endl;
 
-  Vector<double> x(2);
+  DynamicVector<double> x(2);
   double l1{}, l2{};
-  Vector<double> e1(2), e2(2);
+  DynamicVector<double> e1(2), e2(2);
   Matrix<double, n, n> nablaF{};
   auto I = Matrix<double, 2, 2>::identity();
-  Vector<double> deltaX_increment(2);
+  DynamicVector<double> deltaX_increment(2);
 
   // Use Newton_Raphson method to find the approximation with tolerance
   while (iteration < max_iteration) {

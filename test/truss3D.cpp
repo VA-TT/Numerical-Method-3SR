@@ -32,15 +32,15 @@ namespace modelParameters {
 constexpr Index d{3};
 
 // Unit vectors
-Vector<double> i1{1.0, 0.0, 0.0};
-Vector<double> i2{0.0, 1.0, 0.0};
-Vector<double> i3{0.0, 0.0, 1.0};
+DynamicVector<double> i1{1.0, 0.0, 0.0};
+DynamicVector<double> i2{0.0, 1.0, 0.0};
+DynamicVector<double> i3{0.0, 0.0, 1.0};
 
 // Geometry of the truss
 constexpr Index nNodes{8}; // number of nodes
 constexpr Index nBars{10}; // number of bars
 
-Vector<Vector<double>> nodes{
+DynamicVector<DynamicVector<double>> nodes{
     {0.0, 0.0, 0.0},     // Node 0
     {10.0, 0.0, 0.0},    // Node 1
     {0.0, 0.0, 10.0},    // Node 2
@@ -52,15 +52,15 @@ Vector<Vector<double>> nodes{
 
 };
 // Bar connectivity: store node indices for each bar's origin and end
-Vector<Index> barOrigin{0, 2, 3, 2, 3, 4, 6, 7, 3, 2};
-Vector<Index> barEnd{2, 3, 1, 6, 7, 6, 7, 5, 6, 7};
-Vector<Vector<double>> vectorBars(nBars), unitVectorBars(nBars);
-Vector<double> lengthBars(nBars);
-Vector<double> length0Bars(nBars);
-Vector<Index> nodeImposed{0, 1, 4, 5};
-Vector<Vector<double>> displacementImposed{
+DynamicVector<Index> barOrigin{0, 2, 3, 2, 3, 4, 6, 7, 3, 2};
+DynamicVector<Index> barEnd{2, 3, 1, 6, 7, 6, 7, 5, 6, 7};
+DynamicVector<DynamicVector<double>> vectorBars(nBars), unitVectorBars(nBars);
+DynamicVector<double> lengthBars(nBars);
+DynamicVector<double> length0Bars(nBars);
+DynamicVector<Index> nodeImposed{0, 1, 4, 5};
+DynamicVector<DynamicVector<double>> displacementImposed{
     {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-Vector<Index> nodeFree(nNodes - nodeImposed.size());
+DynamicVector<Index> nodeFree(nNodes - nodeImposed.size());
 
 // Section dimension
 double youngModulus{25e9}; // Module Young
@@ -70,7 +70,7 @@ double alpha{youngModulus * A};
 
 //  External loads at nodes - Direct 3D force vectors
 // External Force applying
-Vector<Vector<double>> externalForce{
+DynamicVector<DynamicVector<double>> externalForce{
     {0.0, 0.0, 0.0},      // Node 0: no force
     {0.0, 0.0, 0.0},      // Node 1: no force
     {0.0, 0.0, -15000.0}, // Node 2: 15kN downward (z-direction)
@@ -81,16 +81,16 @@ Vector<Vector<double>> externalForce{
     {0.0, 0.0, -15000.0}  // Node 7: 15kN downward
 };
 // Displacement Vector
-Vector<double> U(nNodes *d), UImposed(nNodes *d), UFree(nNodes *d);
-Vector<double> totalDispalcement(nNodes *d);
+DynamicVector<double> U(nNodes *d), UImposed(nNodes *d), UFree(nNodes *d);
+DynamicVector<double> totalDispalcement(nNodes *d);
 // Axial Force inside the Bars and applying on Nodes
-Vector<Vector<double>> internalForceBar(nBars);
-Vector<Vector<double>> internalForceNodes(nNodes);
+DynamicVector<DynamicVector<double>> internalForceBar(nBars);
+DynamicVector<DynamicVector<double>> internalForceNodes(nNodes);
 std::vector<int> iteration_array;
-std::vector<Vector<double>> deltaU_array;
+std::vector<DynamicVector<double>> deltaU_array;
 
 // Rigidity kt of each bar
-Vector<double> k(nBars);
+DynamicVector<double> k(nBars);
 // Choosing non-linear Saint-Venant Kirchhoff law
 int law{1};
 
@@ -194,7 +194,7 @@ int main() {
     }
     // Assemble internal force vector at nodes
     for (Index n{0}; n < nNodes; ++n) {
-      internalForceNodes[n] = Vector<double>(d);
+      internalForceNodes[n] = DynamicVector<double>(d);
       for (Index k = 0; k < d; ++k)
         internalForceNodes[n][k] = 0.0;
     }
@@ -205,10 +205,10 @@ int main() {
     }
 
     // Flatting vector F
-    Vector<double> externalForceFlatten{flatten(externalForce, nNodes, d)};
-    Vector<double> internalForceFlatten{flatten(internalForceNodes, nNodes, d)};
+    DynamicVector<double> externalForceFlatten{flatten(externalForce, nNodes, d)};
+    DynamicVector<double> internalForceFlatten{flatten(internalForceNodes, nNodes, d)};
     // Modify the right-hand side: F = F_external - F_internal
-    Vector<double> forceF = externalForceFlatten - internalForceFlatten;
+    DynamicVector<double> forceF = externalForceFlatten - internalForceFlatten;
 
     // Saving
     double residualNorm = magnitude(forceF);
@@ -232,7 +232,7 @@ int main() {
       k[b] = kt(lengthBars[b], length0Bars[b]);
     }
 
-    Vector<Matrix<double, d, d>> elementaryApplicationK(nBars);
+    DynamicVector<Matrix<double, d, d>> elementaryApplicationK(nBars);
     for (Index b{0}; b < nBars; ++b) {
       elementaryApplicationK[b] =
           At(lengthBars[b], length0Bars[b]) * Matrix<double, d, d>::identity() +
@@ -240,7 +240,7 @@ int main() {
               tensorProduct<d, d>(vectorBars[b], vectorBars[b]);
     }
     //  Connectivity Matrix
-    Vector<Matrix<double, d, d * nNodes>> C(nNodes);
+    DynamicVector<Matrix<double, d, d * nNodes>> C(nNodes);
 
     const auto Id = Matrix<double, d, d>::identity();
     Matrix<double, d, d * nNodes> Ci{};
@@ -284,7 +284,7 @@ int main() {
     }
 
     // Solve the linear system to find displacement
-    Vector<double> deltaU{solveLinearSystem(assemblyStiffnessK, forceF)};
+    DynamicVector<double> deltaU{solveLinearSystem(assemblyStiffnessK, forceF)};
     double incrementNorm = magnitude(deltaU);
 
     // IN RA THÔNG TIN HỘI TỤ GIỐNG CODE 2D
@@ -298,9 +298,9 @@ int main() {
     deltaU_array.push_back(deltaU);
 
     // Calculate the reaction
-    Vector<Vector<double>> reactionR(nNodes);
+    DynamicVector<DynamicVector<double>> reactionR(nNodes);
     for (Index ii = 0; ii < nNodes; ++ii) {
-      reactionR[ii] = Vector<double>(d);
+      reactionR[ii] = DynamicVector<double>(d);
       for (Index k = 0; k < d; ++k)
         reactionR[ii][k] = 0.0;
     }

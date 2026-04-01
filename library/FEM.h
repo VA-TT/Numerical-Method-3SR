@@ -160,7 +160,7 @@ public:
   void calculateReaction() {
     // Compute reaction vector R = K_original * U - F_original
     m_R = -(m_F_original - m_K_original * m_U);
-    std::cout << "Reaction force vector R: \n" << Vector<T>(m_R) << std::endl;
+    std::cout << "Reaction force vector R: \n" << DynamicVector<T>(m_R) << std::endl;
   }
 
   void compareAnalytic() {
@@ -203,14 +203,14 @@ public:
 
     // Compute element axial forces: N_e = EA * (u[j] - u[i]) / h_e
     // Store element forces, then assign to nodes
-    Vector<T> element_forces(m_mesh.getNumElements());
+    DynamicVector<T> element_forces(m_mesh.getNumElements());
     for (Index e = 0; e < m_mesh.getNumElements(); ++e) {
       T h = m_mesh.getLengthEle(e);
       element_forces[e] = m_EA * (m_U[e + 1] - m_U[e]) / h;
     }
 
     // Assign element forces to nodes
-    Vector<T> axial_force(nNodes);
+    DynamicVector<T> axial_force(nNodes);
     axial_force[0] = element_forces[0]; // First node: force from first element
     for (Index i = 1; i < nNodes - 1; ++i) {
       // Internal nodes: average of adjacent elements (equilibrium)

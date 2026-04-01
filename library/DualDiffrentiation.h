@@ -47,6 +47,7 @@ public:
   friend Dual operator-(const Dual &d1, const Dual &d2) {
     return d1 + (-1) * d2;
   }
+  friend Dual operator-(const Dual &d) { return Dual{-d.m_val, -d.m_der}; }
   friend Dual operator*(const Dual &d1, const Dual &d2) {
     Dual result{};
     result.m_val = d1.m_val * d2.m_val;
@@ -106,14 +107,6 @@ auto automaticDiff(Func func, T x0) -> double {
   Dual d{static_cast<double>(x0), 1.0};
   auto result = func(d);
   return static_cast<double>(result.getDer());
-}
-
-// Help to create container (array) of type dual lambda
-template <typename T = double>
-T automaticDiff(std::function<Dual(Dual)> func, T x0) {
-  Dual d{x0};
-  Dual result{func(d)};
-  return result.getDer();
 }
 
 // Compute gradient of a scalar function f(x,y) using forward-mode Dual.
@@ -188,7 +181,6 @@ double div3D(VectorFunction u, double x0, double y0, double z0) {
   return du1dx + du2dy + du3dz;
 }
 
-using VectorFunction = std::function<StaticVector<Dual, 3>(Dual, Dual, Dual)>;
 StaticVector<double, 3> curl3D(VectorFunction u, double x0, double y0,
                                double z0) {
   // du_i/dx
@@ -220,11 +212,26 @@ StaticVector<double, 3> curl3D(VectorFunction u, double x0, double y0,
 
 // Laplacian scalar
 double laplacian3D(ScalarFunction f, double x0, double y0, double z0) {
-  return div3D(grad3D(f, x0, y0, z0), x0, y0, z0);
+  const double h = 1e-5;
+  auto eval = [&](double x, double y, double z) {
+    return f(Dual{x, 0.0}, Dual{y, 0.0}, Dual{z, 0.0}).getVal();
+  };
+
+  const double d2fdx2 =
+      (eval(x0 + h, y0, z0) - 2.0 * eval(x0, y0, z0) + eval(x0 - h, y0, z0)) /
+      (h * h);
+  const double d2fdy2 =
+      (eval(x0, y0 + h, z0) - 2.0 * eval(x0, y0, z0) + eval(x0, y0 - h, z0)) /
+      (h * h);
+  const double d2fdz2 =
+      (eval(x0, y0, z0 + h) - 2.0 * eval(x0, y0, z0) + eval(x0, y0, z0 - h)) /
+      (h * h);
+
+  return d2fdx2 + d2fdy2 + d2fdz2;
 }
 // Laplacian vector
-StaticVector<double, 3> laplacian(VectorFunction u, double x0, double y0,
-                                  double z0) {
+StaticVector<double, 3> laplacian3D(VectorFunction u, double x0, double y0,
+                                    double z0) {
   StaticVector<double, 3> uLap;
   for (int i = 0; i < 3; i++) {
     auto ui = [u, i](Dual x, Dual y, Dual z) -> Dual { return u(x, y, z)[i]; };

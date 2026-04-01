@@ -1,7 +1,7 @@
 #include "library/Matrix.h" //Approximative Comparsion
 #include "library/Vector.h"
 #include "library/clock.h"
-#include "library/dualDiffrentiation.h"
+#include "library/DualDiffrentiation.h"
 #include "vector"
 #include <cassert> // for assert
 #include <fstream> //working with files
@@ -32,15 +32,15 @@ namespace modelParameters {
 constexpr Index d{2};
 
 // Unit vectors (2D)
-Vector<double> i1{1.0, 0.0};
-Vector<double> i2{0.0, 1.0};
+DynamicVector<double> i1{1.0, 0.0};
+DynamicVector<double> i2{0.0, 1.0};
 
 // Geometry of the truss
 constexpr Index nNodes{6}; // number of nodes
 constexpr Index nBars{8};  // number of bars
 
 // Nodes now as 2D coordinates (x, z) taken from original (x, y=0, z)
-Vector<Vector<double>> nodes{
+DynamicVector<DynamicVector<double>> nodes{
     {0.0, 0.0},   // Node 0 (x=0, z=0)
     {10.0, 0.0},  // Node 1 (x=10, z=0)
     {0.0, 10.0},  // Node 2 (x=0, z=10)
@@ -49,13 +49,13 @@ Vector<Vector<double>> nodes{
     {10.0, 20.0}  // Node 5 (x=10, z=20)
 };
 // Bar connectivity: store node indices for each bar's origin and end
-Vector<Index> barOrigin{0, 2, 1, 2, 2, 3, 3, 4};
-Vector<Index> barEnd{2, 1, 3, 3, 4, 4, 5, 5};
-Vector<Vector<double>> vectorBars(nBars), unitVectorBars(nBars);
-Vector<double> lengthBars(nBars);
-Vector<Index> nodeImposed{0, 1};
-Vector<Vector<double>> displacementImposed{{0.0, 0.0}, {0.0, 0.0}};
-Vector<Index> nodeFree(nNodes - nodeImposed.size());
+DynamicVector<Index> barOrigin{0, 2, 1, 2, 2, 3, 3, 4};
+DynamicVector<Index> barEnd{2, 1, 3, 3, 4, 4, 5, 5};
+DynamicVector<DynamicVector<double>> vectorBars(nBars), unitVectorBars(nBars);
+DynamicVector<double> lengthBars(nBars);
+DynamicVector<Index> nodeImposed{0, 1};
+DynamicVector<DynamicVector<double>> displacementImposed{{0.0, 0.0}, {0.0, 0.0}};
+DynamicVector<Index> nodeFree(nNodes - nodeImposed.size());
 
 // Section dimension
 double youngModulus{25e9}; // Module Young
@@ -64,7 +64,7 @@ double A{b * h};
 double alpha{youngModulus * A};
 
 // External loads at nodes (2D): (Fx, Fz). Downward is negative z.
-Vector<Vector<double>> externalForce{
+DynamicVector<DynamicVector<double>> externalForce{
     {0.0, 0.0},      // Node 0: no force
     {0.0, 0.0},      // Node 1: no force
     {0.0, -15000.0}, // Node 2: 15kN downward (z-direction)
@@ -101,10 +101,10 @@ int main() {
 
   // Setting up
   int iteration{0};
-  Vector<double> U(nNodes * d), UImposed(nNodes * d), UFree(nNodes * d);
+  DynamicVector<double> U(nNodes * d), UImposed(nNodes * d), UFree(nNodes * d);
 
   // Identify free nodes
-  Vector<Index> nodeFree(nNodes - nodeImposed.size());
+  DynamicVector<Index> nodeFree(nNodes - nodeImposed.size());
   Index nf{0};
   bool isImposed = false;
   for (Index n{0}; n < nNodes; ++n) {
@@ -124,13 +124,13 @@ int main() {
   assert(nf == nodeFree.size() && "Mismatch in free node count");
 
   // Rigidity in small deformation configuration: N = k e (u2 - u1)
-  Vector<double> k(nBars);
+  DynamicVector<double> k(nBars);
   for (Index b{0}; b < nBars; ++b) {
     k[b] = youngModulus * A / lengthBars[b];
   }
 
   std::cout << k;
-  Vector<Matrix<double, d, d>> elementaryApplicationK(nBars);
+  DynamicVector<Matrix<double, d, d>> elementaryApplicationK(nBars);
   for (Index b{0}; b < nBars; ++b) {
     elementaryApplicationK[b] =
         k[b] * tensorProduct<d, d>(unitVectorBars[b], unitVectorBars[b]);
@@ -138,7 +138,7 @@ int main() {
   std::cout << elementaryApplicationK;
 
   // Matrix<double, 2, 2> connectivityMatrix{1.0, -1.0, -1.0, 1.0};
-  // Vector<Matrix<double, d * 2, d * 2>> elementaryK(nBars);
+  // DynamicVector<Matrix<double, d * 2, d * 2>> elementaryK(nBars);
   // for (Index b{0}; b < nBars; ++b) {
   //   elementaryK[b] =
   //       tensorProduct(connectivityMatrix, elementaryApplicationK[b]);
@@ -146,7 +146,7 @@ int main() {
   // std::cout << elementaryK;
 
   // Connectivity Matrix
-  Vector<Matrix<double, d, d * nNodes>> C(nNodes);
+  DynamicVector<Matrix<double, d, d * nNodes>> C(nNodes);
 
   const auto Id = Matrix<double, d, d>::identity();
   Matrix<double, d, d * nNodes> Ci{};
@@ -196,13 +196,13 @@ int main() {
   std::cout << std::boolalpha << (det(assemblyStiffnessK) == 0) << std::endl;
 
   // Flatting vector F
-  Vector<double> forceF(nNodes * d);
+  DynamicVector<double> forceF(nNodes * d);
   for (Index i{0}; i < forceF.size(); ++i) {
     forceF[i] = externalForce[i / d][i % d];
   }
 
   // Solve the linear system K'U' = F':
-  Vector<double> increment_displacement{
+  DynamicVector<double> increment_displacement{
       solveLinearSystem(assemblyStiffnessK, forceF)};
 
   // Print the displacement vector
@@ -214,7 +214,7 @@ int main() {
     using MatCol = Matrix<double, d * nNodes, 1>;
     MatCol Umat{increment_displacement};
     auto KU = assemblyStiffnessK * Umat; // Matrix * column matrix
-    Vector<double> KUvec = Vector<double>(KU);
+    DynamicVector<double> KUvec = DynamicVector<double>(KU);
     double maxAbsResidual{0.0};
     for (Index ii = 0; ii < KUvec.size(); ++ii) {
       double r = KUvec[ii] - forceF[ii];
@@ -226,7 +226,7 @@ int main() {
   }
 
   // // Update the position
-  // Vector<double> totalDispalcementU;
+  // DynamicVector<double> totalDispalcementU;
   // totalDispalcementU += increment_displacement;
 
   // // Saving the output
@@ -235,7 +235,7 @@ int main() {
 
   // Calculate the reaction at the end of the loop
   // Index i{0};
-  // Vector<double> reactionR{nodeImposed};
+  // DynamicVector<double> reactionR{nodeImposed};
   // for (auto n : nodeImposed) {
   //   for (int k = 0; k < 3; k++) // Encastre tous 3 directions
   //   {

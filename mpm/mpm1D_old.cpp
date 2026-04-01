@@ -51,23 +51,23 @@ double mv_p{mass_p * v_p};                 // Momentum
 double strain_rate_p{0.0}, dStrain_p{0.0}; // Momentum
 
 // Initiate needed containers
-Vector<double> nodes{};
-Vector<double> positions{};      // Analytical positions
-Vector<double> velocities{};     // Analytical velocities
-Vector<double> positions_mpm{};  // MPM positions
-Vector<double> velocities_mpm{}; // MPM velocities
-Vector<double> times{};
+DynamicVector<double> nodes{};
+DynamicVector<double> positions{};      // Analytical positions
+DynamicVector<double> velocities{};     // Analytical velocities
+DynamicVector<double> positions_mpm{};  // MPM positions
+DynamicVector<double> velocities_mpm{}; // MPM velocities
+DynamicVector<double> times{};
 // Start and end of elements, will be generated automatically in main
-Vector<Index> eleOrigin;
-Vector<Index> eleEnd;
-Vector<double> length(nElements);
-Vector<Vector<double>> element(nElements);
-Vector<Vector<std::function<double(double)>>> N(nNodes), B(nNodes);
-Vector<double> N_p(nNodes), B_p(nNodes);
-Vector<double> m_i(nNodes), v_i(nNodes), mv_i(nNodes);
+DynamicVector<Index> eleOrigin;
+DynamicVector<Index> eleEnd;
+DynamicVector<double> length(nElements);
+DynamicVector<DynamicVector<double>> element(nElements);
+DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes), B(nNodes);
+DynamicVector<double> N_p(nNodes), B_p(nNodes);
+DynamicVector<double> m_i(nNodes), v_i(nNodes), mv_i(nNodes);
 
 // Nodal external forces
-Vector<double> f_ext_i(nNodes), f_int_i(nNodes), f_total_i(nNodes);
+DynamicVector<double> f_ext_i(nNodes), f_int_i(nNodes), f_total_i(nNodes);
 
 } // namespace modelParameters
 
@@ -83,8 +83,8 @@ double position_solution(double x_loc, double t) {
 }
 
 // 0. Mesh generated function
-Vector<double> generateMesh(double a, double b, Index n) {
-  Vector<double> nodes;
+DynamicVector<double> generateMesh(double a, double b, Index n) {
+  DynamicVector<double> nodes;
   for (Index i{0}; i < n; ++i) {
     nodes.push_back((b - a) / (n - 1) * i + a);
   }

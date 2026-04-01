@@ -36,8 +36,8 @@ constexpr double h{0.0};               // Neuman
 constexpr Index nNodes{6};             // Numbers of nodes
 constexpr Index nElements{nNodes - 1}; // Numbers of elements
 // Start and end of elements, could be generate automatically
-Vector<Index> eleOrigin{0, 1, 2, 3, 4};
-Vector<Index> eleEnd{1, 2, 3, 4, 5};
+DynamicVector<Index> eleOrigin{0, 1, 2, 3, 4};
+DynamicVector<Index> eleEnd{1, 2, 3, 4, 5};
 constexpr double EA = 1.0;
 
 // Right hand side function
@@ -48,23 +48,23 @@ auto rhsFunction = [](auto x) { return 6.0 * x; };
 ////////////////////////////////////////////////////////////
 
 // Initiate needed containers
-Vector<Vector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
+DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
 Matrix<double, nNodes, nNodes> K{};
 Matrix<double, nNodes, 1> U{};
 Matrix<double, nNodes, 1> F{};
 Matrix<double, nNodes, 1> R{};
-Vector<double> nodes{};
-Vector<Vector<double>> element(nElements);
-Vector<double> k(nElements);
-Vector<double> length(nElements);
+DynamicVector<double> nodes{};
+DynamicVector<DynamicVector<double>> element(nElements);
+DynamicVector<double> k(nElements);
+DynamicVector<double> length(nElements);
 Index first_node{0};         // index of the last node
 Index last_node{nNodes - 1}; // index of the last node
 
 } // namespace modelParameters
 
 // Mesh generated function
-Vector<double> generateMesh(double a, double b, Index n) {
-  Vector<double> nodes;
+DynamicVector<double> generateMesh(double a, double b, Index n) {
+  DynamicVector<double> nodes;
   for (Index i{0}; i < n; ++i) {
     nodes.push_back((b - a) / (n - 1) * i + a);
   }

@@ -32,15 +32,15 @@ namespace modelParameters {
 constexpr Index d{3};
 
 // Unit vectors
-Vector<double> i1{1.0, 0.0, 0.0};
-Vector<double> i2{0.0, 1.0, 0.0};
-Vector<double> i3{0.0, 0.0, 1.0};
+DynamicVector<double> i1{1.0, 0.0, 0.0};
+DynamicVector<double> i2{0.0, 1.0, 0.0};
+DynamicVector<double> i3{0.0, 0.0, 1.0};
 
 // Geometry of the truss
 constexpr Index nNodes{8}; // number of nodes
 constexpr Index nBars{10}; // number of bars
 
-Vector<Vector<double>> nodes{
+DynamicVector<DynamicVector<double>> nodes{
     {0.0, 0.0, 0.0},     // Node 0
     {10.0, 0.0, 0.0},    // Node 1
     {0.0, 0.0, 10.0},    // Node 2
@@ -52,15 +52,15 @@ Vector<Vector<double>> nodes{
 
 };
 // Bar connectivity: store node indices for each bar's origin and end
-Vector<Index> barOrigin{0, 2, 3, 2, 3, 4, 6, 7, 3, 2};
-Vector<Index> barEnd{2, 3, 1, 6, 7, 6, 7, 5, 6, 7};
-Vector<Vector<double>> vectorBars(nBars), unitVectorBars(nBars);
-Vector<double> lengthBars(nBars);
-Vector<double> length0Bars(nBars);
-Vector<Index> nodeImposed{0, 1, 4, 5};
-Vector<Vector<double>> displacementImposed{
+DynamicVector<Index> barOrigin{0, 2, 3, 2, 3, 4, 6, 7, 3, 2};
+DynamicVector<Index> barEnd{2, 3, 1, 6, 7, 6, 7, 5, 6, 7};
+DynamicVector<DynamicVector<double>> vectorBars(nBars), unitVectorBars(nBars);
+DynamicVector<double> lengthBars(nBars);
+DynamicVector<double> length0Bars(nBars);
+DynamicVector<Index> nodeImposed{0, 1, 4, 5};
+DynamicVector<DynamicVector<double>> displacementImposed{
     {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-Vector<Index> nodeFree(nNodes - nodeImposed.size());
+DynamicVector<Index> nodeFree(nNodes - nodeImposed.size());
 
 // Section dimension
 double youngModulus{25e9}; // Module Young
@@ -70,7 +70,7 @@ double alpha{youngModulus * A};
 
 // External Force applying
 double forceZ{-1.5e6};
-Vector<Vector<double>> externalForce{
+DynamicVector<DynamicVector<double>> externalForce{
     {0.0, 0.0, 0.0},    // Node 0: no force
     {0.0, 0.0, 0.0},    // Node 1: no force
     {0.0, 0.0, forceZ}, // Node 2: 1.5 MN downward (z-direction)
@@ -81,18 +81,18 @@ Vector<Vector<double>> externalForce{
     {0.0, 0.0, forceZ}  // Node 7: 1.5 MN downward
 };
 // Displacement Vector
-Vector<double> U(nNodes *d), UImposed(nNodes *d), UFree(nNodes *d);
-Vector<double> totalDispalcement(nNodes *d);
+DynamicVector<double> U(nNodes *d), UImposed(nNodes *d), UFree(nNodes *d);
+DynamicVector<double> totalDispalcement(nNodes *d);
 // Axial Force inside the Bars and applying on Nodes
-Vector<Vector<double>> internalForceBar(nBars);
-Vector<Vector<double>> internalForceNodes(nNodes);
-Vector<Vector<double>> reactionR(nNodes);
+DynamicVector<DynamicVector<double>> internalForceBar(nBars);
+DynamicVector<DynamicVector<double>> internalForceNodes(nNodes);
+DynamicVector<DynamicVector<double>> reactionR(nNodes);
 Matrix<double, d * nNodes, d * nNodes> assemblyStiffnessK{};
 std::vector<int> iteration_array;
-std::vector<Vector<double>> deltaU_array;
+std::vector<DynamicVector<double>> deltaU_array;
 std::vector<double> incrementNorm_array;
 std::vector<double> residualNorm_array;
-Vector<double> k(nBars);
+DynamicVector<double> k(nBars);
 
 // Choosing non-linear Saint-Venant Kirchhoff law
 int law{1};
@@ -204,7 +204,7 @@ int main() {
     // Assemble internal force vector at nodes
     for (Index n{0}; n < nNodes; ++n) {
       internalForceNodes[n] =
-          Vector<double>::zero(d); // reset to prepare for accumulation
+          DynamicVector<double>::zero(d); // reset to prepare for accumulation
     }
     for (Index b{0}; b < nBars; ++b) {
       internalForceNodes[barEnd[b]] += internalForceBar[b];
@@ -212,18 +212,18 @@ int main() {
     }
 
     // Flatten force vectors
-    Vector<double> externalresidualForcelatten{
+    DynamicVector<double> externalresidualForcelatten{
         flatten(externalForce, nNodes, d)};
-    Vector<double> internalresidualForcelatten{
+    DynamicVector<double> internalresidualForcelatten{
         flatten(internalForceNodes, nNodes, d)};
 
     // Compute residual force : F = Fext - Fint
-    Vector<double> residualForce =
+    DynamicVector<double> residualForce =
         externalresidualForcelatten - internalresidualForcelatten;
 
     // Reaction at fixed points
     for (Index ii = 0; ii < nNodes; ++ii) {
-      reactionR[ii] = Vector<double>::zero(d);
+      reactionR[ii] = DynamicVector<double>::zero(d);
     }
 
     for (Index idx = 0; idx < nodeImposed.size(); ++idx) {
@@ -234,10 +234,10 @@ int main() {
                           externalresidualForcelatten[d * n + k];
       }
     }
-    Vector<double> reactionFlatten = flatten(reactionR, nNodes, d);
+    DynamicVector<double> reactionFlatten = flatten(reactionR, nNodes, d);
 
     // Stopping criterion: F_ext - F_int + R = 0
-    Vector<double> globalEquilibrium = residualForce + reactionFlatten;
+    DynamicVector<double> globalEquilibrium = residualForce + reactionFlatten;
     double globalEquilibriumNorm = magnitude(globalEquilibrium);
 
     // Check global force equilibrium at nodes
@@ -263,7 +263,7 @@ int main() {
       k[b] = kt(lengthBars[b], length0Bars[b]);
     }
 
-    Vector<Matrix<double, d, d>> elementaryApplicationK(nBars);
+    DynamicVector<Matrix<double, d, d>> elementaryApplicationK(nBars);
     for (Index b{0}; b < nBars; ++b) {
       elementaryApplicationK[b] =
           At(lengthBars[b], length0Bars[b]) * Matrix<double, d, d>::identity() +
@@ -271,7 +271,7 @@ int main() {
               tensorProduct<d, d>(vectorBars[b], vectorBars[b]);
     }
     //  Connectivity Matrix
-    Vector<Matrix<double, d, d * nNodes>> C(nNodes);
+    DynamicVector<Matrix<double, d, d * nNodes>> C(nNodes);
     const auto Id = Matrix<double, d, d>::identity();
     Matrix<double, d, d * nNodes> Ci{};
     for (Index n{0}; n < nNodes; ++n) {
@@ -308,7 +308,7 @@ int main() {
     }
 
     // Solve the linear system to find displacement
-    Vector<double> deltaU{solveLinearSystem(assemblyStiffnessK, residualForce)};
+    DynamicVector<double> deltaU{solveLinearSystem(assemblyStiffnessK, residualForce)};
     double incrementNorm = magnitude(deltaU);
 
     nodes += unflatten(deltaU, nNodes, d);

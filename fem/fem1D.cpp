@@ -42,8 +42,8 @@ constexpr double uniform_load{5.0};
 constexpr Index nNodes{6};             // Numbers of nodes
 constexpr Index nElements{nNodes - 1}; // Numbers of elements
 // Start and end of elements, will be generated automatically in main
-Vector<Index> eleOrigin;
-Vector<Index> eleEnd;
+DynamicVector<Index> eleOrigin;
+DynamicVector<Index> eleEnd;
 constexpr double EA = 10.0;
 
 // Right hand side function: default is uniform load `uniform_load`.
@@ -54,15 +54,15 @@ auto rhsFunction = [](auto x) { return uniform_load; };
 ////////////////////////////////////////////////////////////
 
 // Initiate needed containers
-Vector<Vector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
+DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
 Matrix<double, nNodes, nNodes> K{};
 Matrix<double, nNodes, 1> U{};
 Matrix<double, nNodes, 1> F{};
 Matrix<double, nNodes, 1> R{};
-Vector<double> nodes{};
-Vector<Vector<double>> element(nElements);
-Vector<double> k(nElements);
-Vector<double> length(nElements);
+DynamicVector<double> nodes{};
+DynamicVector<DynamicVector<double>> element(nElements);
+DynamicVector<double> k(nElements);
+DynamicVector<double> length(nElements);
 Index first_node{0};         // index of the last node
 Index last_node{nNodes - 1}; // index of the last node
 
@@ -78,8 +78,8 @@ double solution(double x) {
 }
 
 // Mesh generated function
-Vector<double> generateMesh(double a, double b, Index n) {
-  Vector<double> nodes;
+DynamicVector<double> generateMesh(double a, double b, Index n) {
+  DynamicVector<double> nodes;
   for (Index i{0}; i < n; ++i) {
     nodes.push_back((b - a) / (n - 1) * i + a);
   }
@@ -205,8 +205,8 @@ int main() {
   nodes = generateMesh(a, b, nNodes);
   std::cout << "Coordinates of nodes x_i: \n" << nodes << '\n';
   // Generate element connectivity automatically from number of nodes
-  eleOrigin = Vector<Index>();
-  eleEnd = Vector<Index>();
+  eleOrigin = DynamicVector<Index>();
+  eleEnd = DynamicVector<Index>();
   for (Index e = 0; e < nElements; ++e) {
     eleOrigin.push_back(e);
     eleEnd.push_back(e + 1);
@@ -225,16 +225,16 @@ int main() {
   // std::cout << K << std::endl;
   // std::cout << F << std::endl;
   U = solveLinearSystem(K, F);
-  std::cout << "Displacement vector U: \n" << Vector<double>(U) << std::endl;
+  std::cout << "Displacement vector U: \n" << DynamicVector<double>(U) << std::endl;
 
   // Calculate reaction forces using helper function
   calculateReactions(K_original, F_original, U);
 
-  std::cout << "Reaction force vector R: \n" << Vector<double>(R) << std::endl;
+  std::cout << "Reaction force vector R: \n" << DynamicVector<double>(R) << std::endl;
 
   {
     // Compute element axial forces (constant per linear element)
-    Vector<double> N_elem(nElements);
+    DynamicVector<double> N_elem(nElements);
     for (Index e = 0; e < nElements; ++e) {
       Index i = eleOrigin[e];
       Index j = eleEnd[e];
@@ -242,7 +242,7 @@ int main() {
     }
 
     // Assign element axial force to its two end nodes (overwrite if shared)
-    Vector<double> N_node(nNodes);
+    DynamicVector<double> N_node(nNodes);
     for (Index e = 0; e < nElements; ++e) {
       Index i = eleOrigin[e];
       Index j = eleEnd[e];

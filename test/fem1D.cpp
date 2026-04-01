@@ -30,25 +30,25 @@ constexpr double g{1.0};
 constexpr double h{1.0};
 constexpr Index nNodes{6};
 constexpr Index nElements{nNodes - 1};
-Vector<Index> eleOrigin{0, 1, 2, 3, 4};
-Vector<Index> eleEnd{1, 2, 3, 4, 5};
+DynamicVector<Index> eleOrigin{0, 1, 2, 3, 4};
+DynamicVector<Index> eleEnd{1, 2, 3, 4, 5};
 constexpr double EA = 1.0;
 
 auto rhsFunction = [](auto x) { return x; };
 
-Vector<Vector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
+DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
 Matrix<double, nNodes, nNodes> K{};
 Matrix<double, nNodes, 1> U{};
 Matrix<double, nNodes, 1> F{};
 
-Vector<Vector<double>> element(nElements);
-Vector<double> k(nElements);
-Vector<double> length(nElements);
+DynamicVector<DynamicVector<double>> element(nElements);
+DynamicVector<double> k(nElements);
+DynamicVector<double> length(nElements);
 
 } // namespace modelParameters
 
-Vector<double> generateMesh(double a, double b, Index n) {
-  Vector<double> nodes;
+DynamicVector<double> generateMesh(double a, double b, Index n) {
+  DynamicVector<double> nodes;
   for (Index i{0}; i < n; ++i) {
     nodes.push_back((b - a) / (n - 1) * i + a);
   }
@@ -63,7 +63,7 @@ int main() {
   // Equally divied
   using namespace modelParameters;
 
-  Vector<double> nodes{generateMesh(a, b, nNodes)};
+  DynamicVector<double> nodes{generateMesh(a, b, nNodes)};
   std::cout << nodes << "'\n";
 
   // Local indices within the element (0 or 1)

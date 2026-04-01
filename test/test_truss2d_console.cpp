@@ -30,23 +30,23 @@ constexpr Index nBars{2}; // 2 bars
 double a{10.0}; // Distance
 
 // Initial node positions
-Vector<Vector<double>> nodes{
+DynamicVector<DynamicVector<double>> nodes{
     {0.0, 0.0}, // Node 0: origin (fixed)
     {0.0, a},   // Node 1: top-left (fixed)
     {a, a}      // Node 2: C (initial position, will move)
 };
 
 // Bar connectivity
-Vector<Index> barOrigin{0, 1}; // Bar 0: 0->2, Bar 1: 1->2
-Vector<Index> barEnd{2, 2};
+DynamicVector<Index> barOrigin{0, 1}; // Bar 0: 0->2, Bar 1: 1->2
+DynamicVector<Index> barEnd{2, 2};
 
-Vector<Vector<double>> vectorBars(nBars), unitVectorBars(nBars);
-Vector<double> lengthBars(nBars), length0Bars(nBars);
+DynamicVector<DynamicVector<double>> vectorBars(nBars), unitVectorBars(nBars);
+DynamicVector<double> lengthBars(nBars), length0Bars(nBars);
 
 // Fixed nodes (0 and 1)
-Vector<Index> nodeImposed{0, 1};
-Vector<Vector<double>> displacementImposed{{0.0, 0.0}, {0.0, 0.0}};
-Vector<Index> nodeFree{2}; // Only node 2 is free
+DynamicVector<Index> nodeImposed{0, 1};
+DynamicVector<DynamicVector<double>> displacementImposed{{0.0, 0.0}, {0.0, 0.0}};
+DynamicVector<Index> nodeFree{2}; // Only node 2 is free
 
 // Material properties (giống console2D)
 double E{25e9};
@@ -60,17 +60,17 @@ double force{1.5e6};
 double theta{20.0};
 double thetaRadian{theta * std::numbers::pi / 180.0};
 
-Vector<Vector<double>> externalForce{
+DynamicVector<DynamicVector<double>> externalForce{
     {0.0, 0.0}, // Node 0: no force
     {0.0, 0.0}, // Node 1: no force
     {force * std::sin(thetaRadian), -force *std::cos(thetaRadian)} // Node 2
 };
 
 // State vectors
-Vector<double> totalDisplacement(nNodes *d);
-Vector<Vector<double>> internalForceBar(nBars);
-Vector<Vector<double>> internalForceNodes(nNodes);
-Vector<Vector<double>> reactionR(nNodes);
+DynamicVector<double> totalDisplacement(nNodes *d);
+DynamicVector<DynamicVector<double>> internalForceBar(nBars);
+DynamicVector<DynamicVector<double>> internalForceNodes(nNodes);
+DynamicVector<DynamicVector<double>> reactionR(nNodes);
 
 // Convergence
 int law{1}; // SVK like console2D
@@ -79,7 +79,7 @@ double epsilon{1e-8};
 int max_iteration{100};
 
 std::vector<int> iteration_array;
-std::vector<Vector<double>> deltaU_array;
+std::vector<DynamicVector<double>> deltaU_array;
 std::vector<double> incrementNorm_array;
 std::vector<double> residualNorm_array;
 } // namespace modelParameters
@@ -119,19 +119,19 @@ void setUp() {
 
   // Initialize internal force nodes with correct size
   for (Index n = 0; n < nNodes; ++n) {
-    internalForceNodes[n] = Vector<double>::zero(d);
+    internalForceNodes[n] = DynamicVector<double>::zero(d);
   }
 
   // Initialize reaction vectors with correct size
   for (Index n = 0; n < nNodes; ++n) {
-    reactionR[n] = Vector<double>::zero(d);
+    reactionR[n] = DynamicVector<double>::zero(d);
   }
 
   // Initialize bar vectors
   for (Index b = 0; b < nBars; ++b) {
-    vectorBars[b] = Vector<double>::zero(d);
-    unitVectorBars[b] = Vector<double>::zero(d);
-    internalForceBar[b] = Vector<double>::zero(d);
+    vectorBars[b] = DynamicVector<double>::zero(d);
+    unitVectorBars[b] = DynamicVector<double>::zero(d);
+    internalForceBar[b] = DynamicVector<double>::zero(d);
   }
 }
 
@@ -189,7 +189,7 @@ int main() {
       if (internalForceNodes[n].size() == d) {
         internalForceNodes[n].resetZero();
       } else {
-        internalForceNodes[n] = Vector<double>::zero(d);
+        internalForceNodes[n] = DynamicVector<double>::zero(d);
       }
     }
     for (Index b{0}; b < nBars; ++b) {
@@ -198,16 +198,16 @@ int main() {
     }
 
     // Flatten forces
-    Vector<double> externalForceFlatten{flatten(externalForce, nNodes, d)};
-    Vector<double> internalForceFlatten{flatten(internalForceNodes, nNodes, d)};
-    Vector<double> residualForce = externalForceFlatten - internalForceFlatten;
+    DynamicVector<double> externalForceFlatten{flatten(externalForce, nNodes, d)};
+    DynamicVector<double> internalForceFlatten{flatten(internalForceNodes, nNodes, d)};
+    DynamicVector<double> residualForce = externalForceFlatten - internalForceFlatten;
 
     // Calculate reactions
     for (Index ii = 0; ii < nNodes; ++ii) {
       if (reactionR[ii].size() == d) {
         reactionR[ii].resetZero();
       } else {
-        reactionR[ii] = Vector<double>::zero(d);
+        reactionR[ii] = DynamicVector<double>::zero(d);
       }
     }
     for (Index idx = 0; idx < nodeImposed.size(); ++idx) {
@@ -217,10 +217,10 @@ int main() {
             internalForceFlatten[d * n + k] - externalForceFlatten[d * n + k];
       }
     }
-    Vector<double> reactionFlatten = flatten(reactionR, nNodes, d);
+    DynamicVector<double> reactionFlatten = flatten(reactionR, nNodes, d);
 
     // Global equilibrium check
-    Vector<double> globalEquilibrium = residualForce + reactionFlatten;
+    DynamicVector<double> globalEquilibrium = residualForce + reactionFlatten;
     double globalEquilibriumNorm = magnitude(globalEquilibrium);
 
     if (globalEquilibriumNorm < epsilon) {
@@ -252,12 +252,12 @@ int main() {
     }
 
     // Build stiffness matrix
-    Vector<double> k(nBars);
+    DynamicVector<double> k(nBars);
     for (Index b{0}; b < nBars; ++b) {
       k[b] = kt(b, lengthBars[b], length0Bars[b]);
     }
 
-    Vector<Matrix<double, d, d>> elementaryApplicationK(nBars);
+    DynamicVector<Matrix<double, d, d>> elementaryApplicationK(nBars);
     for (Index b{0}; b < nBars; ++b) {
       elementaryApplicationK[b] =
           At(b, lengthBars[b], length0Bars[b]) *
@@ -267,7 +267,7 @@ int main() {
     }
 
     // Connectivity matrix
-    Vector<Matrix<double, d, d * nNodes>> C(nNodes);
+    DynamicVector<Matrix<double, d, d * nNodes>> C(nNodes);
     const auto Id = Matrix<double, d, d>::identity();
     for (Index n{0}; n < nNodes; ++n) {
       Matrix<double, d, d * nNodes> Ci{};
@@ -299,7 +299,7 @@ int main() {
     }
 
     // Solve
-    Vector<double> deltaU{solveLinearSystem(assemblyStiffnessK, residualForce)};
+    DynamicVector<double> deltaU{solveLinearSystem(assemblyStiffnessK, residualForce)};
     double incrementNorm = magnitude(deltaU);
 
     std::cout << "Iteration " << iteration

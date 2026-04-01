@@ -46,35 +46,35 @@ private:
   Mesh1D<T> m_mesh{};
 
   // Nodes n
-  Vector<T> n_mass{};
-  // Vector<T> position_n{}; // Don't get used
-  Vector<T> n_velocity{};
-  Vector<T> n_acceleration{};
-  Vector<T> n_momentum{};
-  Vector<char> n_velocityConstrained{};
-  Vector<char> n_accelerationConstrained{};
-  Vector<char> n_momentumConstrained{};
-  Vector<char> n_forceConstrained{};
+  DynamicVector<T> n_mass{};
+  // DynamicVector<T> position_n{}; // Don't get used
+  DynamicVector<T> n_velocity{};
+  DynamicVector<T> n_acceleration{};
+  DynamicVector<T> n_momentum{};
+  DynamicVector<char> n_velocityConstrained{};
+  DynamicVector<char> n_accelerationConstrained{};
+  DynamicVector<char> n_momentumConstrained{};
+  DynamicVector<char> n_forceConstrained{};
 
   // Constraint values (so constraints can be set anytime and enforced later)
-  Vector<T> n_velocityConstraintValue{};
-  Vector<T> n_accelerationConstraintValue{};
-  Vector<T> n_momentumConstraintValue{};
-  Vector<T> n_forceConstraintValue{};
-  Vector<T> n_bodyForce{}, n_tractionForce{};
+  DynamicVector<T> n_velocityConstraintValue{};
+  DynamicVector<T> n_accelerationConstraintValue{};
+  DynamicVector<T> n_momentumConstraintValue{};
+  DynamicVector<T> n_forceConstraintValue{};
+  DynamicVector<T> n_bodyForce{}, n_tractionForce{};
   // Nodal external forces
-  Vector<T> n_forceExternal{}, n_forceInternal{}, n_forceTotal{};
+  DynamicVector<T> n_forceExternal{}, n_forceInternal{}, n_forceTotal{};
 
   // Material Points p
-  Vector<T> p_volume{};   // Volume
-  Vector<T> p_mass{};     // Mass
-  Vector<T> p_position{}; // Position
-  Vector<T> p_velocity{}; // Velocity
-  Vector<T> p_momentum{}; // Momentum
-  Vector<T> p_stress{};
-  Vector<T> p_strain{};
-  Vector<T> p_strainRate{};
-  Vector<T> p_dStrain{}; // Stress + strain
+  DynamicVector<T> p_volume{};   // Volume
+  DynamicVector<T> p_mass{};     // Mass
+  DynamicVector<T> p_position{}; // Position
+  DynamicVector<T> p_velocity{}; // Velocity
+  DynamicVector<T> p_momentum{}; // Momentum
+  DynamicVector<T> p_stress{};
+  DynamicVector<T> p_strain{};
+  DynamicVector<T> p_strainRate{};
+  DynamicVector<T> p_dStrain{}; // Stress + strain
 
   static bool endsWith(const std::string &s, const std::string &suffix) {
     return s.size() >= suffix.size() &&
@@ -598,7 +598,7 @@ private:
   T m_volume{1.0}, m_volume0{1.0}; // Volume
   T m_mass{1000};                  // mass
   T m_G{0.0};                      // Gravity Acceleration
-  Vector<T> m_v0{T{}, T{}};        // Initial velocity
+  DynamicVector<T> m_v0{T{}, T{}};        // Initial velocity
 
   // Simulation properties
   T m_currentTime{0.0}; // Current time
@@ -614,37 +614,37 @@ private:
   Mesh2D<T> m_mesh{};
 
   // Nodes n
-  Vector<T> n_mass{};
-  // Vector<T> position_n{}; // Don't get used
-  Vector<Vector<T>> n_velocity{};
-  Vector<Vector<T>> n_acceleration{};
-  Vector<Vector<T>> n_momentum{};
-  Vector<Vector<T>> n_displacement{}; // Displacement
-  Vector<Matrix<T, 2, 2>> n_stress{}; // Nodal stress (optional)
+  DynamicVector<T> n_mass{};
+  // DynamicVector<T> position_n{}; // Don't get used
+  DynamicVector<DynamicVector<T>> n_velocity{};
+  DynamicVector<DynamicVector<T>> n_acceleration{};
+  DynamicVector<DynamicVector<T>> n_momentum{};
+  DynamicVector<DynamicVector<T>> n_displacement{}; // Displacement
+  DynamicVector<Matrix<T, 2, 2>> n_stress{}; // Nodal stress (optional)
 
-  Vector<Vector<char>> n_velocityConstrained{};
-  Vector<Vector<char>> n_accelerationConstrained{};
-  Vector<Vector<char>> n_momentumConstrained{};
-  Vector<Vector<char>> n_forceConstrained{};
+  DynamicVector<DynamicVector<char>> n_velocityConstrained{};
+  DynamicVector<DynamicVector<char>> n_accelerationConstrained{};
+  DynamicVector<DynamicVector<char>> n_momentumConstrained{};
+  DynamicVector<DynamicVector<char>> n_forceConstrained{};
 
   // Constraint values (so constraints can be set anytime and enforced later)
-  Vector<Vector<T>> n_velocityConstraintValue{};
-  Vector<Vector<T>> n_accelerationConstraintValue{};
-  Vector<Vector<T>> n_momentumConstraintValue{};
-  Vector<Vector<T>> n_forceConstraintValue{};
-  Vector<Vector<T>> n_bodyForce{}, n_tractionForce{};
+  DynamicVector<DynamicVector<T>> n_velocityConstraintValue{};
+  DynamicVector<DynamicVector<T>> n_accelerationConstraintValue{};
+  DynamicVector<DynamicVector<T>> n_momentumConstraintValue{};
+  DynamicVector<DynamicVector<T>> n_forceConstraintValue{};
+  DynamicVector<DynamicVector<T>> n_bodyForce{}, n_tractionForce{};
   // Nodal external forces
-  Vector<Vector<T>> n_forceExternal{}, n_forceInternal{}, n_forceTotal{};
+  DynamicVector<DynamicVector<T>> n_forceExternal{}, n_forceInternal{}, n_forceTotal{};
 
   // Material Points p
-  Vector<T> p_volume{};           // Volume
-  Vector<T> p_volume0{};          // Initial volume (for large-strain update)
-  Vector<T> p_mass{};             // Mass
-  Vector<Vector<T>> p_position{}; // Position
-  Vector<Vector<T>> p_velocity{}; // Velocity
-  Vector<Vector<T>> p_momentum{}; // Momentum
+  DynamicVector<T> p_volume{};           // Volume
+  DynamicVector<T> p_volume0{};          // Initial volume (for large-strain update)
+  DynamicVector<T> p_mass{};             // Mass
+  DynamicVector<DynamicVector<T>> p_position{}; // Position
+  DynamicVector<DynamicVector<T>> p_velocity{}; // Velocity
+  DynamicVector<DynamicVector<T>> p_momentum{}; // Momentum
 
-  Vector<Matrix<T, 2, 2>> p_stress{}, p_strain{}, p_strainRate{},
+  DynamicVector<Matrix<T, 2, 2>> p_stress{}, p_strain{}, p_strainRate{},
       p_deformGradient{}, p_dStrain{}; // Stress + strain
 
   static constexpr Index dir_x = 0;
@@ -694,34 +694,34 @@ public:
 
     // Initialize nodal vectors
     n_mass.resize(nNodes, T{});
-    // position_n.resize(nNodes, Vector<T>{});
-    n_velocity.resize(nNodes, Vector<T>{0, 0});
-    n_acceleration.resize(nNodes, Vector<T>{0, 0});
-    n_momentum.resize(nNodes, Vector<T>{0, 0});
-    n_displacement.resize(nNodes, Vector<T>{0, 0});
+    // position_n.resize(nNodes, DynamicVector<T>{});
+    n_velocity.resize(nNodes, DynamicVector<T>{0, 0});
+    n_acceleration.resize(nNodes, DynamicVector<T>{0, 0});
+    n_momentum.resize(nNodes, DynamicVector<T>{0, 0});
+    n_displacement.resize(nNodes, DynamicVector<T>{0, 0});
     n_stress.resize(nNodes, Matrix<T, 2, 2>::zero());
 
-    n_velocityConstrained.resize(nNodes, Vector<char>{0, 0});
-    n_accelerationConstrained.resize(nNodes, Vector<char>{0, 0});
-    n_momentumConstrained.resize(nNodes, Vector<char>{0, 0});
-    n_forceConstrained.resize(nNodes, Vector<char>{0, 0});
-    n_velocityConstraintValue.resize(nNodes, Vector<T>{0, 0});
-    n_accelerationConstraintValue.resize(nNodes, Vector<T>{0, 0});
-    n_momentumConstraintValue.resize(nNodes, Vector<T>{0, 0});
-    n_forceConstraintValue.resize(nNodes, Vector<T>{0, 0});
+    n_velocityConstrained.resize(nNodes, DynamicVector<char>{0, 0});
+    n_accelerationConstrained.resize(nNodes, DynamicVector<char>{0, 0});
+    n_momentumConstrained.resize(nNodes, DynamicVector<char>{0, 0});
+    n_forceConstrained.resize(nNodes, DynamicVector<char>{0, 0});
+    n_velocityConstraintValue.resize(nNodes, DynamicVector<T>{0, 0});
+    n_accelerationConstraintValue.resize(nNodes, DynamicVector<T>{0, 0});
+    n_momentumConstraintValue.resize(nNodes, DynamicVector<T>{0, 0});
+    n_forceConstraintValue.resize(nNodes, DynamicVector<T>{0, 0});
 
-    n_bodyForce.resize(nNodes, Vector<T>{0, 0});
-    n_tractionForce.resize(nNodes, Vector<T>{0, 0});
-    n_forceExternal.resize(nNodes, Vector<T>{0, 0});
-    n_forceInternal.resize(nNodes, Vector<T>{0, 0});
-    n_forceTotal.resize(nNodes, Vector<T>{0, 0});
+    n_bodyForce.resize(nNodes, DynamicVector<T>{0, 0});
+    n_tractionForce.resize(nNodes, DynamicVector<T>{0, 0});
+    n_forceExternal.resize(nNodes, DynamicVector<T>{0, 0});
+    n_forceInternal.resize(nNodes, DynamicVector<T>{0, 0});
+    n_forceTotal.resize(nNodes, DynamicVector<T>{0, 0});
 
     // Initialize MP vectors
     p_volume.resize(nMPs, m_volume / nMPs);
     p_volume0.resize(nMPs, m_volume / nMPs);
     p_mass.resize(nMPs, m_mass / nMPs); // MP's mass is constant
     p_position = m_mesh.getMPCoordsVec();
-    p_momentum.resize(nMPs, Vector<T>{0, 0}); // Compute later
+    p_momentum.resize(nMPs, DynamicVector<T>{0, 0}); // Compute later
     p_velocity.resize(nMPs, m_v0);            // Initial velocity
 
     p_stress.resize(nMPs, Matrix<T, 2, 2>::zero());
@@ -798,42 +798,42 @@ public:
                              law(dEps.yy())};
     };
   }
-  void setMPvelocity(Index p, const Vector<T> &value) { p_velocity[p] = value; }
+  void setMPvelocity(Index p, const DynamicVector<T> &value) { p_velocity[p] = value; }
   void setMPvelocity(Index p, T value) {
-    p_velocity[p] = Vector<T>{value, T{}};
+    p_velocity[p] = DynamicVector<T>{value, T{}};
   }
 
   // Setters: store constraint values + mark constrained
-  void setNodalVeloConstraint(Index i, const Vector<T> &value) {
+  void setNodalVeloConstraint(Index i, const DynamicVector<T> &value) {
     n_velocityConstraintValue[i] = value;
-    n_velocityConstrained[i] = Vector<char>{1, 1};
+    n_velocityConstrained[i] = DynamicVector<char>{1, 1};
   }
   void setNodalVeloConstraint(Index i, T value) {
-    setNodalVeloConstraint(i, Vector<T>{value, value});
+    setNodalVeloConstraint(i, DynamicVector<T>{value, value});
   }
 
-  void setNodalAccConstraint(Index i, const Vector<T> &value) {
+  void setNodalAccConstraint(Index i, const DynamicVector<T> &value) {
     n_accelerationConstraintValue[i] = value;
-    n_accelerationConstrained[i] = Vector<char>{1, 1};
+    n_accelerationConstrained[i] = DynamicVector<char>{1, 1};
   }
   void setNodalAccConstraint(Index i, T value) {
-    setNodalAccConstraint(i, Vector<T>{value, value});
+    setNodalAccConstraint(i, DynamicVector<T>{value, value});
   }
 
-  void setNodalMomentumConstraint(Index i, const Vector<T> &value) {
+  void setNodalMomentumConstraint(Index i, const DynamicVector<T> &value) {
     n_momentumConstraintValue[i] = value;
-    n_momentumConstrained[i] = Vector<char>{1, 1};
+    n_momentumConstrained[i] = DynamicVector<char>{1, 1};
   }
   void setNodalMomentumConstraint(Index i, T value) {
-    setNodalMomentumConstraint(i, Vector<T>{value, value});
+    setNodalMomentumConstraint(i, DynamicVector<T>{value, value});
   }
 
-  void setNodalForceConstraint(Index i, const Vector<T> &value) {
+  void setNodalForceConstraint(Index i, const DynamicVector<T> &value) {
     n_forceConstraintValue[i] = value;
-    n_forceConstrained[i] = Vector<char>{1, 1};
+    n_forceConstrained[i] = DynamicVector<char>{1, 1};
   }
   void setNodalForceConstraint(Index i, T value) {
-    setNodalForceConstraint(i, Vector<T>{value, value});
+    setNodalForceConstraint(i, DynamicVector<T>{value, value});
   }
 
   // Apply stored constraints to current nodal state
@@ -875,13 +875,13 @@ public:
   }
 
   // Source: https://www.geoelements.org/LearnMPM/mpm2d-column-collapse.html
-  void frictionalBC(const Vector<Index> &nodeIDs, Index dir_n,
+  void frictionalBC(const DynamicVector<Index> &nodeIDs, Index dir_n,
                     Index signDir_n) {
     Index dir_t = 1 - dir_n; // tangential diretion
     // Normal and tangential acceleration
     const Index nNodes = nodeIDs.size();
-    Vector<T> acc_n(nNodes), acc_t(nNodes), vel_t(nNodes);
-    Vector<char> moveTowardBoundary(nNodes);
+    DynamicVector<T> acc_n(nNodes), acc_t(nNodes), vel_t(nNodes);
+    DynamicVector<char> moveTowardBoundary(nNodes);
     for (Index i{0}; i < nNodes; ++i) {
       const Index nodeID = nodeIDs[i];
       acc_n[i] = n_acceleration[nodeID][dir_n];
@@ -1057,13 +1057,13 @@ public:
         // Internal force (both x and y)
         const auto [dN_dx, dN_dy] = gradientN(xi, eta, x_nodes, y_nodes);
         n_forceInternal[n1] -=
-            p_volume[p] * (p_stress[p] * Vector<T>{dN_dx[0], dN_dy[0]});
+            p_volume[p] * (p_stress[p] * DynamicVector<T>{dN_dx[0], dN_dy[0]});
         n_forceInternal[n2] -=
-            p_volume[p] * (p_stress[p] * Vector<T>{dN_dx[1], dN_dy[1]});
+            p_volume[p] * (p_stress[p] * DynamicVector<T>{dN_dx[1], dN_dy[1]});
         n_forceInternal[n3] -=
-            p_volume[p] * (p_stress[p] * Vector<T>{dN_dx[2], dN_dy[2]});
+            p_volume[p] * (p_stress[p] * DynamicVector<T>{dN_dx[2], dN_dy[2]});
         n_forceInternal[n4] -=
-            p_volume[p] * (p_stress[p] * Vector<T>{dN_dx[3], dN_dy[3]});
+            p_volume[p] * (p_stress[p] * DynamicVector<T>{dN_dx[3], dN_dy[3]});
       }
     };
 
@@ -1130,12 +1130,12 @@ public:
       const T N4 = N4_ref(xi, eta);
 
       // Update particles' velocity , position and momentum
-      const Vector<T> a_next = N1_ref(xi, eta) * n_acceleration[n1] +
+      const DynamicVector<T> a_next = N1_ref(xi, eta) * n_acceleration[n1] +
                                N2_ref(xi, eta) * n_acceleration[n2] +
                                N3_ref(xi, eta) * n_acceleration[n3] +
                                N4_ref(xi, eta) * n_acceleration[n4];
 
-      const Vector<T> v_next =
+      const DynamicVector<T> v_next =
           N1_ref(xi, eta) * n_velocity[n1] + N2_ref(xi, eta) * n_velocity[n2] +
           N3_ref(xi, eta) * n_velocity[n3] + N4_ref(xi, eta) * n_velocity[n4];
 
@@ -1150,7 +1150,7 @@ public:
       for (Index a{0}; a < 4; ++a) {
         const Index nodeID = conn[a];
         L += tensorProduct<2, 2>(n_velocity[nodeID],
-                                 Vector<T>{dN_dx[a], dN_dy[a]});
+                                 DynamicVector<T>{dN_dx[a], dN_dy[a]});
       }
       // // Strain rate from nodal velocities (small strain)
       // p_strainRate[p] = Matrix<T, 2, 2>::zero();
@@ -1200,11 +1200,11 @@ public:
         const Matrix<T, 3, 3> D = elasticityMatrix(m_E, m_nu, "planeStrain");
         const auto [alpha, k] = druckerPrager(m_phi, m_c);
 
-        const Vector<T> stress_n{p_stress[p].xx(), p_stress[p].yy(),
+        const DynamicVector<T> stress_n{p_stress[p].xx(), p_stress[p].yy(),
                                  p_stress[p].xy()};
-        const Vector<T> strain_n{p_strain[p].xx(), p_strain[p].yy(),
+        const DynamicVector<T> strain_n{p_strain[p].xx(), p_strain[p].yy(),
                                  p_strain[p].xy()};
-        const Vector<T> strain_increment{p_dStrain[p].xx(), p_dStrain[p].yy(),
+        const DynamicVector<T> strain_increment{p_dStrain[p].xx(), p_dStrain[p].yy(),
                                          p_dStrain[p].xy()};
 
         const auto [stress_updated, strain_updated, _delta_lambda] =

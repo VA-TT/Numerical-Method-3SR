@@ -13,7 +13,7 @@
 // Lagrange basis at x : l_i(x)
 // N_i(x) = l_i(x) = Product((x - x_i) / (x_i - x_j))
 template <typename T>
-T basisLagrange(Index i, const Vector<double> &data_x, T x) {
+T basisLagrange(Index i, const DynamicVector<double> &data_x, T x) {
   T l_i{1.0};
   for (Index j{0}; j < data_x.size(); ++j) {
     if (j != i)
@@ -26,8 +26,8 @@ T basisLagrange(Index i, const Vector<double> &data_x, T x) {
 // Make interpolation templated in evaluation type T so it works with Dual
 // numbers produced by automatic differentiation.
 template <typename T>
-T interpolatePolynomial(const Vector<double> &data_x,
-                        const Vector<double> &data_y, T x) {
+T interpolatePolynomial(const DynamicVector<double> &data_x,
+                        const DynamicVector<double> &data_y, T x) {
   assert(data_x.size() == data_y.size() &&
          "Size of data x and y must matched!");
   T y{0.0};
@@ -47,9 +47,9 @@ double chebyShevNode(int k, int n, double a, double b) {
 
 // int main() {
 
-//   Vector<double> data_x{0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+//   DynamicVector<double> data_x{0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
 
-//   Vector<double> data_y{0.0, 0.8415, 0.9093, 0.1411, -0.7568, -0.9589,
+//   DynamicVector<double> data_y{0.0, 0.8415, 0.9093, 0.1411, -0.7568, -0.9589,
 //   -0.2794};
 
 //   std::cout << std::fixed << std::setprecision(6);

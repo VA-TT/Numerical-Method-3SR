@@ -10,8 +10,8 @@ int main() {
 
   auto run_for_n = [&](int n) {
     int nodes = n + 1; // degree n => n+1 nodes
-    Vector<double> xs(nodes);
-    Vector<double> ys(nodes);
+    DynamicVector<double> xs(nodes);
+    DynamicVector<double> ys(nodes);
     for (int k = 0; k < nodes; ++k) {
       double x = std::cos(M_PI * k /
                           double(n)); // Chebyshev-Gauss-Lobatto nodes in [-1,1]

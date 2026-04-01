@@ -1,5 +1,5 @@
-#ifndef MY_NEWTON_RAPHSON_ROOT
-#define MY_NEWTON_RAPHSON_ROOT
+#ifndef MY_NEWTON_RAPHSON_ROOT_H
+#define MY_NEWTON_RAPHSON_ROOT_H
 
 #include "DualDiffrentiation.h"
 #include <algorithm>

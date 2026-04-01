@@ -2,7 +2,7 @@
 #include <cassert>
 #include <iostream>
 
-static bool contains(const Vector<Index> &ids, Index v) {
+static bool contains(const DynamicVector<Index> &ids, Index v) {
   for (Index i = 0; i < ids.size(); ++i) {
     if (ids[i] == v)
       return true;

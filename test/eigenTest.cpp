@@ -7,12 +7,12 @@
 
 using Index = std::ptrdiff_t;
 
-template <Index N>
-double residualNorm2(const Matrix<double, N, N> &A, const Vector<double> &v,
+template <Index N, typename Vec>
+double residualNorm2(const Matrix<double, N, N> &A, const Vec &v,
                      double lambda) {
   const Matrix<double, N, 1> vc(v);
   const Matrix<double, N, 1> rc = (A * vc) - (lambda * vc);
-  const Vector<double> r = static_cast<Vector<double>>(rc);
+  const DynamicVector<double> r = static_cast<DynamicVector<double>>(rc);
   double s = 0.0;
   for (Index i = 0; i < r.size(); ++i)
     s += r[i] * r[i];
@@ -48,7 +48,7 @@ void printEigenReport(const Matrix<double, N, N> &A, const char *label) {
 
   std::cout << "Residual norms ||A v_i - lambda_i v_i||_2:" << std::endl;
   for (Index i = 0; i < N; ++i) {
-    const Vector<double> vi = V.getColVector(i);
+    const auto vi = V.getColVector(i);
     std::cout << std::setprecision(6) << residualNorm2(A, vi, eigvals[i])
               << " ";
   }

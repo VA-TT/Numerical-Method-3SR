@@ -3,8 +3,8 @@
 
 int main() {
   // Test rectangle element: (0,0), (2,0), (2,1), (0,1)
-  Vector<double> x_nodes = {0.0, 2.0, 2.0, 0.0};
-  Vector<double> y_nodes = {0.0, 0.0, 1.0, 1.0};
+  DynamicVector<double> x_nodes = {0.0, 2.0, 2.0, 0.0};
+  DynamicVector<double> y_nodes = {0.0, 0.0, 1.0, 1.0};
 
   std::cout << std::fixed << std::setprecision(6);
   std::cout << "=== Test parentElement.h Functions ===" << '\n';

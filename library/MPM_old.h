@@ -40,23 +40,23 @@ private:
   Mesh1D<T> m_mesh{};
 
   // Nodes n
-  Vector<T> mass_n{};
-  // Vector<T> position_n{}; // Don't get used
-  Vector<T> velocity_n{};
-  Vector<T> acceleration_n{};
-  Vector<T> momentum_n{};
-  Vector<T> bodyForce_n{}, tractionForce_n{};
+  DynamicVector<T> mass_n{};
+  // DynamicVector<T> position_n{}; // Don't get used
+  DynamicVector<T> velocity_n{};
+  DynamicVector<T> acceleration_n{};
+  DynamicVector<T> momentum_n{};
+  DynamicVector<T> bodyForce_n{}, tractionForce_n{};
   // Nodal external forces
-  Vector<double> forceExternal_n{}, forceInternal_n{}, totalForce_n{};
+  DynamicVector<double> forceExternal_n{}, forceInternal_n{}, totalForce_n{};
 
   // Material Points p
-  Vector<Index> mp_element_id{}; // Cached element ID
-  Vector<T> volume_p{};          // Volume
-  Vector<T> mass_p{};            // Mass
-  Vector<T> position_p{};        // Position
-  Vector<T> velocity_p{};        // Velocity
-  Vector<T> momentum_p{};        // Momentum
-  Vector<T> stress_p{}, strain_p{}, strain_rate_p{},
+  DynamicVector<Index> mp_element_id{}; // Cached element ID
+  DynamicVector<T> volume_p{};          // Volume
+  DynamicVector<T> mass_p{};            // Mass
+  DynamicVector<T> position_p{};        // Position
+  DynamicVector<T> velocity_p{};        // Velocity
+  DynamicVector<T> momentum_p{};        // Momentum
+  DynamicVector<T> stress_p{}, strain_p{}, strain_rate_p{},
       dStrain_p{}; // Stress + strain
 
 public:

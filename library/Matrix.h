@@ -561,7 +561,7 @@ public:
   }
 
   // Convert a Matrix type to a Vector type by using Constructor
-  Matrix(const Vector<T> &vec) {
+  Matrix(const DynamicVector<T> &vec) {
     static_assert(nCols == 1, "Can only construct column matrix from Vector");
     if (vec.size() != nRows)
       throw std::invalid_argument("Vector size must match matrix rows");
@@ -569,17 +569,17 @@ public:
       (*this)(i, 0) = vec[i];
   }
 
-  // Matrix(const StaticVector<T, nRows> &vec) {
-  //   static_assert(nCols == 1,
-  //                 "Can only construct column matrix from Vector (static)");
-  //   for (Index i = 0; i < nRows; ++i)
-  //     (*this)(i, 0) = vec[i];
-  // }
+  Matrix(const StaticVector<T, nRows> &vec) {
+    static_assert(nCols == 1,
+                  "Can only construct column matrix from Vector (static)");
+    for (Index i = 0; i < nRows; ++i)
+      (*this)(i, 0) = vec[i];
+  }
 
   // Type conversion from Matrix to Vector
-  operator Vector<T>() const {
+  operator DynamicVector<T>() const {
     static_assert(nCols == 1, "Can only convert column matrix to Vector");
-    Vector<T> result;
+    DynamicVector<T> result;
     result.resize(nRows);
     for (Index i = 0; i < nRows; ++i) {
       result[i] = (*this)(i, 0);
@@ -587,26 +587,25 @@ public:
     return result;
   }
 
-  // operator StaticVector<T, nRows>() const {
-  //   static_assert(nCols == 1, "Can only convert column matrix to Vector");
-  //   StaticVector<T, nRows> result;
-  //   for (Index i = 0; i < nRows; ++i) {
-  //     result[i] = (*this)(i, 0);
-  //   }
-  //   return result;
-  // }
+  operator StaticVector<T, nRows>() const {
+    static_assert(nCols == 1, "Can only convert column matrix to Vector");
+    StaticVector<T, nRows> result;
+    for (Index i = 0; i < nRows; ++i) {
+      result[i] = (*this)(i, 0);
+    }
+    return result;
+  }
 
-  Vector<T> getColVector(Index j) const {
-    Vector<T> v(nRows);
+  StaticVector<T, nRows> getColVector(Index j) const {
+    StaticVector<T, nRows> v{};
     for (Index i = 0; i < nRows; ++i)
       v[i] = (*this)(i, j);
     return v;
   }
 
-  StaticVector<Matrix, 2> symmetricDecomposition const() {
-    return {
-      0.5 * (*this + this->transpose()), 0.5 * (*this - this->transpose())
-    }
+  StaticVector<Matrix<T, nRows, nCols>, 2> symmetricDecomposition() const {
+    return {0.5 * ((*this) + this->transpose()),
+            0.5 * ((*this) - this->transpose())};
   }
 
   // StaticVector<T, nRows> getColVector(Index j) const {
@@ -618,7 +617,8 @@ public:
 
   // How about static Vector
   // Real Eigenvalues and their Eigen Vectors for symmetric matrices:: AX = kX
-  std::pair<Vector<T>, Matrix> eigen(Index maxIterations = 1000) const {
+  std::pair<StaticVector<T, nRows>, Matrix>
+  eigen(Index maxIterations = 1000) const {
     const bool symmetric = this->isSymmetric();
 
     // Phase 1: QR iteration to estimate eigenvalues.
@@ -641,7 +641,7 @@ public:
                 << '\n';
     }
 
-    Vector<T> eigenValues(nRows);
+    StaticVector<T, nRows> eigenValues{};
     for (Index i = 0; i < nRows; ++i)
       eigenValues[i] = A_qr(i, i);
 
@@ -656,7 +656,7 @@ public:
       for (Index j = 0; j < nRows; ++j) {
         const T mu0 = eigenValues[j];
 
-        Vector<T> x(nRows);
+        StaticVector<T, nRows> x{};
         for (Index i = 0; i < nRows; ++i)
           x[i] = static_cast<T>(Random::get(-10, 10));
 
@@ -665,14 +665,14 @@ public:
           x[0] = T{1};
         x = x / magnitude(x);
 
-        Vector<T> xPrev = Vector<T>::zero(nRows);
+        StaticVector<T, nRows> xPrev = StaticVector<T, nRows>::zero();
 
         for (Index invIter = 0; invIter < maxIterations; ++invIter) {
           if (magnitude(x - xPrev) < tol)
             break;
           xPrev = x;
 
-          Vector<T> y;
+          StaticVector<T, nRows> y{};
           bool solved = false;
 
           for (int attempt = 0; attempt < 4 && !solved; ++attempt) {
@@ -734,7 +734,7 @@ public:
     Matrix result{};
     auto [eigvals, V] = this->eigen();
     for (Index i{0}; i < eigvals.size(); ++i) {
-      const Vector<T> v = V.getColVector(i);
+      const StaticVector<T, nRows> v = V.getColVector(i);
       result += std::pow(eigvals[i], pow) * tensorProduct<nRows, nRows>(v, v);
     }
     return result;
@@ -759,13 +759,14 @@ QRdecomposition(const Matrix<T, nRows, nCols> &A) {
   for (Index j{0}; j < nCols - 1; ++j) // Except the last column
   {
     const Index subSize{nCols - j};
-    Vector<T> a1(subSize);
-    Vector<T> b1(subSize);
+    DynamicVector<T> a1(subSize);
+    DynamicVector<T> b1(subSize);
     b1[0] = T{1.0}; // basis vector
     for (Index i = j; i < nRows; ++i) {
       a1[i - j] = R(i, j);
     }
-    Vector<T> n = normalize(a1 - (-sgn(a1[0])) * magnitude(a1) * b1); // n = û
+    DynamicVector<T> n =
+        normalize(a1 - (-sgn(a1[0])) * magnitude(a1) * b1); // n = û
 
     // Build full Householder matrix P = I - 2 n n^T (embedded in nRows x
     // nCols)
@@ -839,21 +840,25 @@ Matrix<T, R1, 1> solveLinearSystem(const Matrix<T, R1, C1> &A,
 
 // Solve Ax = B by taking x = A.inverse()*B
 template <typename T, Index R1, Index C1>
-Vector<T> solveLinearSystem(const Matrix<T, R1, C1> &A, const Vector<T> &B) {
+DynamicVector<T> solveLinearSystem(const Matrix<T, R1, C1> &A,
+                                   const DynamicVector<T> &B) {
   Matrix<T, R1, 1> Bmatrix{B};
   Matrix<T, R1, C1> inverseA{A.inverse()};
   Matrix<T, R1, 1> result{inverseA * Bmatrix};
-  return Vector<T>(result);
+  return DynamicVector<T>(result);
 }
 
-// template <typename T, Index R1, Index C1>
-// StaticVector<T, R1> solveLinearSystem(const Matrix<T, R1, C1> &A,
-//                                       const StaticVector<T, R1> &B) {
-//   Matrix<T, R1, 1> Bmatrix{B};
-//   Matrix<T, R1, C1> inverseA{A.inverse()};
-//   Matrix<T, R1, 1> result{inverseA * Bmatrix};
-//   return StaticVector<T, R1>(result);
-// }
+template <typename T, Index R1, Index C1>
+StaticVector<T, R1> solveLinearSystem(const Matrix<T, R1, C1> &A,
+                                      const StaticVector<T, R1> &B) {
+  Matrix<T, R1, 1> Bmatrix{};
+  for (Index i = 0; i < R1; ++i)
+    Bmatrix(i, 0) = B[i];
+
+  Matrix<T, R1, C1> inverseA{A.inverse()};
+  Matrix<T, R1, 1> result{inverseA * Bmatrix};
+  return static_cast<StaticVector<T, R1>>(result);
+}
 
 // Matrix multiplication
 template <typename T, Index R1, Index C1, Index R2, Index C2>
@@ -870,22 +875,22 @@ Matrix<T, R1, C2> operator*(const Matrix<T, R1, C1> &m1,
 
 // Matrix-vector multiplication (m * v)
 template <typename T, Index R, Index C>
-Vector<T> operator*(const Matrix<T, R, C> &m, const Vector<T> &v) {
+DynamicVector<T> operator*(const Matrix<T, R, C> &m,
+                           const DynamicVector<T> &v) {
   assert(v.size() == C && "Vector size must match matrix column count.");
   const Matrix<T, C, 1> col{v};
   const Matrix<T, R, 1> result = m * col;
-  return static_cast<Vector<T>>(result); // uses Matrix::operator Vector<T>()
+  return static_cast<DynamicVector<T>>(
+      result); // uses Matrix::operator DynamicVector<T>()
 }
 
-// template <typename T, Index R, Index C>
-// StaticVector<T, R> operator*(const Matrix<T, R, C> &m,
-//                              const StaticVector<T, R> &v) {
-//   assert(v.size() == C && "Vector size must match matrix column count.");
-//   const Matrix<T, C, 1> col{v};
-//   const Matrix<T, R, 1> result = m * col;
-//   return static_cast<StaticVector<T, R>>(
-//       result); // uses Matrix::operator Vector<T, R>()
-// }
+template <typename T, Index R, Index C>
+StaticVector<T, R> operator*(const Matrix<T, R, C> &m,
+                             const StaticVector<T, C> &v) {
+  const Matrix<T, C, 1> col{v};
+  const Matrix<T, R, 1> result = m * col;
+  return static_cast<StaticVector<T, R>>(result);
+}
 
 // Orthogonal bool function
 template <typename T, Index R1, Index C1, Index R2, Index C2>
@@ -972,7 +977,8 @@ T det(const Matrix<T, nRows, nCols> &m) {
 
 // Tensor Product function with explicit template parameters for vectors
 template <typename T, Index R, Index C>
-Matrix<T, R, C> tensorProduct(const Vector<T> &v1, const Vector<T> &v2) {
+Matrix<T, R, C> tensorProduct(const DynamicVector<T> &v1,
+                              const DynamicVector<T> &v2) {
   // Runtime validation
   if (v1.size() != R || v2.size() != C) {
     throw std::invalid_argument("Vector sizes must match template parameters");
@@ -987,23 +993,30 @@ Matrix<T, R, C> tensorProduct(const Vector<T> &v1, const Vector<T> &v2) {
   return result;
 }
 
-// template <typename T, Index R, Index C, Index n>
-// Matrix<T, R, C> tensorProduct(const StaticVector<T, n> &v1,
-//                               const StaticVector<T, n> &v2) {
-//   // Runtime validation
-//   if (n != R || n != C) {
-//     throw std::invalid_argument("Vector sizes must match template
-//     parameters");
-//   }
+// Backward-compatible overload for calls like tensorProduct<2, 2>(v1, v2)
+template <Index R, Index C, typename T>
+Matrix<T, R, C> tensorProduct(const DynamicVector<T> &v1,
+                              const DynamicVector<T> &v2) {
+  return tensorProduct<T, R, C>(v1, v2);
+}
 
-//   Matrix<T, R, C> result{};
-//   for (Index i = 0; i < R; ++i) {
-//     for (Index j = 0; j < C; ++j) {
-//       result(i, j) = v1[i] * v2[j];
-//     }
-//   }
-//   return result;
-// }
+template <typename T, Index R, Index C>
+Matrix<T, R, C> tensorProduct(const StaticVector<T, R> &v1,
+                              const StaticVector<T, C> &v2) {
+  Matrix<T, R, C> result{};
+  for (Index i = 0; i < R; ++i) {
+    for (Index j = 0; j < C; ++j) {
+      result(i, j) = v1[i] * v2[j];
+    }
+  }
+  return result;
+}
+
+template <Index R, Index C, typename T>
+Matrix<T, R, C> tensorProduct(const StaticVector<T, R> &v1,
+                              const StaticVector<T, C> &v2) {
+  return tensorProduct<T, R, C>(v1, v2);
+}
 
 template <typename T, Index R1, Index C1, Index R2, Index C2>
 Matrix<T, R1 * R2, C1 * C2> tensorProduct(const Matrix<T, R1, C1> &A,

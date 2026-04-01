@@ -83,6 +83,6 @@ int main() {
             << std::endl;
   std::cout << "Angle entre direction principal et x: "
             << angleDegree(principalDirection.getColVector(0),
-                           Vector<double>{1.0, 0.0})
+                           StaticVector<double, 2>{1.0, 0.0})
             << "\n";
 }

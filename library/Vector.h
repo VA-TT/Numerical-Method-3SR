@@ -17,42 +17,50 @@
 using Index = std::ptrdiff_t; // typedef
 constexpr Index dynamic = -1;
 
+template <typename T, Index n> class StaticVector;
+
 ///////////////////////////////////////////////////
 /////////////// DYNAMIC CLASS VECTOR //////////////
 ///////////////////////////////////////////////////
 
 // Consider integrated to Class (dynamic+static) into 1 by using is_static flag
-// template <typename T, Index n = dynamic> class Vector {}
+// template <typename T, Index n = dynamic> class DynamicVector {}
 // static constexpr bool is_static = (n != Dynamic);
-// if constexpr (Vector<T, n>::is_static) {
+// if constexpr (DynamicVector<T, n>::is_static) {
 //   // vector static
 // } else {
 //   // vector dynamic
 // }
-template <typename T> class Vector {
+template <typename T> class DynamicVector {
 private:
   std::vector<T> m_elements{};
 
 public:
   // Default Constructors
-  Vector() = default;
-  Vector(const Vector &) = default;
-  Vector(Vector &&) = default;
-  Vector &operator=(const Vector &) = default;
-  Vector &operator=(Vector &&) = default;
-  ~Vector() = default;
+  DynamicVector() = default;
+  DynamicVector(const DynamicVector &) = default;
+  DynamicVector(DynamicVector &&) = default;
+  DynamicVector &operator=(const DynamicVector &) = default;
+  DynamicVector &operator=(DynamicVector &&) = default;
+  ~DynamicVector() = default;
 
   // Constructor with length n of elements which are 0
-  explicit Vector(std::size_t n) : m_elements(n, T{}) {}
+  explicit DynamicVector(std::size_t n) : m_elements(n, T{}) {}
 
   // // Constructor with length n of elements which are value
-  Vector(std::size_t n, const T &value) : m_elements(n, value) {}
+  DynamicVector(std::size_t n, const T &value) : m_elements(n, value) {}
 
   // Constructor with initializer_list
-  Vector(std::initializer_list<T> list) : m_elements(list) {}
+  DynamicVector(std::initializer_list<T> list) : m_elements(list) {}
 
-  // Vector 0
-  static Vector<T> zero(Index n) { return Vector<T>(n); }
+  template <Index n> explicit DynamicVector(const StaticVector<T, n> &v) {
+    m_elements.resize(static_cast<std::size_t>(n));
+    for (Index i = 0; i < n; ++i)
+      m_elements[static_cast<std::size_t>(i)] = v[i];
+  }
+
+  // DynamicVector 0
+  static DynamicVector<T> zero(Index n) { return DynamicVector<T>(n); }
 
   // Reset all value to 0 default
   void resetZero() {
@@ -161,13 +169,19 @@ public:
   }
 
   // Print
-  friend std::ostream &operator<<(std::ostream &os, const Vector<T> &v) {
+  friend std::ostream &operator<<(std::ostream &os, const DynamicVector<T> &v) {
     os << "[";
     for (Index i = 0; i < v.size(); ++i) {
-      if (approximatelyEqualAbsRel(v[i], T{0}))
-        os << T{0};
-      else
+      if constexpr (requires(const T &x) {
+                      approximatelyEqualAbsRel(x, T{0});
+                    }) {
+        if (approximatelyEqualAbsRel(v[i], T{0}))
+          os << T{0};
+        else
+          os << v[i];
+      } else {
         os << v[i];
+      }
       if (i < v.size() - 1)
         os << ", ";
     }
@@ -176,7 +190,7 @@ public:
   }
 
   //+= operator
-  Vector &operator+=(const Vector<T> &other) {
+  DynamicVector &operator+=(const DynamicVector<T> &other) {
     if (this->size() != other.size())
       throw std::invalid_argument(
           "Vectors must have the same dimension for operator+=.");
@@ -185,11 +199,13 @@ public:
     return *this;
   }
 
-  Vector &operator-=(const Vector<T> &other) { return *this += -other; }
+  DynamicVector &operator-=(const DynamicVector<T> &other) {
+    return *this += -other;
+  }
 
   // Projection on another vector
-  Vector projection(const Vector &other) const {
-    Vector unit{normalize(other)};
+  DynamicVector projection(const DynamicVector &other) const {
+    DynamicVector unit{normalize(other)};
     return unit * dotProduct(*this, unit);
   }
 
@@ -205,17 +221,25 @@ public:
   }
 
   // Return a sorted copy. Default: descending order.
-  Vector sorted(bool descending = true) const {
-    Vector copy = *this;
+  DynamicVector sorted(bool descending = true) const {
+    DynamicVector copy = *this;
     copy.sort(descending);
     return copy;
+  }
+
+  template <Index n> DynamicVector &operator=(const StaticVector<T, n> &v) {
+    m_elements.resize(static_cast<std::size_t>(n));
+    for (Index i = 0; i < n; ++i)
+      m_elements[i] = v[i];
+    return *this;
   }
 };
 
 ////////////////// END OF VECTOR CLASS /////////////////////////////
-// Vector operators
+
+// DynamicVector operators
 template <typename T>
-bool operator==(const Vector<T> &v1, const Vector<T> &v2) {
+bool operator==(const DynamicVector<T> &v1, const DynamicVector<T> &v2) {
   if (v1.size() != v2.size())
     return false;
   for (Index i = 0; i < v1.size(); ++i) {
@@ -226,60 +250,66 @@ bool operator==(const Vector<T> &v1, const Vector<T> &v2) {
 }
 
 template <typename T>
-bool operator!=(const Vector<T> &v1, const Vector<T> &v2) {
+bool operator!=(const DynamicVector<T> &v1, const DynamicVector<T> &v2) {
   return !(v1 == v2);
 }
 
 template <typename T>
-Vector<T> operator+(const Vector<T> &v1, const Vector<T> &v2) {
+DynamicVector<T> operator+(const DynamicVector<T> &v1,
+                           const DynamicVector<T> &v2) {
   if (v1.size() != v2.size())
     throw std::invalid_argument("Vectors must have the same dimension.");
 
-  Vector<T> result(v1.size());
+  DynamicVector<T> result(v1.size());
   for (Index i = 0; i < v1.size(); ++i)
     result[i] = v1[i] + v2[i];
   return result;
 }
 
 // Scalar multiplication (scalar * vector)
-template <typename T> Vector<T> operator*(const T &k, const Vector<T> &v) {
-  Vector<T> result(v.size());
+template <typename T>
+DynamicVector<T> operator*(const T &k, const DynamicVector<T> &v) {
+  DynamicVector<T> result(v.size());
   for (Index i = 0; i < v.size(); ++i)
     result[i] = k * v[i];
   return result;
 }
 
 // Scalar multiplication (vector * scalar)
-template <typename T> Vector<T> operator*(const Vector<T> &v, const T &k) {
+template <typename T>
+DynamicVector<T> operator*(const DynamicVector<T> &v, const T &k) {
   return k * v;
 }
 
 // Element-wise multiplication
 template <typename T>
-Vector<T> operator*(const Vector<T> &v1, const Vector<T> &v2) {
+DynamicVector<T> operator*(const DynamicVector<T> &v1,
+                           const DynamicVector<T> &v2) {
   assert(v1.size() == v2.size() && "Can't perfom element-wised mulplication "
                                    "on 2 different-sized vectors!");
-  Vector<T> result(v1.size());
+  DynamicVector<T> result(v1.size());
   for (Index i = 0; i < v1.size(); ++i)
     result[i] = v1[i] * v2[i];
   return result;
 }
 
 // Unary minus
-template <typename T> Vector<T> operator-(const Vector<T> &v) {
+template <typename T> DynamicVector<T> operator-(const DynamicVector<T> &v) {
   return T{-1} * v;
 }
 
 // Scalar multiplication (vector / scalar)
-template <typename T> Vector<T> operator/(const Vector<T> &v, const T &k) {
+template <typename T>
+DynamicVector<T> operator/(const DynamicVector<T> &v, const T &k) {
   assert(!approximatelyEqualAbsRel(k, T{0}) &&
          "Can't divide by a number approximate to 0.");
   return v * (T{1} / k);
 }
 
 // Scalar divide (scalar/vector)
-template <typename T> Vector<T> operator/(const T &k, const Vector<T> &v) {
-  Vector<T> result(v.size());
+template <typename T>
+DynamicVector<T> operator/(const T &k, const DynamicVector<T> &v) {
+  DynamicVector<T> result(v.size());
   for (Index i = 0; i < v.size(); ++i) {
     assert(!approximatelyEqualAbsRel(v[i], T{}) && "Division by zero!");
     result[i] = k / v[i];
@@ -289,20 +319,23 @@ template <typename T> Vector<T> operator/(const T &k, const Vector<T> &v) {
 
 // Element-wised divide
 template <typename T>
-Vector<T> operator/(const Vector<T> &v1, const Vector<T> &v2) {
+DynamicVector<T> operator/(const DynamicVector<T> &v1,
+                           const DynamicVector<T> &v2) {
   assert(v1.size() == v2.size() &&
          "Can't perfom element-wised division on 2 different-sized vectors!");
   return v1 * (T{1} / v2);
 }
 
-// Vector subtraction
+// DynamicVector subtraction
 template <typename T>
-Vector<T> operator-(const Vector<T> &v1, const Vector<T> &v2) {
+DynamicVector<T> operator-(const DynamicVector<T> &v1,
+                           const DynamicVector<T> &v2) {
   return v1 + (-v2);
 }
 
 // Dot product
-template <typename T> T dotProduct(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T>
+T dotProduct(const DynamicVector<T> &v1, const DynamicVector<T> &v2) {
   if (v1.size() != v2.size())
     throw std::invalid_argument("Vectors must have the same dimension.");
 
@@ -314,12 +347,13 @@ template <typename T> T dotProduct(const Vector<T> &v1, const Vector<T> &v2) {
 
 // Cross product (3D)
 template <typename T>
-Vector<T> crossProduct(const Vector<T> &v1, const Vector<T> &v2) {
+DynamicVector<T> crossProduct(const DynamicVector<T> &v1,
+                              const DynamicVector<T> &v2) {
   if (v1.size() != 3 || v2.size() != 3)
     throw std::invalid_argument(
         "Cross product is only defined for 3D vectors.");
   // Method 1
-  Vector<T> result(3);
+  DynamicVector<T> result(3);
   result[0] = v1[1] * v2[2] - v1[2] * v2[1];
   result[1] = v1[2] * v2[0] - v1[0] * v2[2];
   result[2] = v1[0] * v2[1] - v1[1] * v2[0];
@@ -328,13 +362,14 @@ Vector<T> crossProduct(const Vector<T> &v1, const Vector<T> &v2) {
 
 // Cross product (3D) - Method 2 using Levi-Civita
 template <typename T>
-Vector<T> crossProduct2(const Vector<T> &v1, const Vector<T> &v2) {
+DynamicVector<T> crossProduct2(const DynamicVector<T> &v1,
+                               const DynamicVector<T> &v2) {
   if (v1.size() != 3 || v2.size() != 3)
     throw std::invalid_argument(
         "Cross product is only defined for 3D vectors.");
 
   // Method 2: Using Levi-Civita symbol
-  Vector<T> result(3);
+  DynamicVector<T> result(3);
   for (Index i = 0; i < 3; ++i) {
     result[i] = T{0}; // Initialize to zero
     for (Index j = 0; j < 3; ++j) {
@@ -346,13 +381,13 @@ Vector<T> crossProduct2(const Vector<T> &v1, const Vector<T> &v2) {
   return result;
 }
 
-// Vector magnitude/norm
-template <typename T> T magnitude(const Vector<T> &v) {
+// DynamicVector magnitude/norm
+template <typename T> T magnitude(const DynamicVector<T> &v) {
   return std::sqrt(dotProduct(v, v));
 }
 
 // Normalize to Unit vector
-template <typename T> Vector<T> normalize(const Vector<T> &v) {
+template <typename T> DynamicVector<T> normalize(const DynamicVector<T> &v) {
   T mag = magnitude(v);
   if (approximatelyEqualAbsRel(mag, T{0}))
     throw std::invalid_argument("Cannot normalize zero vector.");
@@ -360,34 +395,37 @@ template <typename T> Vector<T> normalize(const Vector<T> &v) {
 }
 
 // Angle functions
-template <typename T> T angleRad(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T>
+T angleRad(const DynamicVector<T> &v1, const DynamicVector<T> &v2) {
   return std::acos(dotProduct(v1, v2) / (magnitude(v1) * magnitude(v2)));
 }
 
-template <typename T> T angleDegree(const Vector<T> &v1, const Vector<T> &v2) {
+template <typename T>
+T angleDegree(const DynamicVector<T> &v1, const DynamicVector<T> &v2) {
   return angleRad(v1, v2) * T{180} / T{constants::pi};
 }
 
 template <typename T>
-bool isPerpendicular(const Vector<T> &v1, const Vector<T> &v2) {
+bool isPerpendicular(const DynamicVector<T> &v1, const DynamicVector<T> &v2) {
   return approximatelyEqualAbsRel(dotProduct(v1, v2), T{});
 }
 
 template <typename T>
-bool isParallel(const Vector<T> &v1, const Vector<T> &v2) {
+bool isParallel(const DynamicVector<T> &v1, const DynamicVector<T> &v2) {
   return approximatelyEqualAbsRel(magnitude(crossProduct(v1, v2)), T{});
 }
 
 // flatten: 2D -> 1D (row-major)
 template <typename T>
-Vector<T> flatten(const Vector<Vector<T>> &twoDVect, Index nRows, Index nCols) {
+DynamicVector<T> flatten(const DynamicVector<DynamicVector<T>> &twoDVect,
+                         Index nRows, Index nCols) {
   if (static_cast<Index>(twoDVect.size()) != nRows)
     throw std::invalid_argument("flatten: nRows mismatch");
   for (Index r = 0; r < nRows; ++r)
     if (static_cast<Index>(twoDVect[r].size()) != nCols)
       throw std::invalid_argument("flatten: nCols mismatch");
 
-  Vector<T> flat(nRows * nCols);
+  DynamicVector<T> flat(nRows * nCols);
   for (Index i = 0; i < nRows; ++i)
     for (Index j = 0; j < nCols; ++j)
       flat[i * nCols + j] = twoDVect[i][j];
@@ -396,11 +434,11 @@ Vector<T> flatten(const Vector<Vector<T>> &twoDVect, Index nRows, Index nCols) {
 
 // unflatten: 1D -> 2D (row-major)
 template <typename T>
-Vector<Vector<T>> unflatten(const Vector<T> &oneDVect, Index nRows,
-                            Index nCols) {
+DynamicVector<DynamicVector<T>> unflatten(const DynamicVector<T> &oneDVect,
+                                          Index nRows, Index nCols) {
   if (static_cast<Index>(oneDVect.size()) != nRows * nCols)
     throw std::invalid_argument("unflatten: size mismatch");
-  Vector<Vector<T>> twoDVect(nRows);
+  DynamicVector<DynamicVector<T>> twoDVect(nRows);
   for (Index i = 0; i < nRows; ++i) {
     twoDVect[i].resize(static_cast<std::size_t>(nCols));
     for (Index j = 0; j < nCols; ++j)
@@ -430,6 +468,22 @@ public:
   StaticVector(std::initializer_list<T> list) {
     assert(static_cast<Index>(list.size()) == n);
     std::copy(list.begin(), list.end(), m_elements.begin());
+  }
+
+  // Explicit conversion(static_cast/initialization) from DynamicVector.
+  explicit StaticVector(const DynamicVector<T> &v) {
+    if (v.size() != n)
+      throw std::invalid_argument(
+          "StaticVector size must match DynamicVector size.");
+    for (Index i = 0; i < n; ++i)
+      m_elements[static_cast<std::size_t>(i)] = v[i];
+  }
+
+  explicit operator DynamicVector<T>() const {
+    DynamicVector<T> out(static_cast<std::size_t>(n));
+    for (Index i = 0; i < n; ++i)
+      out[i] = m_elements[static_cast<std::size_t>(i)];
+    return out;
   }
 
   // // Constructor with length n of elements which are value
@@ -551,6 +605,15 @@ public:
     StaticVector copy = *this;
     copy.sort(descending);
     return copy;
+  }
+
+  StaticVector &operator=(const DynamicVector<T> &v) {
+    if (v.size() != n)
+      throw std::invalid_argument(
+          "StaticVector size must match DynamicVector size.");
+    for (Index i = 0; i < n; ++i)
+      m_elements[static_cast<std::size_t>(i)] = v[i];
+    return *this;
   }
 };
 

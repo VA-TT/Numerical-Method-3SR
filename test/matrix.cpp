@@ -337,7 +337,7 @@ void testVectorIntegration() {
   std::cout << "=== Testing Matrix-Vector Integration ===" << std::endl;
 
   Matrix<double, 3, 3> A{2, 1, 1, 1, 0, 1, 0, 3, 1};
-  Vector<double> b{4, 2, 6};
+  DynamicVector<double> b{4, 2, 6};
 
   std::cout << "Matrix A:\n" << A << std::endl;
   std::cout << "Vector b: " << b << std::endl;
@@ -452,9 +452,9 @@ int main() {
 
   // Test 1: Constructors
   std::cout << "1. Testing Constructors:" << std::endl;
-  Vector<int> v1;                // Default constructor
-  Vector<int> v2(5);             // Size constructor (5 zeros)
-  Vector<int> v3{1, 2, 3, 4, 5}; // Initializer list
+  DynamicVector<int> v1;                // Default constructor
+  DynamicVector<int> v2(5);             // Size constructor (5 zeros)
+  DynamicVector<int> v3{1, 2, 3, 4, 5}; // Initializer list
 
   std::cout << "v1 (default): " << v1 << " (size: " << v1.size() << ")"
             << std::endl;
@@ -465,7 +465,7 @@ int main() {
 
   // Test 2: Indexing
   std::cout << "2. Testing Indexing:" << std::endl;
-  Vector<double> v4{10.5, 20.3, 30.7, 40.1};
+  DynamicVector<double> v4{10.5, 20.3, 30.7, 40.1};
   std::cout << "v4: " << v4 << std::endl;
   std::cout << "v4[0] = " << v4[0] << std::endl;
   std::cout << "v4[2] = " << v4[2] << std::endl;
@@ -481,8 +481,8 @@ int main() {
 
   // Test 3: Vector Operations
   std::cout << "3. Testing Vector Operations:" << std::endl;
-  Vector<double> va{1.0, 2.0, 3.0};
-  Vector<double> vb{4.0, 5.0, 6.0};
+  DynamicVector<double> va{1.0, 2.0, 3.0};
+  DynamicVector<double> vb{4.0, 5.0, 6.0};
 
   std::cout << "va = " << va << std::endl;
   std::cout << "vb = " << vb << std::endl;
@@ -505,8 +505,8 @@ int main() {
 
   // Test 4: Vector Math
   std::cout << "4. Testing Vector Math:" << std::endl;
-  Vector<double> u1{3.0, 4.0, 0.0};
-  Vector<double> u2{1.0, 0.0, 0.0};
+  DynamicVector<double> u1{3.0, 4.0, 0.0};
+  DynamicVector<double> u2{1.0, 0.0, 0.0};
 
   std::cout << "u1 = " << u1 << std::endl;
   std::cout << "u2 = " << u2 << std::endl;
@@ -539,7 +539,7 @@ int main() {
 
   // Test 5: Resize and Push Back
   std::cout << "5. Testing Resize and Push Back:" << std::endl;
-  Vector<int> vr{10, 20, 30};
+  DynamicVector<int> vr{10, 20, 30};
   std::cout << "Original vr: " << vr << " (size: " << vr.size() << ")"
             << std::endl;
 
@@ -560,8 +560,8 @@ int main() {
   std::cout << "6. Testing Edge Cases:" << std::endl;
 
   try {
-    Vector<int> v_small{1, 2};
-    Vector<int> v_big{1, 2, 3, 4};
+    DynamicVector<int> v_small{1, 2};
+    DynamicVector<int> v_big{1, 2, 3, 4};
     std::cout << "Trying to add vectors of different sizes..." << std::endl;
     auto result = v_small + v_big;
   } catch (const std::exception &e) {
@@ -569,7 +569,7 @@ int main() {
   }
 
   try {
-    Vector<double> zero_vec{0.0, 0.0, 0.0};
+    DynamicVector<double> zero_vec{0.0, 0.0, 0.0};
     std::cout << "Trying to normalize zero vector..." << std::endl;
     auto unit = normalize(zero_vec);
   } catch (const std::exception &e) {
@@ -577,8 +577,8 @@ int main() {
   }
 
   try {
-    Vector<int> v2d_1{1, 2};
-    Vector<int> v2d_2{3, 4};
+    DynamicVector<int> v2d_1{1, 2};
+    DynamicVector<int> v2d_2{3, 4};
     std::cout << "Trying cross product on 2D vectors..." << std::endl;
     auto cross_2d = crossProduct(v2d_1, v2d_2);
   } catch (const std::exception &e) {
@@ -591,9 +591,9 @@ int main() {
   // Test 7: Projection
   std::cout << "7. Testing Vector Projection:" << std::endl;
 
-  Vector<double> proj_a{3.0, 4.0, 0.0}; // Vector a
-  Vector<double> proj_b{1.0, 0.0, 0.0}; // Unit vector along x-axis
-  Vector<double> proj_c{2.0, 2.0, 0.0}; // 45-degree vector
+  DynamicVector<double> proj_a{3.0, 4.0, 0.0}; // Vector a
+  DynamicVector<double> proj_b{1.0, 0.0, 0.0}; // Unit vector along x-axis
+  DynamicVector<double> proj_c{2.0, 2.0, 0.0}; // 45-degree vector
 
   std::cout << "Vector proj_a = " << proj_a << std::endl;
   std::cout << "Vector proj_b = " << proj_b << std::endl;
@@ -612,9 +612,9 @@ int main() {
   // Test 8: Angle Calculation
   std::cout << "8. Testing Angle Calculation:" << std::endl;
 
-  Vector<double> angle_v1{1.0, 0.0, 0.0}; // Unit vector along x-axis
-  Vector<double> angle_v2{0.0, 1.0, 0.0}; // Unit vector along y-axis
-  Vector<double> angle_v3{1.0, 1.0, 0.0}; // 45-degree vector
+  DynamicVector<double> angle_v1{1.0, 0.0, 0.0}; // Unit vector along x-axis
+  DynamicVector<double> angle_v2{0.0, 1.0, 0.0}; // Unit vector along y-axis
+  DynamicVector<double> angle_v3{1.0, 1.0, 0.0}; // 45-degree vector
 
   std::cout << "angle_v1 = " << angle_v1 << std::endl;
   std::cout << "angle_v2 = " << angle_v2 << std::endl;
@@ -637,9 +637,9 @@ int main() {
   // Test 9: Perpendicular and Parallel
   std::cout << "9. Testing Perpendicular and Parallel:" << std::endl;
 
-  Vector<double> perp_x{1.0, 0.0, 0.0}; // Unit vector along x
-  Vector<double> perp_y{0.0, 1.0, 0.0}; // Unit vector along y
-  Vector<double> para_x{2.0, 0.0, 0.0}; // Parallel to perp_x
+  DynamicVector<double> perp_x{1.0, 0.0, 0.0}; // Unit vector along x
+  DynamicVector<double> perp_y{0.0, 1.0, 0.0}; // Unit vector along y
+  DynamicVector<double> para_x{2.0, 0.0, 0.0}; // Parallel to perp_x
 
   std::cout << "perp_x = " << perp_x << std::endl;
   std::cout << "perp_y = " << perp_y << std::endl;
