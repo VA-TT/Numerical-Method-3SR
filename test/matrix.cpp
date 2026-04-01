@@ -386,6 +386,61 @@ void testTensorProductBlocks() {
   //                |21 24 | 28 32 |
 }
 
+void testStaticFirstMatrixFeatures() {
+  std::cout << "\n=== Testing Static-first Matrix Features ===\n";
+
+  Matrix<double, 2, 2> A{4.0, 1.0, 1.0, 3.0};
+
+  // 1) getColVector now returns StaticVector<T, nRows>
+  const auto c0 = A.getColVector(0);
+  static_assert(
+      std::is_same_v<std::decay_t<decltype(c0)>, StaticVector<double, 2>>,
+      "getColVector should return StaticVector<double, 2>");
+  if (!(std::abs(c0[0] - 4.0) < 1e-12 && std::abs(c0[1] - 1.0) < 1e-12)) {
+    throw std::runtime_error("getColVector static return mismatch");
+  }
+
+  // 2) Matrix * StaticVector
+  const StaticVector<double, 2> x{2.0, -1.0};
+  const auto Ax = A * x;
+  static_assert(
+      std::is_same_v<std::decay_t<decltype(Ax)>, StaticVector<double, 2>>,
+      "Matrix * StaticVector should return StaticVector");
+  if (!(std::abs(Ax[0] - 7.0) < 1e-12 && std::abs(Ax[1] - (-1.0)) < 1e-12)) {
+    throw std::runtime_error("Matrix * StaticVector result mismatch");
+  }
+
+  // 3) solveLinearSystem with StaticVector RHS
+  const StaticVector<double, 2> b{1.0, 2.0};
+  const auto sol = solveLinearSystem(A, b);
+  static_assert(
+      std::is_same_v<std::decay_t<decltype(sol)>, StaticVector<double, 2>>,
+      "solveLinearSystem(static RHS) should return StaticVector");
+
+  const auto check = A * sol;
+  for (Index i = 0; i < 2; ++i) {
+    if (std::abs(check[i] - b[i]) > 1e-8)
+      throw std::runtime_error("solveLinearSystem(static) verification failed");
+  }
+
+  // 4) eigen() now returns StaticVector eigenvalues
+  const auto [eigvals, V] = A.eigen();
+  static_assert(
+      std::is_same_v<std::decay_t<decltype(eigvals)>, StaticVector<double, 2>>,
+      "eigen() should return StaticVector eigenvalues");
+
+  // Validate eigenpair residual for first vector.
+  const auto v0 = V.getColVector(0);
+  const auto Av0 = A * v0;
+  const auto lv0 = eigvals[0] * v0;
+  const auto r0 = Av0 - lv0;
+  if (magnitude(r0) > 1e-6) {
+    throw std::runtime_error("eigen() residual too large for first eigenpair");
+  }
+
+  std::cout << "Static-first Matrix feature tests passed!\n";
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////   MAIN   //////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -410,6 +465,7 @@ int main() {
   testVectorIntegration();
   testTensorProduct();
   testTensorProductBlocks();
+  testStaticFirstMatrixFeatures();
 
   std::cout << "\n=== ORIGINAL TESTS (from previous main) ===" << std::endl;
 
