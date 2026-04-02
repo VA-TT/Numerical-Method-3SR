@@ -1,6 +1,7 @@
 #ifndef DUAL_CLASS_DIFFERENTIATION_H
 #define DUAL_CLASS_DIFFERENTIATION_H
 
+#include "Matrix.h"
 #include "Vector.h"
 #include <cmath>
 #include <functional>
@@ -109,26 +110,68 @@ auto automaticDiff(Func func, T x0) -> double {
   return static_cast<double>(result.getDer());
 }
 
-// Compute gradient of a scalar function f(x,y) using forward-mode Dual.
-// The callable `func` must accept two Dual arguments and return a Dual.
-// e.g: auto energy = [](Dual x, Dual y) {return x * x + y * y;};
-template <typename Func>
-std::pair<double, double> grad2D(Func func, double x0, double y0) {
+// Compute gradient of a scalar function f(Dual x,Dual y) ->vector
+using ScalarFunction2D = std::function<Dual(Dual, Dual)>;
+StaticVector<double, 2> grad2D(ScalarFunction2D f, double x0, double y0) {
   Dual x_dx{x0, 1.0};
   Dual y_dx{y0, 0.0};
-  Dual r_x = func(x_dx, y_dx);
+  Dual r_x = f(x_dx, y_dx);
   double dfdx = r_x.getDer();
 
   Dual x_dy{x0, 0.0};
   Dual y_dy{y0, 1.0};
-  Dual r_y = func(x_dy, y_dy);
+  Dual r_y = f(x_dy, y_dy);
   double dfdy = r_y.getDer();
 
   return {dfdx, dfdy};
 }
 
-using ScalarFunction = std::function<Dual(Dual, Dual, Dual)>;
-StaticVector<double, 3> grad3D(ScalarFunction f, double x0, double y0,
+// Compute gradient of vector function -> tensor
+using VectorFunction2D = std::function<StaticVector<Dual, 2>(Dual, Dual)>;
+Matrix<double, 2, 2> grad2D(VectorFunction2D u, double x0, double y0) {
+  Dual x_dx{x0, 1.0};
+  Dual y_dx{y0, 0.0};
+  auto u_dualX = u(x_dx, y_dx);
+  double du1dx = u_dualX.x().getDer();
+  double du2dx = u_dualX.y().getDer();
+
+  Dual x_dy{x0, 0.0};
+  Dual y_dy{y0, 1.0};
+  auto u_dualY = u(x_dy, y_dy);
+  double du1dy = u_dualY.x().getDer();
+  double du2dy = u_dualY.y().getDer();
+
+  return {du1dx, du1dy, du2dx, du2dy};
+}
+
+double div2D(VectorFunction2D u, double x0, double y0) {
+  Dual x_dx{x0, 1.0};
+  Dual y_dx{y0, 0.0};
+  auto u_dualX = u(x_dx, y_dx);
+
+  Dual x_dy{x0, 0.0};
+  Dual y_dy{y0, 1.0};
+  auto u_dualY = u(x_dy, y_dy);
+
+  return u_dualX.x().getDer() + u_dualY.y().getDer();
+}
+
+double curl2D(VectorFunction2D u, double x0, double y0) {
+  Dual x_dx{x0, 1.0};
+  Dual y_dx{y0, 0.0};
+  auto u_dualX = u(x_dx, y_dx);
+
+  Dual x_dy{x0, 0.0};
+  Dual y_dy{y0, 1.0};
+  auto u_dualY = u(x_dy, y_dy);
+
+  // 2D curl = scalar z-component of the 3D curl:
+  // curl(F) = dFy/dx - dFx/dy.
+  return u_dualX.y().getDer() - u_dualY.x().getDer();
+}
+
+using ScalarFunction3D = std::function<Dual(Dual, Dual, Dual)>;
+StaticVector<double, 3> grad3D(ScalarFunction3D f, double x0, double y0,
                                double z0) {
   // df/dx
   Dual x_dx{x0, 1.0};
@@ -155,6 +198,35 @@ StaticVector<double, 3> grad3D(ScalarFunction f, double x0, double y0,
 }
 
 using VectorFunction = std::function<StaticVector<Dual, 3>(Dual, Dual, Dual)>;
+
+Matrix<double, 3, 3> grad3D(VectorFunction u, double x0, double y0, double z0) {
+  Dual x_dx{x0, 1.0};
+  Dual y_dx{y0, 0.0};
+  Dual z_dx{z0, 0.0};
+  auto u_dualX = u(x_dx, y_dx, z_dx);
+  double du1dx = u_dualX.x().getDer();
+  double du2dx = u_dualX.y().getDer();
+  double du3dx = u_dualX.z().getDer();
+
+  Dual x_dy{x0, 0.0};
+  Dual y_dy{y0, 1.0};
+  Dual z_dy{z0, 0.0};
+  auto u_dualY = u(x_dy, y_dy, z_dy);
+  double du1dy = u_dualY.x().getDer();
+  double du2dy = u_dualY.y().getDer();
+  double du3dy = u_dualY.z().getDer();
+
+  Dual x_dz{x0, 0.0};
+  Dual y_dz{y0, 0.0};
+  Dual z_dz{z0, 1.0};
+  auto u_dualZ = u(x_dz, y_dz, z_dz);
+  double du1dz = u_dualZ.x().getDer();
+  double du2dz = u_dualZ.y().getDer();
+  double du3dz = u_dualZ.z().getDer();
+
+  return {du1dx, du1dy, du1dz, du2dx, du2dy, du2dz, du3dx, du3dy, du3dz};
+}
+
 double div3D(VectorFunction u, double x0, double y0, double z0) {
 
   // u_x,x
@@ -211,7 +283,7 @@ StaticVector<double, 3> curl3D(VectorFunction u, double x0, double y0,
 }
 
 // Laplacian scalar
-double laplacian3D(ScalarFunction f, double x0, double y0, double z0) {
+double laplacian3D(ScalarFunction3D f, double x0, double y0, double z0) {
   const double h = 1e-5;
   auto eval = [&](double x, double y, double z) {
     return f(Dual{x, 0.0}, Dual{y, 0.0}, Dual{z, 0.0}).getVal();

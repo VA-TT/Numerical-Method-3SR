@@ -47,19 +47,20 @@ private:
   constexpr Index m_npc{ngh * ngh};
   StaticVector<Particle2D<T>, m_npc> m_particles {}
   DynamicVector<Particle2D<T>> m_interactions {}
-  T m_z{};       // Nombre de coordination
-  T m_e{};       // Indice de vide
-  T m_I{};       // Nombre d'inertie
-  T m_kappa{};   // Niveau de raideur
-  T m_dt{};      // Pas de temps
-  T m_eta{0.95}; // Amortissement
-  T m_phi{0.64}; // Solid Fraction
-  T m_p{1000};   // Isotropic compression
-  T m_H0{};      // hauteur initiale
-  T m_v{};       // Velocité de cissailement
-  T m_muy{};     // Coefficient de frottement
-  T m_c{};       // Cohesion
-  T m_dmax{};    // distance maximale pour etre voisin
+  T m_z{};              // Nombre de coordination
+  T m_e{};              // Indice de vide
+  T m_I{};              // Nombre d'inertie
+  T m_kappa{};          // Niveau de raideur
+  T m_dt{};             // Pas de temps
+  T m_eta{0.95};        // Amortissement (viscous)
+  T m_phi{0.64};        // Solid Fraction
+  T m_p{1000};          // Isotropic compression
+  T m_H0{};             // hauteur initiale
+  T m_v{};              // Velocité de cissailement
+  T m_muy{};            // Coefficient de frottement
+  T m_c{};              // Cohesion
+  T m_dmax{};           // distance maximale pour etre voisin
+  Index m_stepUpdate {} // step-number to update neighbor list
 
 public:
   DEM2D(T rho, T rmin, T rmax) {

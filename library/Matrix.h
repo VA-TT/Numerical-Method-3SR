@@ -746,7 +746,7 @@ public:
   }
   T thirdInvariant() const { return det(*this); }
 
-  StaticVector<T, 3> invariants(const) {
+  StaticVector<T, 3> invariants() const {
     return {this->firstInvariant(), this->secondInvariant(),
             this->thirdInvariant()};
   }
