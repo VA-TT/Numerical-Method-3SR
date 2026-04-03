@@ -216,6 +216,9 @@ public:
   }
   void computeHalfVel() {}
   void updatePosition() {}
+  void computeInteraction(){
+    
+  }
   void computeAcc() {}
   void computeFullVel() {}
   void coulombFriction() {}

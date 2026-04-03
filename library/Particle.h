@@ -19,8 +19,9 @@ template <typename T> struct Particle2D {
   T mass{};
   T inertia{};
 
-  // Raideur
-  T kn{}, kt{};
+  
+  T kn{}, kt{};// Raideur
+  T vis{}; //viscocité
 
   // force et moment de résultat (Cartesian)
   StaticVector<T, 2> force{}; // fx & fy
