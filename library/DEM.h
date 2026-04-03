@@ -11,49 +11,14 @@
 #include "signFunction.h"
 #include <iostream>
 
-template <typename T> struct Particle2D {
-  // position
-  StaticVector<T, 2> pos{};
-  StaticVector<T, 2> vel{};
-  StaticVector<T, 2> acc{};
+void periodicBC() {};
 
-  // Rotation
-  StaticVector<T, 2> rot{};
-  StaticVector<T, 2> vrot{};
-  StaticVector<T, 2> arot{};
-
-  // Properties
-  T radius{};
-  T mass{};
-  T inertia{};
-
-  // Raideur
-  T kn{}, kt{};
-
-  // force et moment de résultat (Cartesian)
-  StaticVector<T, 2> force{};  // fx & fy
-  StaticVector<T, 2> moment{}; // frot
-}
-
-struct Interaction {
-  Index i{};
-  Index j{};
-  T dn{}; //  Overlaps
-  bool touch { false; }
-
-  T fn{};
-  T ft{};
-  Interaction(Index i, Index j) {};
-}
-
-periodicBC(){};
-
-reducedCoordinate(){};
+void reducedCoordinate() {};
 
 template <typename T, Index ngl, Index ngh> class DEM2D {
 private:
-  constexpr Index m_npc{ngh * ngh};
-  T m_legnth{}, m_height {}
+  constexpr Index m_npc{ngl * ngh};
+  T m_legnth{}, m_height{};
   StaticVector<Particle2D<T>, m_npc> m_particles {}
   DynamicVector<Particle2D<T>> m_interactions {}
   DynamicVector<Particle2D<T>> m_neighbors {}
@@ -84,11 +49,11 @@ private:
   T m_kinEnergy{}, m_potentEnergy{}, m_totalEnergy0{}, m_dissiEnergy{};
 
 public:
-  DEM2D(T rho, T rmin, T rmax, T kn, T kt, T muy, T c, T eta, T dt,
+  DEM2D(T rho, T rmin, T rmax, T kn, T kt, T muy, T eta, T c, T dt,
         T duration = 10000.0)
       : m_muy{muy}, m_c{c}, m_dt{dt}, m_dmax{0.95 * rmin},
         m_nStep{static_cast<Index>{m_duration / m_nStep}} {
-
+    assert(T{0} < eta && eta < T{1} && "Eta must be in range [0,1]");
     T totalM{};
     T totalR{};
     // Initiate particles' position
@@ -107,6 +72,7 @@ public:
       p.vel.y() = Random::get(-vRand, vRand);
       p.kn = kn;
       p.kt = kt;
+      p.visco = T{2} * eta * std::sqrt(p.mass / kn);
       totalR += p.radius;
       m_Msolid += p.mass;
       m_Vsolid += constant::pi * p.radius * p.radius;
@@ -186,12 +152,60 @@ public:
       p.rot += m_dt * p.vrot + T{0.5} * p.arot * m_dt;
       p.vrot += m_dt * p.arot;
       p.vrot *= m_alpha; // Amortissement artificiel
+
+      // reset the resultant forces on grains
+      grain[i].fx = 0.0;
+      grain[i].fy = 0.0;
+      grain[i].frot = 0.0;
     }
   }
   void artificialDissipation() {
     for (Index i{0}; i < m_npc; ++i) {
       m_particles[i].vel *= (T{1} - alpha);
       m_particles[i].vrot *= (T{1} - alpha);
+    }
+  }
+
+  // note that there's no friction between grains and walls
+  void interactWalls(Index i) {
+    T dn = grain[i].x - grain[i].radius;
+    if (dn < 0.0) {
+      let vn = grain[i].vx;
+      let visco = viscoRate * 2.0 * sqrt(grain[i].mass * kn);
+      let fn = -kn * dn - visco * vn;
+      grain[i].fx += fn;
+    }
+  }
+
+  void computeForceWallRight(i) {
+    T dn = (xmax - grain[i].x) - grain[i].radius;
+    if (dn < 0.0) {
+      let vn = -grain[i].vx;
+      let visco = viscoRate * 2.0 * sqrt(grain[i].mass * kn);
+      let fn = -kn * dn - visco * vn;
+      grain[i].fx -= fn;
+      rightf += fn;
+    }
+  }
+
+  void computeForceWallBottom(i) {
+    T dn = grain[i].y - grain[i].radius;
+    if (dn < 0.0) { // if overlap
+      let vn = grain[i].vy;
+      let visco = viscoRate * 2.0 * sqrt(grain[i].mass * kn);
+      let fn = -kn * dn - visco * vn;
+      grain[i].fy += fn;
+    }
+  }
+
+  void computeForceWallTop(i) {
+    T dn = (ymax - grain[i].y) - grain[i].radius;
+    if (dn < 0.0) {
+      let vn = -grain[i].vy;
+      let visco = viscoRate * 2.0 * sqrt(grain[i].mass * kn);
+      let fn = -kn * dn - visco * vn;
+      grain[i].fy -= fn;
+      topf += fn;
     }
   }
   void velocityVerlet() {

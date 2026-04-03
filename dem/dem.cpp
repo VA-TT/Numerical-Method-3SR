@@ -16,13 +16,10 @@ int main() {
   double dt = 1e-5;
   double duration = 0.2;
 
-  DEM2D<double, ngl, ngh> rigidWall(density, rmin, rmax, kn, kt, muy, cohesion,
-                                    viscoRate, dt, duration);
+  DEM2D<double, ngl, ngh> rigidWall(density, rmin, rmax, kn, kt, muy, viscoRate,
+                                    cohesion, dt, duration);
   rigidWall.setG();
   rigidWall.setAlpha(0.01);
-  rigidWall.setDeta();
-  rigidWall.runFreeFall("data2D", 20);
 
-  std::cout << "Done. Open dem/data2D/particles_*.vtk in ParaView.\n";
   return 0;
 }
