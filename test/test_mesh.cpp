@@ -29,7 +29,7 @@ int main() {
   std::cout << "  Element 1 now: [" << x1_updated << ", " << x2_updated
             << "]\n";
 
-  mesh1D.resetMesh();
+  mesh1D.nodalReset();
   std::cout << "After reset: " << mesh1D.nodeCoords()[2] << "\n";
   auto [x1_reset, x2_reset] = mesh1D.getElementNodes(1);
   std::cout << "  Element 1 now: [" << x1_reset << ", " << x2_reset << "]\n";
@@ -103,7 +103,7 @@ int main() {
   auto [x0_updated, y0_updated] = mesh2D.getNodeCoor(4);
   std::cout << "After update: (" << x0_updated << ", " << y0_updated << ")\n";
 
-  mesh2D.resetMesh();
+  mesh2D.nodalReset();
   auto [x0_reset, y0_reset] = mesh2D.getNodeCoor(4);
   std::cout << "After reset: (" << x0_reset << ", " << y0_reset << ")\n";
 

@@ -18,7 +18,7 @@ private:
   Index m_nNodes{}, m_nElements{}, m_nMPperEle{}, m_nMPs{};
   DynamicVector<T> m_nodes{};
   DynamicVector<char> m_activeNodes{}; // Use char instead of bool to avoid
-                                // std::vector<bool> issues
+                                       // std::vector<bool> issues
   DynamicVector<T> m_MPs{};
   DynamicVector<Index> m_mpElementId{}; // Cached element ID for each MP
   DynamicVector<T> m_nodes_initial{};   // Store initial configuration for reset
@@ -236,23 +236,27 @@ private:
   T m_length{}, m_height{};
   Index m_nx{}, m_ny{}, m_nNodes{}, m_nElements{}, m_nMPs{}; // numbers
 
-  DynamicVector<std::pair<T, T>> m_nodes{}; // All node coordinates as (x, y) pairs
-  DynamicVector<std::pair<T, T>> m_nodes_initial{}; // Initial configuration for reset
-  DynamicVector<char> m_activeNodes{};    // Track which nodes contain Material Points
-  DynamicVector<char> m_activeElements{}; // Track which elements contain MPs
+  DynamicVector<std::pair<T, T>>
+      m_nodes{}; // All node coordinates as (x, y) pairs
+  DynamicVector<std::pair<T, T>>
+      m_nodes_initial{}; // Initial configuration for reset
+  DynamicVector<char>
+      m_activeNodes{}; // Track which nodes contain Material Points
+  DynamicVector<char> m_activeElements{};    // Track which elements contain MPs
   DynamicVector<T> m_nodes_x{}, m_nodes_y{}; // Node coordinates vector
   DynamicVector<T> m_nodes_x_initial{},
       m_nodes_y_initial{}; // Initial nodal coordinates
 
   DynamicVector<DynamicVector<Index>> m_connectivity{}; // Elements representing
-  static constexpr Index idError = -1;    // default id error for mpElementID
+  static constexpr Index idError = -1; // default id error for mpElementID
 
   T m_MP_size{}; // MP spacing / particle size used for square-grid MPs
-  DynamicVector<std::pair<T, T>> m_MPs{};              // Material Points coordinates
-  DynamicVector<T> m_MP_x{}, m_MP_y{};                 // MP coordinates
+  DynamicVector<std::pair<T, T>> m_MPs{}; // Material Points coordinates
+  DynamicVector<T> m_MP_x{}, m_MP_y{};    // MP coordinates
   DynamicVector<T> m_MP_x_initial{}, m_MP_y_initial{}; // Initial MP coordinates
-  DynamicVector<Index> m_mpElementId{};                // Cached element ID for each MP
-  DynamicVector<DynamicVector<Index>> m_mpsInElement{};       // MPs grouped per element
+  DynamicVector<Index> m_mpElementId{}; // Cached element ID for each MP
+  DynamicVector<DynamicVector<Index>>
+      m_mpsInElement{}; // MPs grouped per element
 
   void generateMPGridPerElement(Index nMPperEle) {
     if (nMPperEle <= 0) {
@@ -374,7 +378,7 @@ private:
   void generateCircleMPgrid(const std::pair<T, T> &center, T radius,
                             T MP_size) {
     m_MP_size = MP_size;
-
+    // To be continued
     if (!(MP_size > T{0}) || !(radius > T{0})) {
       m_nMPs = 0;
       m_MPs = DynamicVector<std::pair<T, T>>{};
@@ -512,7 +516,7 @@ public:
     //   |          |
     //   n1 ------ n2
     Index elemID{0};
-    DynamicVector<Index> eleConnectivity(4);
+    StaticVector<Index, 4> eleConnectivity;
     for (Index j{0}; j < ny - 1; j++) {
       for (Index i{0}; i < nx - 1; i++) {
         eleConnectivity[0] = i + j * nx;
@@ -567,7 +571,9 @@ public:
   Mesh2D &operator=(Mesh2D &&) = default;
   ~Mesh2D() = default;
 
-  // Getter
+  // Getters
+  T getGridLength() const { return m_length; }
+  T getGridHeight() const { return m_height; }
   Index getNumNodes() const { return m_nNodes; }
   Index getNumElements() const { return m_nElements; }
   Index getNumMPs() const { return m_nMPs; }
@@ -578,7 +584,8 @@ public:
   const DynamicVector<std::pair<T, T>> &getNodes() const { return m_nodes; }
   const DynamicVector<std::pair<T, T>> &getMPCoords() const { return m_MPs; }
 
-  // Convenience API: return MP coords as DynamicVector<T>{x,y} for math operations.
+  // Convenience API: return MP coords as DynamicVector<T>{x,y} for math
+  // operations.
   DynamicVector<DynamicVector<T>> getMPCoordsVec() const {
     DynamicVector<DynamicVector<T>> out;
     out.resize(m_MPs.size());
@@ -591,6 +598,21 @@ public:
   // Backward-compatible name used by tests
   const DynamicVector<Index> &getConnectivity(Index elemID) const {
     return getEleConnectivity(elemID);
+  }
+
+  StaticVector<T, 2> getEleCenter(Index elemID) const {
+    const auto &element_nodeIDs = getEleConnectivity(elemID);
+
+    StaticVector<T, 2> center{};
+    for (Index id : element_nodeIDs) {
+      center.x() += m_nodes_x[id];
+      center.y() += m_nodes_y[id];
+    }
+
+    const T nNodesPerEle = static_cast<T>(element_nodeIDs.size());
+    center.x() /= nNodesPerEle;
+    center.y() /= nNodesPerEle;
+    return center;
   }
 
   // Cached MP element IDs
@@ -683,7 +705,8 @@ public:
 
   // Boundary node sets (useful for applying BCs)
   // y < eps, y > H-eps, x < eps, x > L-eps
-  DynamicVector<Index> bottomNodes(double absEps = 1e-8, double relEps = 1e-8) const {
+  DynamicVector<Index> bottomNodes(double absEps = 1e-8,
+                                   double relEps = 1e-8) const {
     DynamicVector<Index> ids;
     for (Index i{0}; i < m_nNodes; ++i) {
       const double y = static_cast<double>(m_nodes_y[i]);
@@ -693,7 +716,8 @@ public:
     return ids;
   }
 
-  DynamicVector<Index> topNodes(double absEps = 1e-8, double relEps = 1e-8) const {
+  DynamicVector<Index> topNodes(double absEps = 1e-8,
+                                double relEps = 1e-8) const {
     DynamicVector<Index> ids;
     const double H = static_cast<double>(m_height);
     for (Index i{0}; i < m_nNodes; ++i) {
@@ -704,7 +728,8 @@ public:
     return ids;
   }
 
-  DynamicVector<Index> leftNodes(double absEps = 1e-8, double relEps = 1e-8) const {
+  DynamicVector<Index> leftNodes(double absEps = 1e-8,
+                                 double relEps = 1e-8) const {
     DynamicVector<Index> ids;
     for (Index i{0}; i < m_nNodes; ++i) {
       const double x = static_cast<double>(m_nodes_x[i]);
@@ -714,7 +739,8 @@ public:
     return ids;
   }
 
-  DynamicVector<Index> rightNodes(double absEps = 1e-8, double relEps = 1e-8) const {
+  DynamicVector<Index> rightNodes(double absEps = 1e-8,
+                                  double relEps = 1e-8) const {
     DynamicVector<Index> ids;
     const double L = static_cast<double>(m_length);
     for (Index i{0}; i < m_nNodes; ++i) {
@@ -729,7 +755,7 @@ public:
   // Useful when applying BCs that must only target nodes participating in
   // the current time step (i.e., nodes connected to MPs).
   DynamicVector<Index> bottomActiveNodes(double absEps = 1e-8,
-                                  double relEps = 1e-8) const {
+                                         double relEps = 1e-8) const {
     DynamicVector<Index> ids;
     for (Index i{0}; i < m_nNodes; ++i) {
       if (!isActiveNode(i))
@@ -742,7 +768,7 @@ public:
   }
 
   DynamicVector<Index> topActiveNodes(double absEps = 1e-8,
-                               double relEps = 1e-8) const {
+                                      double relEps = 1e-8) const {
     DynamicVector<Index> ids;
     const double H = static_cast<double>(m_height);
     for (Index i{0}; i < m_nNodes; ++i) {
@@ -756,7 +782,7 @@ public:
   }
 
   DynamicVector<Index> leftActiveNodes(double absEps = 1e-8,
-                                double relEps = 1e-8) const {
+                                       double relEps = 1e-8) const {
     DynamicVector<Index> ids;
     for (Index i{0}; i < m_nNodes; ++i) {
       if (!isActiveNode(i))
@@ -769,7 +795,7 @@ public:
   }
 
   DynamicVector<Index> rightActiveNodes(double absEps = 1e-8,
-                                 double relEps = 1e-8) const {
+                                        double relEps = 1e-8) const {
     DynamicVector<Index> ids;
     const double L = static_cast<double>(m_length);
     for (Index i{0}; i < m_nNodes; ++i) {
@@ -849,7 +875,8 @@ public:
     m_mpElementId[p] = findCageID(x, y, m_mpElementId[p]);
   }
 
-  void updateAllMPs(const DynamicVector<T> &new_mp_x, const DynamicVector<T> &new_mp_y) {
+  void updateAllMPs(const DynamicVector<T> &new_mp_x,
+                    const DynamicVector<T> &new_mp_y) {
     assert(new_mp_x.size() == m_nMPs && new_mp_y.size() == m_nMPs &&
            "Size mismatch");
     m_MP_x = new_mp_x;
@@ -891,12 +918,13 @@ public:
     return m_connectivity[elemID];
   }
 
-  // Returns {x_nodes, y_nodes} by value (size 4 each) for Q4 element mapping
-  std::pair<DynamicVector<T>, DynamicVector<T>> getElementNodes(Index elemID) const {
+  // Static-size variant for Q4 operations.
+  std::pair<StaticVector<T, 4>, StaticVector<T, 4>>
+  getElementNodesStatic(Index elemID) const {
     assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
     const auto &conn = m_connectivity[elemID];
-    DynamicVector<T> x_nodes(4);
-    DynamicVector<T> y_nodes(4);
+    StaticVector<T, 4> x_nodes;
+    StaticVector<T, 4> y_nodes;
     for (Index i{0}; i < 4; ++i) {
       const Index nodeID = conn[i];
       assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
@@ -904,6 +932,13 @@ public:
       y_nodes[i] = m_nodes_y[nodeID];
     }
     return {x_nodes, y_nodes};
+  }
+
+  // Backward-compatible dynamic variant kept for existing MPM/FEM code.
+  std::pair<DynamicVector<T>, DynamicVector<T>>
+  getElementNodes(Index elemID) const {
+    const auto [x_nodes_static, y_nodes_static] = getElementNodesStatic(elemID);
+    return {DynamicVector<T>(x_nodes_static), DynamicVector<T>(y_nodes_static)};
   }
 
   inline bool isActiveElement(Index elemID) const {
@@ -974,7 +1009,8 @@ public:
     m_nodes[nodeID] = {new_x, new_y};
   }
 
-  void updateAllNodes(const DynamicVector<T> &new_x, const DynamicVector<T> &new_y) {
+  void updateAllNodes(const DynamicVector<T> &new_x,
+                      const DynamicVector<T> &new_y) {
     assert(new_x.size() == m_nNodes && new_y.size() == m_nNodes &&
            "Size mismatch");
     m_nodes_x = new_x;
@@ -1003,8 +1039,12 @@ public:
   const DynamicVector<std::pair<T, T>> &getInitialNodes() const {
     return m_nodes_initial;
   }
-  const DynamicVector<T> &getInitialXCoords() const { return m_nodes_x_initial; }
-  const DynamicVector<T> &getInitialYCoords() const { return m_nodes_y_initial; }
+  const DynamicVector<T> &getInitialXCoords() const {
+    return m_nodes_x_initial;
+  }
+  const DynamicVector<T> &getInitialYCoords() const {
+    return m_nodes_y_initial;
+  }
 
   // MPM helper function
   bool isPointInElement(T x, T y, Index e) const {
