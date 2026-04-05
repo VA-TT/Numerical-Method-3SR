@@ -14,11 +14,11 @@ int main() {
   const double a = 2.0;
   const double b = 3.0;
 
-  // Use cylindrical Jacobian J=r from cylinCoor directly.
+  // Use cylindrical Jacobian J=r from CylinCoor directly.
   auto dV_without_phi = [a, b](double z) -> double {
     const double rMax = (a / b) * z;
     auto inner = [z](double r) -> double {
-      cylinCoor<double> c{r, 0.0, z};
+      CylinCoor<double> c{r, 0.0, z};
       return c.jacobian();
     };
     return integrationGauss1D(0.0, rMax, inner, 4);
@@ -31,7 +31,7 @@ int main() {
   auto zMoment_without_phi = [a, b](double z) -> double {
     const double rMax = (a / b) * z;
     auto inner = [z](double r) -> double {
-      cylinCoor<double> c{r, 0.0, z};
+      CylinCoor<double> c{r, 0.0, z};
       return z * c.jacobian();
     };
     return integrationGauss1D(0.0, rMax, inner, 4);

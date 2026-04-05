@@ -30,7 +30,9 @@ int main() {
     for (int j = 0; j < ny; ++j) {
       const double y = ymin + (ymax - ymin) * static_cast<double>(j) / (ny - 1);
 
-      const auto [gx, gy] = grad2D(f_xy, x, y);
+      const auto grad = grad2D(f_xy, x, y);
+      const double gx = grad[0];
+      const double gy = grad[1];
       const double gxy = std::sqrt(gx * gx + gy * gy);
       const double f = f_xy(Dual{x, 0.0}, Dual{y, 0.0}).getVal();
 

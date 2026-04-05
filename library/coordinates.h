@@ -11,12 +11,14 @@
 #include <string>
 #include <string_view>
 
-void changeCoord() {}
+void changeCoord() {
+    
+}
 
 // 2D polar coordinate
-template <typename T> struct polarCoor {
+template <typename T> struct PolarCoor {
   // Constructor using (r,t) variables
-  polarCoor(T r, T t) // theta is in degree unit
+  PolarCoor(T r, T t) // theta is in degree unit
   {
     this->r = r;
     this->t = t;
@@ -32,11 +34,11 @@ template <typename T> struct polarCoor {
   }
 
   // Constructor using (x,y, "Cartesian") variables
-  polarCoor(T x, T y, std::string_view coordSystem)
-      : polarCoor(std::sqrt(x * x + y * y),
+  PolarCoor(T x, T y, std::string_view coordSystem)
+      : PolarCoor(std::sqrt(x * x + y * y),
                   std::atan2(y, x) * T{180} / T{constants::pi}) {
     if (coordSystem != "Cartesian")
-      throw std::invalid_argument("polarCoor: coordSystem must be Cartesian.");
+      throw std::invalid_argument("PolarCoor: coordSystem must be Cartesian.");
 
     // Preserve exact Cartesian inputs from caller.
     this->x = x;
@@ -54,7 +56,7 @@ template <typename T> struct polarCoor {
   VectorFunction2D u; // u = (u1(r,t), u2(r,t))
   StaticVector<T, 2> gradient(ScalarFunction2D f_rt) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("polarCoor::gradient requires r != 0.");
+      throw std::invalid_argument("PolarCoor::gradient requires r != 0.");
 
     Dual r_dr{r, 1.0};
     Dual t_dr{t, 0.0};
@@ -72,7 +74,7 @@ template <typename T> struct polarCoor {
 
   T div(VectorFunction2D u_rt) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("polarCoor::div requires r != 0.");
+      throw std::invalid_argument("PolarCoor::div requires r != 0.");
 
     Dual r_dr{r, 1.0};
     Dual t_dr{t, 0.0};
@@ -91,7 +93,7 @@ template <typename T> struct polarCoor {
   // 2D curl = scalar z-component of the 3D curl:
   T curl(VectorFunction2D u_rt) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("polarCoor::curl requires r != 0.");
+      throw std::invalid_argument("PolarCoor::curl requires r != 0.");
 
     Dual r_dr{r, 1.0};
     Dual t_dr{t, 0.0};
@@ -111,10 +113,10 @@ template <typename T> struct polarCoor {
   // nabla^2 f = d2f/dr2 + (1/r) df/dr + (1/r^2) d2f/dt2
   T laplacian(ScalarFunction2D f_rt, T hr = T{1e-5}, T ht = T{1e-5}) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("polarCoor::laplacian requires r != 0.");
+      throw std::invalid_argument("PolarCoor::laplacian requires r != 0.");
     if (hr <= T{0} || ht <= T{0})
       throw std::invalid_argument(
-          "polarCoor::laplacian requires positive steps.");
+          "PolarCoor::laplacian requires positive steps.");
 
     auto eval = [&](T rr, T tt) -> T {
       return static_cast<T>(f_rt(Dual{static_cast<double>(rr), 0.0},
@@ -155,40 +157,51 @@ template <typename T> struct polarCoor {
 };
 
 // 3D Cylindrical coordinates
-template <typename T> struct cylinCoor {
-  // Cylindrical system constructors
-  cylinCoor(T r, T p, T z) // phi is in degree unit
-  {
+template <typename T> struct CylinCoor {
+  // Constructor using cylindrical variables (r, p, z), p in degrees.
+  CylinCoor(T r, T p, T z) {
     this->r = r;
     this->p = p;
     this->z = z;
+
     p_rad = p * T{constants::pi} / T{180};
     cosp = std::cos(p_rad);
     sinp = std::sin(p_rad);
+
     x = r * cosp;
     y = r * sinp;
+
     rUnit = StaticVector<T, 3>{cosp, sinp, T{0}};
     pUnit = StaticVector<T, 3>{-sinp, cosp, T{0}};
     zUnit = StaticVector<T, 3>{T{0}, T{0}, T{1}};
     position = r * rUnit + z * zUnit;
   }
 
-  // Constructor using Cartesian variables.
-  cylinCoor(T x, T y, T z, std::string_view coordSystem)
-      : cylinCoor(std::sqrt(x * x + y * y),
-                  std::atan2(y, x) * T{180} / T{constants::pi}, z) {
+  // Constructor using Cartesian variables (x, y, z).
+  CylinCoor(T x, T y, T z, std::string_view coordSystem) {
     if (coordSystem != "Cartesian")
-      throw std::invalid_argument("cylinCoor: coordSystem must be Cartesian.");
+      throw std::invalid_argument("CylinCoor: coordSystem must be Cartesian.");
 
     this->x = x;
     this->y = y;
     this->z = z;
+
+    r = std::sqrt(x * x + y * y);
+    p = std::atan2(y, x) * T{180} / T{constants::pi};
+
+    p_rad = p * T{constants::pi} / T{180};
+    cosp = std::cos(p_rad);
+    sinp = std::sin(p_rad);
+
+    rUnit = StaticVector<T, 3>{cosp, sinp, T{0}};
+    pUnit = StaticVector<T, 3>{-sinp, cosp, T{0}};
+    zUnit = StaticVector<T, 3>{T{0}, T{0}, T{1}};
+    position = r * rUnit + z * zUnit;
   }
 
   // Member variables
-  T x{}, y{};
-  T z{};      // Shared component between Cartesian and cylindrical
-  T r{}, p{}; // Rho and Phi - Equivalent to r and theta in 2D
+  T x{}, y{}, z{};
+  T r{}, p{};
   T p_rad{};
   T cosp{}, sinp{};
   StaticVector<T, 3> position{};
@@ -196,101 +209,74 @@ template <typename T> struct cylinCoor {
   ScalarFunction3D f; // f = f(r,p,z)
   VectorFunction3D u; // u = (u1(r,p,z), u2(r,p,z), u3(r,p,z))
 
-  // Member functions (differential operators)
-  T jacobian() const { return r; } // dx.dy.dz = |J| dr.dp.dz
+  // Differential operators
+  T jacobian() const { return r; } // dxdydz = |J| drdpdz
 
   StaticVector<T, 3> gradient(ScalarFunction3D f_rpz) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("cylinCoor::gradient requires rho != 0.");
+      throw std::invalid_argument("CylinCoor::gradient requires r != 0.");
 
-    Dual r_dr{r, 1.0};
-    Dual p_dr{p, 0.0};
-    Dual z_dr{z, 0.0};
-    auto f_dualR = f_rpz(r_dr, p_dr, z_dr);
-    double dfdr = f_dualR.getDer();
+    const T dfdr = static_cast<T>(
+        f_rpz(Dual{r, 1.0}, Dual{p, 0.0}, Dual{z, 0.0}).getDer());
+    const T dfdp = static_cast<T>(
+        f_rpz(Dual{r, 0.0}, Dual{p, 1.0}, Dual{z, 0.0}).getDer());
+    const T dfdz = static_cast<T>(
+        f_rpz(Dual{r, 0.0}, Dual{p, 0.0}, Dual{z, 1.0}).getDer());
 
-    Dual r_dp{r, 0.0};
-    Dual p_dp{p, 1.0};
-    Dual z_dp{z, 0.0};
-    auto f_dualP = f_rpz(r_dp, p_dp, z_dp);
-    double dfdp = f_dualP.getDer();
-
-    Dual r_dz{r, 0.0};
-    Dual p_dz{p, 0.0};
-    Dual z_dz{z, 1.0};
-    auto f_dualZ = f_rpz(r_dz, p_dz, z_dz);
-    double dfdz = f_dualZ.getDer();
-
-    return {dfdr, T{1} / r * dfdp, dfdz}; // cylindrical coordinate
+    return {dfdr, T{1} / r * dfdp, dfdz};
   }
 
-  // Member functions (differential operators)
   T div(VectorFunction3D u_rpz) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("cylinCoor::div requires r != 0.");
+      throw std::invalid_argument("CylinCoor::div requires r != 0.");
 
-    Dual r_dr{r, 1.0};
-    Dual p_dr{p, 0.0};
-    Dual z_dr{z, 0.0};
-    auto u_dualR = u_rpz(r_dr, p_dr, z_dr);
-    double du1dr = u_dualR[0].getDer();
-    double u1 = u_dualR[0].getVal();
+    const auto u_dr = u_rpz(Dual{r, 1.0}, Dual{p, 0.0}, Dual{z, 0.0});
+    const T du1dr = static_cast<T>(u_dr[0].getDer());
+    const T u1 = static_cast<T>(u_dr[0].getVal());
 
-    Dual r_dp{r, 0.0};
-    Dual p_dp{p, 1.0};
-    Dual z_dp{z, 0.0};
-    auto u_dualP = u_rpz(r_dp, p_dp, z_dp);
-    double du2dp = u_dualP[1].getDer();
+    const auto u_dp = u_rpz(Dual{r, 0.0}, Dual{p, 1.0}, Dual{z, 0.0});
+    const T du2dp = static_cast<T>(u_dp[1].getDer());
 
-    Dual r_dz{r, 0.0};
-    Dual p_dz{p, 0.0};
-    Dual z_dz{z, 1.0};
-    auto u_dualZ = u_rpz(r_dz, p_dz, z_dz);
-    double du3dz = u_dualZ[2].getDer();
+    const auto u_dz = u_rpz(Dual{r, 0.0}, Dual{p, 0.0}, Dual{z, 1.0});
+    const T du3dz = static_cast<T>(u_dz[2].getDer());
 
     return du1dr + T{1} / r * (u1 + du2dp) + du3dz;
   }
 
-  // Cylindrical curl (r, p, z components).
+  // Curl in cylindrical components (r, p, z)
   StaticVector<T, 3> curl(VectorFunction3D u_rpz) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("cylinCoor::curl requires r != 0.");
+      throw std::invalid_argument("CylinCoor::curl requires r != 0.");
 
-    Dual r_dr{r, 1.0};
-    Dual p_dr{p, 0.0};
-    Dual z_dr{z, 0.0};
-    auto u_dualR = u_rpz(r_dr, p_dr, z_dr);
-    double du2dr = u_dualR[1].getDer();
-    double du3dr = u_dualR[2].getDer();
+    const auto u_dr = u_rpz(Dual{r, 1.0}, Dual{p, 0.0}, Dual{z, 0.0});
+    const T du2dr = static_cast<T>(u_dr[1].getDer());
+    const T du3dr = static_cast<T>(u_dr[2].getDer());
 
-    Dual r_dp{r, 0.0};
-    Dual p_dp{p, 1.0};
-    Dual z_dp{z, 0.0};
-    auto u_dualP = u_rpz(r_dp, p_dp, z_dp);
-    double du1dp = u_dualP[0].getDer();
-    double du3dp = u_dualP[2].getDer();
-    double u2 = u_dualP[1].getVal();
+    const auto u_dp = u_rpz(Dual{r, 0.0}, Dual{p, 1.0}, Dual{z, 0.0});
+    const T du1dp = static_cast<T>(u_dp[0].getDer());
+    const T du3dp = static_cast<T>(u_dp[2].getDer());
+    const T u2 = static_cast<T>(u_dp[1].getVal());
 
-    Dual r_dz{r, 0.0};
-    Dual p_dz{p, 0.0};
-    Dual z_dz{z, 1.0};
-    auto u_dualZ = u_rpz(r_dz, p_dz, z_dz);
-    double du1dz = u_dualZ[0].getDer();
-    double du2dz = u_dualZ[1].getDer();
+    const auto u_dz = u_rpz(Dual{r, 0.0}, Dual{p, 0.0}, Dual{z, 1.0});
+    const T du1dz = static_cast<T>(u_dz[0].getDer());
+    const T du2dz = static_cast<T>(u_dz[1].getDer());
 
-    return {T{1} / r * du3dp - du2dz, du1dz - du3dr,
-            du2dr + T{1} / r * (u2 - du1dp)};
+    const T curl_r = T{1} / r * du3dp - du2dz;
+    const T curl_p = du1dz - du3dr;
+    const T curl_z = du2dr + T{1} / r * (u2 - du1dp);
+
+    return {curl_r, curl_p, curl_z};
   }
 
-  // Scalar Laplacian in cylindrical coordinates:
+  // Scalar Laplacian:
   // nabla^2 f = d2f/dr2 + (1/r)df/dr + (1/r^2)d2f/dp2 + d2f/dz2
   T laplacian(ScalarFunction3D f_rpz, T hr = T{1e-5}, T hp = T{1e-5},
               T hz = T{1e-5}) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("cylinCoor::laplacian requires r != 0.");
+      throw std::invalid_argument("CylinCoor::laplacian requires r != 0.");
     if (hr <= T{0} || hp <= T{0} || hz <= T{0})
       throw std::invalid_argument(
-          "cylinCoor::laplacian requires positive steps.");
+          "CylinCoor::laplacian requires positive steps.");
 
     auto eval = [&](T rr, T pp, T zz) -> T {
       return static_cast<T>(f_rpz(Dual{static_cast<double>(rr), 0.0},
@@ -315,7 +301,7 @@ template <typename T> struct cylinCoor {
     return d2fdr2 + T{1} / r * dfdr + T{1} / (r * r) * d2fdp2 + d2fdz2;
   }
 
-  // Vector Laplacian in cylindrical coordinates (component-wise).
+  // Vector Laplacian (component-wise)
   StaticVector<T, 3> laplacian(VectorFunction3D u_rpz, T hr = T{1e-5},
                                T hp = T{1e-5}, T hz = T{1e-5}) const {
     auto u1 = [u_rpz](Dual rr, Dual pp, Dual zz) -> Dual {
@@ -327,8 +313,255 @@ template <typename T> struct cylinCoor {
     auto u3 = [u_rpz](Dual rr, Dual pp, Dual zz) -> Dual {
       return u_rpz(rr, pp, zz)[2];
     };
+
     return {laplacian(u1, hr, hp, hz), laplacian(u2, hr, hp, hz),
             laplacian(u3, hr, hp, hz)};
+  }
+};
+
+// 3D Spherical coordinates
+template <typename T> struct SphereCoor {
+public:
+  // Constructor using (r,t,p) where:
+  // t in [0,180] deg is polar angle (theta),
+  // p in [0,360] deg is azimuth angle (phi).
+  SphereCoor(T r, T t, T p) {
+    if (t < T{0} || t > T{180})
+      throw std::invalid_argument(
+          "SphereCoor: theta must be in [0, 180] degrees.");
+    if (p < T{0} || p > T{360})
+      throw std::invalid_argument(
+          "SphereCoor: phi must be in [0, 360] degrees.");
+
+    this->r = r;
+    this->t = t;
+    this->p = p;
+    t_rad = t * T{constants::pi} / T{180};
+    p_rad = p * T{constants::pi} / T{180};
+
+    cost = std::cos(t_rad);
+    sint = std::sin(t_rad);
+    cosp = std::cos(p_rad);
+    sinp = std::sin(p_rad);
+
+    x = r * sint * cosp;
+    y = r * sint * sinp;
+    z = r * cost;
+
+    rUnit = StaticVector<T, 3>{sint * cosp, sint * sinp, cost};
+    tUnit = StaticVector<T, 3>{cost * cosp, cost * sinp, -sint};
+    pUnit = StaticVector<T, 3>{-sinp, cosp, T{0}};
+    position = r * rUnit;
+
+    // Derivatives of spherical unit vectors:
+    drUnitdt = tUnit;
+    dtUnitdt = -rUnit;
+    dpUnitdt = StaticVector<T, 3>{T{0}, T{0}, T{0}};
+    drUnitdp = sint * pUnit;
+    dtUnitdp = cost * pUnit;
+    dpUnitdp = -sint * rUnit - cost * tUnit;
+  }
+
+  // Constructor from Cartesian coordinates.
+  SphereCoor(T x, T y, T z, std::string_view coordSystem) {
+    if (coordSystem != "Cartesian")
+      throw std::invalid_argument("SphereCoor: coordSystem must be Cartesian.");
+
+    this->x = x;
+    this->y = y;
+    this->z = z;
+
+    r = std::sqrt(x * x + y * y + z * z);
+    if (approximatelyEqualAbsRel(r, T{0})) {
+      t = T{0};
+      p = T{0};
+    } else {
+      t = std::acos(z / r) * T{180} / T{constants::pi};
+      p = std::atan2(y, x) * T{180} / T{constants::pi};
+      if (p < T{0})
+        p += T{360};
+    }
+
+    if (t < T{0} || t > T{180})
+      throw std::invalid_argument(
+          "SphereCoor: theta must be in [0, 180] degrees.");
+    if (p < T{0} || p > T{360})
+      throw std::invalid_argument(
+          "SphereCoor: phi must be in [0, 360] degrees.");
+
+    t_rad = t * T{constants::pi} / T{180};
+    p_rad = p * T{constants::pi} / T{180};
+
+    cost = std::cos(t_rad);
+    sint = std::sin(t_rad);
+    cosp = std::cos(p_rad);
+    sinp = std::sin(p_rad);
+
+    rUnit = StaticVector<T, 3>{sint * cosp, sint * sinp, cost};
+    tUnit = StaticVector<T, 3>{cost * cosp, cost * sinp, -sint};
+    pUnit = StaticVector<T, 3>{-sinp, cosp, T{0}};
+    position = r * rUnit;
+
+    drUnitdt = tUnit;
+    dtUnitdt = -rUnit;
+    dpUnitdt = StaticVector<T, 3>{T{0}, T{0}, T{0}};
+    drUnitdp = sint * pUnit;
+    dtUnitdp = cost * pUnit;
+    dpUnitdp = -sint * rUnit - cost * tUnit;
+  }
+
+  T x{}, y{}, z{};
+  T r{}, t{}, p{};
+  T t_rad{}, p_rad{};
+  T cost{}, sint{}, cosp{}, sinp{};
+  StaticVector<T, 3> position{};
+  StaticVector<T, 3> rUnit, tUnit{}, pUnit{};
+  StaticVector<T, 3> drUnitdt, dtUnitdt{}, dpUnitdt{};
+  StaticVector<T, 3> drUnitdp, dtUnitdp{}, dpUnitdp{};
+  ScalarFunction3D f;
+  VectorFunction3D u;
+
+  // dxdydz = |J| drdtdp
+  T jacobian() const { return r * r * sint; }
+
+  StaticVector<T, 3> gradient(ScalarFunction3D f_rtp) const {
+    if (approximatelyEqualAbsRel(r, T{0}))
+      throw std::invalid_argument("SphereCoor::gradient requires r != 0.");
+    if (approximatelyEqualAbsRel(sint, T{0}))
+      throw std::invalid_argument(
+          "SphereCoor::gradient undefined for sin(theta)=0.");
+
+    Dual r_dr{r, 1.0};
+    Dual t_dr{t, 0.0};
+    Dual p_dr{p, 0.0};
+    double dfdr = f_rtp(r_dr, t_dr, p_dr).getDer();
+
+    Dual r_dt{r, 0.0};
+    Dual t_dt{t, 1.0};
+    Dual p_dt{p, 0.0};
+    double dfdt = f_rtp(r_dt, t_dt, p_dt).getDer();
+
+    Dual r_dp{r, 0.0};
+    Dual t_dp{t, 0.0};
+    Dual p_dp{p, 1.0};
+    double dfdp = f_rtp(r_dp, t_dp, p_dp).getDer();
+
+    return {dfdr, T{1} / r * dfdt, T{1} / (r * sint) * dfdp};
+  }
+
+  T div(VectorFunction3D u_rtp) const {
+    if (approximatelyEqualAbsRel(r, T{0}))
+      throw std::invalid_argument("SphereCoor::div requires r != 0.");
+    if (approximatelyEqualAbsRel(sint, T{0}))
+      throw std::invalid_argument(
+          "SphereCoor::div undefined for sin(theta)=0.");
+
+    auto r2ur = [u_rtp](Dual r_var, Dual t_var, Dual p_var) {
+      auto val = u_rtp(r_var, t_var, p_var);
+      return r_var * r_var * val[0];
+    };
+    double d_r2ur_dr = r2ur(Dual{r, 1.0}, Dual{t, 0.0}, Dual{p, 0.0}).getDer();
+
+    auto sint_ut = [u_rtp](Dual r_var, Dual t_var, Dual p_var) {
+      auto val = u_rtp(r_var, t_var, p_var);
+      return sin(t_var * Dual{constants::pi / 180.0}) * val[1];
+    };
+    double d_sintut_dt =
+        sint_ut(Dual{r, 0.0}, Dual{t, 1.0}, Dual{p, 0.0}).getDer();
+
+    auto up = u_rtp(Dual{r, 0.0}, Dual{t, 0.0}, Dual{p, 1.0})[2];
+    double dup_dp = up.getDer();
+
+    return (T{1} / (r * r)) * d_r2ur_dr + (T{1} / (r * sint)) * d_sintut_dt +
+           (T{1} / (r * sint)) * dup_dp;
+  }
+
+  StaticVector<T, 3> curl(VectorFunction3D u_rtp) const {
+    if (approximatelyEqualAbsRel(r, T{0}))
+      throw std::invalid_argument("SphereCoor::curl requires r != 0.");
+    if (approximatelyEqualAbsRel(sint, T{0}))
+      throw std::invalid_argument(
+          "SphereCoor::curl undefined for sin(theta)=0.");
+
+    auto sint_up = [u_rtp](Dual r_var, Dual t_var, Dual p_var) {
+      auto val = u_rtp(r_var, t_var, p_var);
+      return sin(t_var * Dual{constants::pi / 180.0}) * val[2];
+    };
+    double d_sintup_dt =
+        sint_up(Dual{r, 0.0}, Dual{t, 1.0}, Dual{p, 0.0}).getDer();
+    double dut_dp = u_rtp(Dual{r, 0.0}, Dual{t, 0.0}, Dual{p, 1.0})[1].getDer();
+    T curl_r = (T{1} / (r * sint)) * (d_sintup_dt - dut_dp);
+
+    auto r_up = [u_rtp](Dual r_var, Dual t_var, Dual p_var) {
+      auto val = u_rtp(r_var, t_var, p_var);
+      return r_var * val[2];
+    };
+    double d_rup_dr = r_up(Dual{r, 1.0}, Dual{t, 0.0}, Dual{p, 0.0}).getDer();
+    double dur_dp = u_rtp(Dual{r, 0.0}, Dual{t, 0.0}, Dual{p, 1.0})[0].getDer();
+    T curl_t = (T{1} / r) * ((T{1} / sint) * dur_dp - d_rup_dr);
+
+    auto r_ut = [u_rtp](Dual r_var, Dual t_var, Dual p_var) {
+      auto val = u_rtp(r_var, t_var, p_var);
+      return r_var * val[1];
+    };
+    double d_rut_dr = r_ut(Dual{r, 1.0}, Dual{t, 0.0}, Dual{p, 0.0}).getDer();
+    double dur_dt = u_rtp(Dual{r, 0.0}, Dual{t, 1.0}, Dual{p, 0.0})[0].getDer();
+    T curl_p = (T{1} / r) * (d_rut_dr - dur_dt);
+
+    return {curl_r, curl_t, curl_p};
+  }
+
+  T laplacian(ScalarFunction3D f_rtp, T hr = T{1e-5}, T ht = T{1e-5},
+              T hp = T{1e-5}) const {
+    if (approximatelyEqualAbsRel(r, T{0}))
+      throw std::invalid_argument("SphereCoor::laplacian requires r != 0.");
+    if (approximatelyEqualAbsRel(sint, T{0}))
+      throw std::invalid_argument(
+          "SphereCoor::laplacian undefined for sin(theta)=0.");
+    if (hr <= T{0} || ht <= T{0} || hp <= T{0})
+      throw std::invalid_argument(
+          "SphereCoor::laplacian requires positive steps.");
+
+    auto eval = [&](T r_eval, T t_eval, T p_eval) -> T {
+      return static_cast<T>(f_rtp(Dual{static_cast<double>(r_eval), 0.0},
+                                  Dual{static_cast<double>(t_eval), 0.0},
+                                  Dual{static_cast<double>(p_eval), 0.0})
+                                .getVal());
+    };
+
+    const T f0 = eval(r, t, p);
+    const T fr_p = eval(r + hr, t, p);
+    const T fr_m = eval(r - hr, t, p);
+    const T ft_p = eval(r, t + ht, p);
+    const T ft_m = eval(r, t - ht, p);
+    const T fp_p = eval(r, t, p + hp);
+    const T fp_m = eval(r, t, p - hp);
+
+    const T d2fdr2 = (fr_p - T{2} * f0 + fr_m) / (hr * hr);
+    const T dfdr = (fr_p - fr_m) / (T{2} * hr);
+    const T d2fdt2 = (ft_p - T{2} * f0 + ft_m) / (ht * ht);
+    const T dfdt = (ft_p - ft_m) / (T{2} * ht);
+    const T d2fdp2 = (fp_p - T{2} * f0 + fp_m) / (hp * hp);
+
+    const T cot_t = cost / sint;
+    return d2fdr2 + (T{2} / r) * dfdr +
+           (T{1} / (r * r)) *
+               (d2fdt2 + cot_t * dfdt + (T{1} / (sint * sint)) * d2fdp2);
+  }
+
+  StaticVector<T, 3> laplacian(VectorFunction3D u_rtp, T hr = T{1e-5},
+                               T ht = T{1e-5}, T hp = T{1e-5}) const {
+    auto u1 = [u_rtp](Dual r_var, Dual t_var, Dual p_var) -> Dual {
+      return u_rtp(r_var, t_var, p_var)[0];
+    };
+    auto u2 = [u_rtp](Dual r_var, Dual t_var, Dual p_var) -> Dual {
+      return u_rtp(r_var, t_var, p_var)[1];
+    };
+    auto u3 = [u_rtp](Dual r_var, Dual t_var, Dual p_var) -> Dual {
+      return u_rtp(r_var, t_var, p_var)[2];
+    };
+    return {laplacian(u1, hr, ht, hp), laplacian(u2, hr, ht, hp),
+            laplacian(u3, hr, ht, hp)};
   }
 };
 
