@@ -1,6 +1,7 @@
 # Generated VTK outputs
 /mpm/data1D/
 /mpm/data2D/
+/dem/data2D/
 
 # VS Code
 /.vscode/

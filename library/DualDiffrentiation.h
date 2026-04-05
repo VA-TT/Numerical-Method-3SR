@@ -156,6 +156,7 @@ double div2D(VectorFunction2D u, double x0, double y0) {
   return u_dualX.x().getDer() + u_dualY.y().getDer();
 }
 
+// 2D curl = scalar z-component of the 3D curl:
 double curl2D(VectorFunction2D u, double x0, double y0) {
   Dual x_dx{x0, 1.0};
   Dual y_dx{y0, 0.0};
@@ -165,8 +166,6 @@ double curl2D(VectorFunction2D u, double x0, double y0) {
   Dual y_dy{y0, 1.0};
   auto u_dualY = u(x_dy, y_dy);
 
-  // 2D curl = scalar z-component of the 3D curl:
-  // curl(F) = dFy/dx - dFx/dy.
   return u_dualX.y().getDer() - u_dualY.x().getDer();
 }
 
@@ -197,9 +196,10 @@ StaticVector<double, 3> grad3D(ScalarFunction3D f, double x0, double y0,
   return {dfdx, dfdy, dfdz};
 }
 
-using VectorFunction = std::function<StaticVector<Dual, 3>(Dual, Dual, Dual)>;
+using VectorFunction3D = std::function<StaticVector<Dual, 3>(Dual, Dual, Dual)>;
 
-Matrix<double, 3, 3> grad3D(VectorFunction u, double x0, double y0, double z0) {
+Matrix<double, 3, 3> grad3D(VectorFunction3D u, double x0, double y0,
+                            double z0) {
   Dual x_dx{x0, 1.0};
   Dual y_dx{y0, 0.0};
   Dual z_dx{z0, 0.0};
@@ -227,7 +227,7 @@ Matrix<double, 3, 3> grad3D(VectorFunction u, double x0, double y0, double z0) {
   return {du1dx, du1dy, du1dz, du2dx, du2dy, du2dz, du3dx, du3dy, du3dz};
 }
 
-double div3D(VectorFunction u, double x0, double y0, double z0) {
+double div3D(VectorFunction3D u, double x0, double y0, double z0) {
 
   // u_x,x
   Dual x_dx{x0, 1.0};
@@ -253,7 +253,7 @@ double div3D(VectorFunction u, double x0, double y0, double z0) {
   return du1dx + du2dy + du3dz;
 }
 
-StaticVector<double, 3> curl3D(VectorFunction u, double x0, double y0,
+StaticVector<double, 3> curl3D(VectorFunction3D u, double x0, double y0,
                                double z0) {
   // du_i/dx
   Dual x_dx{x0, 1.0};
@@ -302,7 +302,7 @@ double laplacian3D(ScalarFunction3D f, double x0, double y0, double z0) {
   return d2fdx2 + d2fdy2 + d2fdz2;
 }
 // Laplacian vector
-StaticVector<double, 3> laplacian3D(VectorFunction u, double x0, double y0,
+StaticVector<double, 3> laplacian3D(VectorFunction3D u, double x0, double y0,
                                     double z0) {
   StaticVector<double, 3> uLap;
   for (int i = 0; i < 3; i++) {
