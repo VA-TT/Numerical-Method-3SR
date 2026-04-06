@@ -11,9 +11,83 @@
 #include <string>
 #include <string_view>
 
-void changeCoord() {
-    
-}
+// linear transformation
+template <typename T, Index n> struct changeCoor {
+  changeCoor(const StaticVector<StaticVector<T, n>, n> &b_new) : b{b_new} {
+    for (Index i{0}; i < n; ++i) {
+      for (Index j{i}; j < n; ++j) {
+        G(i, j) = dotProduct(b[i], b[j]);
+      }
+    }
+    G.reflect(); // G is symmetric
+    for (Index j{0}; j < n; ++j) {
+      for (Index i{0}; i < n; ++i) {
+        A(i, j) = b_new[j][i];
+      }
+    }
+  }
+  changeCoor(const Matrix<T, n, n> &transformMatrix) : A{transformMatrix} {
+    for (Index j{0}; j < n; ++j) {
+      b[j] = transformMatrix.getColVector(j);
+    }
+    for (Index i{0}; i < n; ++i) {
+      for (Index j{i}; j < n; ++j) {
+        G(i, j) = dotProduct(b[i], b[j]);
+      }
+    }
+    G.reflect(); // G is symmetric
+  }
+
+  StaticVector<StaticVector<T, n>, n> b; // new basis
+  Matrix<T, n, n> G{};                   // Matrix metric
+
+  // from Cartesian->another: change of basis = representation matrix (A = P)
+  Matrix<T, n, n> A{}; // Matrix of the transformation: T(x) = Ax
+                       // (standard reprensentation matrix)
+
+  T norm(const StaticVector<T, n> &v) const {
+    return std::sqrt(dotProduct(v, G * v));
+  }
+
+  StaticVector<T, n> newBasisCoor(const StaticVector<T, n> &v_B,
+                                  const changeCoor &C) const {
+    Matrix<T, n, n> P = changeBasisMatrix(*this, C); // Pc<-b
+    return P * v_B;
+  }
+
+  StaticVector<T, n> oldBasisCoor(const StaticVector<T, n> &v,
+                                  const changeCoor &C) const {
+    Matrix<T, n, n> P = changeBasisMatrix(*this, C); // Pc<-b
+    return P.inverse() * v;
+  }
+
+  static Matrix<T, n, n> changeBasisMatrix(const changeCoor &B,
+                                           const changeCoor &C) {
+    return C.A.inverse() * B.A;
+  }
+
+  // Change linear-operator matrix from basis B (this) to basis C:
+  // [L]_C = P_{C<-B} [L]_B P_{B<-C}
+  Matrix<T, n, n> newBasisOperator(const Matrix<T, n, n> &L_B,
+                                   const changeCoor &C) const {
+    const Matrix<T, n, n> P = changeBasisMatrix(*this, C);
+    return P * L_B * P.inverse();
+  }
+
+  // Change linear-operator matrix from basis C back to basis B (this):
+  // [L]_B = P_{B<-C} [L]_C P_{C<-B}
+  Matrix<T, n, n> oldBasisOperator(const Matrix<T, n, n> &L_C,
+                                   const changeCoor &C) const {
+    const Matrix<T, n, n> P = changeBasisMatrix(*this, C);
+    return P.inverse() * L_C * P;
+  }
+
+  // (R o S) (u) = R(S(u)) = B.A.u
+  // We can change from Cartesian -> another -> another
+  friend changeCoor operator*(const changeCoor &R, const changeCoor &S) {
+    return changeCoor(R.A * S.A);
+  }
+};
 
 // 2D polar coordinate
 template <typename T> struct PolarCoor {

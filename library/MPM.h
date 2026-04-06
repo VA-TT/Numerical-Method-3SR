@@ -598,7 +598,7 @@ private:
   T m_volume{1.0}, m_volume0{1.0}; // Volume
   T m_mass{1000};                  // mass
   T m_G{0.0};                      // Gravity Acceleration
-  DynamicVector<T> m_v0{T{}, T{}};        // Initial velocity
+  DynamicVector<T> m_v0{T{}, T{}}; // Initial velocity
 
   // Simulation properties
   T m_currentTime{0.0}; // Current time
@@ -620,7 +620,7 @@ private:
   DynamicVector<DynamicVector<T>> n_acceleration{};
   DynamicVector<DynamicVector<T>> n_momentum{};
   DynamicVector<DynamicVector<T>> n_displacement{}; // Displacement
-  DynamicVector<Matrix<T, 2, 2>> n_stress{}; // Nodal stress (optional)
+  DynamicVector<Matrix<T, 2, 2>> n_stress{};        // Nodal stress (optional)
 
   DynamicVector<DynamicVector<char>> n_velocityConstrained{};
   DynamicVector<DynamicVector<char>> n_accelerationConstrained{};
@@ -634,12 +634,13 @@ private:
   DynamicVector<DynamicVector<T>> n_forceConstraintValue{};
   DynamicVector<DynamicVector<T>> n_bodyForce{}, n_tractionForce{};
   // Nodal external forces
-  DynamicVector<DynamicVector<T>> n_forceExternal{}, n_forceInternal{}, n_forceTotal{};
+  DynamicVector<DynamicVector<T>> n_forceExternal{}, n_forceInternal{},
+      n_forceTotal{};
 
   // Material Points p
-  DynamicVector<T> p_volume{};           // Volume
-  DynamicVector<T> p_volume0{};          // Initial volume (for large-strain update)
-  DynamicVector<T> p_mass{};             // Mass
+  DynamicVector<T> p_volume{};  // Volume
+  DynamicVector<T> p_volume0{}; // Initial volume (for large-strain update)
+  DynamicVector<T> p_mass{};    // Mass
   DynamicVector<DynamicVector<T>> p_position{}; // Position
   DynamicVector<DynamicVector<T>> p_velocity{}; // Velocity
   DynamicVector<DynamicVector<T>> p_momentum{}; // Momentum
@@ -722,7 +723,7 @@ public:
     p_mass.resize(nMPs, m_mass / nMPs); // MP's mass is constant
     p_position = m_mesh.getMPCoordsVec();
     p_momentum.resize(nMPs, DynamicVector<T>{0, 0}); // Compute later
-    p_velocity.resize(nMPs, m_v0);            // Initial velocity
+    p_velocity.resize(nMPs, m_v0);                   // Initial velocity
 
     p_stress.resize(nMPs, Matrix<T, 2, 2>::zero());
     p_strain.resize(nMPs, Matrix<T, 2, 2>::zero());
@@ -798,7 +799,9 @@ public:
                              law(dEps.yy())};
     };
   }
-  void setMPvelocity(Index p, const DynamicVector<T> &value) { p_velocity[p] = value; }
+  void setMPvelocity(Index p, const DynamicVector<T> &value) {
+    p_velocity[p] = value;
+  }
   void setMPvelocity(Index p, T value) {
     p_velocity[p] = DynamicVector<T>{value, T{}};
   }
@@ -1131,9 +1134,9 @@ public:
 
       // Update particles' velocity , position and momentum
       const DynamicVector<T> a_next = N1_ref(xi, eta) * n_acceleration[n1] +
-                               N2_ref(xi, eta) * n_acceleration[n2] +
-                               N3_ref(xi, eta) * n_acceleration[n3] +
-                               N4_ref(xi, eta) * n_acceleration[n4];
+                                      N2_ref(xi, eta) * n_acceleration[n2] +
+                                      N3_ref(xi, eta) * n_acceleration[n3] +
+                                      N4_ref(xi, eta) * n_acceleration[n4];
 
       const DynamicVector<T> v_next =
           N1_ref(xi, eta) * n_velocity[n1] + N2_ref(xi, eta) * n_velocity[n2] +
@@ -1149,8 +1152,8 @@ public:
 
       for (Index a{0}; a < 4; ++a) {
         const Index nodeID = conn[a];
-        L += tensorProduct<2, 2>(n_velocity[nodeID],
-                                 DynamicVector<T>{dN_dx[a], dN_dy[a]});
+        L += tensorProduct<T, 2, 2>(n_velocity[nodeID],
+                                    DynamicVector<T>{dN_dx[a], dN_dy[a]});
       }
       // // Strain rate from nodal velocities (small strain)
       // p_strainRate[p] = Matrix<T, 2, 2>::zero();
@@ -1201,11 +1204,11 @@ public:
         const auto [alpha, k] = druckerPrager(m_phi, m_c);
 
         const DynamicVector<T> stress_n{p_stress[p].xx(), p_stress[p].yy(),
-                                 p_stress[p].xy()};
+                                        p_stress[p].xy()};
         const DynamicVector<T> strain_n{p_strain[p].xx(), p_strain[p].yy(),
-                                 p_strain[p].xy()};
-        const DynamicVector<T> strain_increment{p_dStrain[p].xx(), p_dStrain[p].yy(),
-                                         p_dStrain[p].xy()};
+                                        p_strain[p].xy()};
+        const DynamicVector<T> strain_increment{
+            p_dStrain[p].xx(), p_dStrain[p].yy(), p_dStrain[p].xy()};
 
         const auto [stress_updated, strain_updated, _delta_lambda] =
             updateStressStrainDruckerPrager(stress_n, strain_n,

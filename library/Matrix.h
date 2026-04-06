@@ -7,7 +7,6 @@
 // Resize function?
 // Jacobian, Hessian Matrix
 
-#include "Vector.h"       //My vector class
 #include "comparison.h"   //Approximative Comparsion
 #include "random.h"       //random
 #include "signFunction.h" //sign()
@@ -25,6 +24,9 @@
 #include <vector>
 
 using Index = std::ptrdiff_t; // typedef
+// Foward declaration (Vector already included Matrix class)
+template <typename T> class DynamicVector;
+template <typename T, Index n> class StaticVector;
 
 template <typename T, Index nRows, Index nCols> class Matrix {
 private:
@@ -608,14 +610,6 @@ public:
             0.5 * ((*this) - this->transpose())};
   }
 
-  // StaticVector<T, nRows> getColVector(Index j) const {
-  //   StaticVector<T, nRows> v{};
-  //   for (Index i = 0; i < nRows; ++i)
-  //     v[i] = (*this)(i, j);
-  //   return v;
-  // }
-
-  // How about static Vector
   // Real Eigenvalues and their Eigen Vectors for symmetric matrices:: AX = kX
   std::pair<StaticVector<T, nRows>, Matrix>
   eigen(Index maxIterations = 1000) const {
@@ -735,7 +729,7 @@ public:
     auto [eigvals, V] = this->eigen();
     for (Index i{0}; i < eigvals.size(); ++i) {
       const StaticVector<T, nRows> v = V.getColVector(i);
-      result += std::pow(eigvals[i], pow) * tensorProduct<nRows, nRows>(v, v);
+      result += std::pow(eigvals[i], pow) * tensorProduct(v, v);
     }
     return result;
   }
@@ -751,8 +745,10 @@ public:
             this->thirdInvariant()};
   }
 };
-
+/////////////////////////////////////////////////////////////////////////
 /////////////////////////// END OF MATRIX CLASS//////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
 // Householder reflection:   A  = Q * R
 template <typename T, Index nRows, Index nCols>
 std::pair<Matrix<T, nRows, nCols>, Matrix<T, nRows, nCols>>
@@ -938,18 +934,7 @@ T trace(const Matrix<T, nRows, nCols> &m) {
 
 // Calculate det(A) using Laplace expansion
 // Though this algorithm is not efficient with huge matrices. Considering
-// implementing LU decomposition insted... template <typename T> T det(const
-// Matrix<T, 1, 1> &m)
-// {
-//   return m(0, 0);
-// }
-
-// // Base case: 2x2
-// template <typename T>
-// T det(const Matrix<T, 2, 2> &m)
-// {
-//   return m(0, 0) * m(1, 1) - m(0, 1) * m(1, 0);
-// }
+// implementing LU decomposition instead...
 
 template <typename T, Index nRows, Index nCols>
 T det(const Matrix<T, nRows, nCols> &m) {
@@ -980,47 +965,31 @@ T det(const Matrix<T, nRows, nCols> &m) {
   }
 }
 
-// Tensor Product function with explicit template parameters for vectors
+// Tensor Product function.
+// - StaticVector overload deduces T, R, C.
+// - DynamicVector overload requires explicit T, R, C because sizes are runtime.
 template <typename T, Index R, Index C>
 Matrix<T, R, C> tensorProduct(const DynamicVector<T> &v1,
                               const DynamicVector<T> &v2) {
-  // Runtime validation
-  if (v1.size() != R || v2.size() != C) {
-    throw std::invalid_argument("Vector sizes must match template parameters");
-  }
+  if (v1.size() != R || v2.size() != C)
+    throw std::invalid_argument(
+        "tensorProduct: vector sizes must match template parameters.");
 
   Matrix<T, R, C> result{};
-  for (Index i = 0; i < R; ++i) {
-    for (Index j = 0; j < C; ++j) {
+  for (Index i = 0; i < R; ++i)
+    for (Index j = 0; j < C; ++j)
       result(i, j) = v1[i] * v2[j];
-    }
-  }
   return result;
-}
-
-// Backward-compatible overload for calls like tensorProduct<2, 2>(v1, v2)
-template <Index R, Index C, typename T>
-Matrix<T, R, C> tensorProduct(const DynamicVector<T> &v1,
-                              const DynamicVector<T> &v2) {
-  return tensorProduct<T, R, C>(v1, v2);
 }
 
 template <typename T, Index R, Index C>
 Matrix<T, R, C> tensorProduct(const StaticVector<T, R> &v1,
                               const StaticVector<T, C> &v2) {
   Matrix<T, R, C> result{};
-  for (Index i = 0; i < R; ++i) {
-    for (Index j = 0; j < C; ++j) {
+  for (Index i = 0; i < R; ++i)
+    for (Index j = 0; j < C; ++j)
       result(i, j) = v1[i] * v2[j];
-    }
-  }
   return result;
-}
-
-template <Index R, Index C, typename T>
-Matrix<T, R, C> tensorProduct(const StaticVector<T, R> &v1,
-                              const StaticVector<T, C> &v2) {
-  return tensorProduct<T, R, C>(v1, v2);
 }
 
 template <typename T, Index R1, Index C1, Index R2, Index C2>

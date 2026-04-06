@@ -70,6 +70,30 @@ int main() {
   }
   assert(mismatchCaught && "Expected size-mismatch conversion to throw");
 
+  // Test quadratic form: v^T A v
+  StaticVector<double, 3> vq{1.0, 2.0, 3.0};
+  Matrix<double, 3, 3> A{{2.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0}};
+  // Expected: 2*1^2 + 3*2^2 + 4*3^2 = 50
+  StaticVector<double, 1> q = (vq.transpose() * A) * vq;
+  assert(std::abs(q[0] - 50.0) < 1e-12);
+
+  // Test helper quadraticForm for static and dynamic vectors
+  const double qStatic = quadraticForm(vq, A);
+  assert(std::abs(qStatic - 50.0) < 1e-12);
+
+  DynamicVector<double> vqd{1.0, 2.0, 3.0};
+  const double qDynamic = quadraticForm<double, 3>(vqd, A);
+  assert(std::abs(qDynamic - 50.0) < 1e-12);
+
+  // Test tensorProduct
+  auto tpStatic = tensorProduct(vq, vq);
+  assert(tpStatic(0, 0) == 1.0 && tpStatic(0, 1) == 2.0 &&
+         tpStatic(2, 2) == 9.0);
+
+  auto tpDynamic = tensorProduct<double, 3, 3>(vqd, vqd);
+  assert(tpDynamic(0, 0) == 1.0 && tpDynamic(1, 2) == 6.0 &&
+         tpDynamic(2, 2) == 9.0);
+
   std::cout << "All vector conversion tests passed!\n";
   return 0;
 }

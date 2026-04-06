@@ -1,6 +1,7 @@
 #ifndef MY_VECTOR_CLASS_H
 #define MY_VECTOR_CLASS_H
 
+#include "Matrix.h"
 #include "comparison.h" //Approximative Comparsion
 #include "kroneckerDelta_LeviCivita.h"
 #include "physicConstants.h"
@@ -236,7 +237,7 @@ public:
   }
 };
 
-////////////////// END OF VECTOR CLASS /////////////////////////////
+////////////////// END OF DYNAMIC VECTOR CLASS /////////////////////////////
 
 // DynamicVector operators
 template <typename T>
@@ -616,9 +617,16 @@ public:
       m_elements[static_cast<std::size_t>(i)] = v[i];
     return *this;
   }
+
+  Matrix<T, 1, n> transpose() const {
+    Matrix<T, 1, n> result{};
+    for (Index i = 0; i < n; ++i)
+      result(0, i) = (*this)[i];
+    return result;
+  }
 };
 
-/////////////////////// END OF StaticVector CLASS/////////////////////
+/////////////////////// END OF STATICVECTOR CLASS/////////////////////
 // StaticVector operators
 template <typename T, Index n1, Index n2>
 bool operator==(const StaticVector<T, n1> &v1, const StaticVector<T, n2> &v2) {
@@ -715,6 +723,29 @@ T dotProduct(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) {
   T result{};
   for (Index i = 0; i < n; ++i)
     result += v1[i] * v2[i];
+  return result;
+}
+
+// Quadratic form: v^T A v
+template <typename T, Index n>
+T quadraticForm(const StaticVector<T, n> &v, const Matrix<T, n, n> &A) {
+  const StaticVector<T, 1> q = (v.transpose() * A) * v;
+  return q[0];
+}
+
+template <typename T, Index n>
+T quadraticForm(const DynamicVector<T> &v, const Matrix<T, n, n> &A) {
+  if (v.size() != n)
+    throw std::invalid_argument(
+        "quadraticForm: vector size must match matrix dimensions.");
+
+  T result{};
+  for (Index i = 0; i < n; ++i) {
+    T rowDot{};
+    for (Index j = 0; j < n; ++j)
+      rowDot += A(i, j) * v[j];
+    result += v[i] * rowDot;
+  }
   return result;
 }
 

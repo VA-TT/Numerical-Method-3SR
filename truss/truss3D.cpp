@@ -268,7 +268,7 @@ int main() {
       elementaryApplicationK[b] =
           At(lengthBars[b], length0Bars[b]) * Matrix<double, d, d>::identity() +
           (1 / lengthBars[b]) * k[b] *
-              tensorProduct<d, d>(vectorBars[b], vectorBars[b]);
+              tensorProduct<double, d, d>(vectorBars[b], vectorBars[b]);
     }
     //  Connectivity Matrix
     DynamicVector<Matrix<double, d, d * nNodes>> C(nNodes);
@@ -308,7 +308,8 @@ int main() {
     }
 
     // Solve the linear system to find displacement
-    DynamicVector<double> deltaU{solveLinearSystem(assemblyStiffnessK, residualForce)};
+    DynamicVector<double> deltaU{
+        solveLinearSystem(assemblyStiffnessK, residualForce)};
     double incrementNorm = magnitude(deltaU);
 
     nodes += unflatten(deltaU, nNodes, d);

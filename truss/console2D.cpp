@@ -39,9 +39,9 @@ double theta{20}; // Inclined degree of the force with relative to vertical
 double thetaRadian{theta * std::numbers::pi / 180}; // converte to radian
 
 DynamicVector<double> f1{force * std::sin(thetaRadian) *
-                  i1}; // force's horizontal component
+                         i1}; // force's horizontal component
 DynamicVector<double> f2{-force * std::cos(thetaRadian) *
-                  i2}; // force's vertical component
+                         i2}; // force's vertical component
 DynamicVector<double> externalForce{f1 + f2};
 
 // Section dimension
@@ -92,7 +92,8 @@ int main() {
   deltaX_array.reserve(max_iteration);
   F_array.reserve(max_iteration);
   DynamicVector<double> deltaX(2); // The displacement vector of node C
-  DynamicVector<double> Fk(2);     // Sum of internal and external force at iteration k
+  DynamicVector<double> Fk(
+      2); // Sum of internal and external force at iteration k
 
   std::cout << "=== 2D CONSOLE PROBLEM ===" << std::endl;
   // Vectors at iteration k
@@ -123,10 +124,10 @@ int main() {
 
     // Calculate NablaF at itaration k
     nablaF = Matrix<double, B, B>{};
-    nablaF += -automaticDiff(func1, l1) * tensorProduct<2, 2>(e1, e1);
-    nablaF += -automaticDiff(func2, l2) * tensorProduct<2, 2>(e2, e2);
-    nablaF += -(func1(l1) / l1) * (I - tensorProduct<2, 2>(e1, e1));
-    nablaF += -(func2(l2) / l2) * (I - tensorProduct<2, 2>(e2, e2));
+    nablaF += -automaticDiff(func1, l1) * tensorProduct<double, 2, 2>(e1, e1);
+    nablaF += -automaticDiff(func2, l2) * tensorProduct<double, 2, 2>(e2, e2);
+    nablaF += -(func1(l1) / l1) * (I - tensorProduct<double, 2, 2>(e1, e1));
+    nablaF += -(func2(l2) / l2) * (I - tensorProduct<double, 2, 2>(e2, e2));
 
     // Solve the linear system
     deltaX_increment = solveLinearSystem(nablaF, -Fk);
