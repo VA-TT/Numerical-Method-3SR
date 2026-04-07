@@ -1,4 +1,4 @@
-#include "../library/coordinates.h"
+#include "../library/Coordinates.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>

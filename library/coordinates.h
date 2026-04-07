@@ -557,7 +557,7 @@ public:
   T r{}, t{}, p{};
   T t_rad{}, p_rad{};
   T cost{}, sint{}, cosp{}, sinp{};
-  StaticVector<T, 3> position{};
+  StaticVector<T, 3>  {};
   StaticVector<T, 3> rUnit, tUnit{}, pUnit{};
   StaticVector<T, 3> drUnitdt, dtUnitdt{}, dpUnitdt{};
   StaticVector<T, 3> drUnitdp, dtUnitdp{}, dpUnitdp{};
