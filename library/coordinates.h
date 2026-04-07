@@ -13,6 +13,9 @@
 
 // linear transformation of a coordinate system != Cartesian
 template <typename T, Index n> struct CoordSystem {
+  // Vectors constructors:
+  // (b should contains the new basis system after the transformation T(x) of
+  // standard basis) : b1 = T(e1), b2 = T(e2),..etc
   CoordSystem(const StaticVector<StaticVector<T, n>, n> &b_new) : b{b_new} {
     for (Index i{0}; i < n; ++i) {
       for (Index j{i}; j < n; ++j) {
@@ -26,6 +29,7 @@ template <typename T, Index n> struct CoordSystem {
       }
     }
   }
+  // Representation matrix (A) constructor
   CoordSystem(const Matrix<T, n, n> &transformMatrix) : A{transformMatrix} {
     for (Index j{0}; j < n; ++j) {
       b[j] = transformMatrix.getColVector(j);
@@ -38,31 +42,88 @@ template <typename T, Index n> struct CoordSystem {
     G.reflect(); // G is symmetric
   }
 
+  // Member variables: Gram's matrix and standard representation matrix
   StaticVector<StaticVector<T, n>, n> b; // new basis
-  Matrix<T, n, n> G{};                   // Matrix metric
+  Matrix<T, n, n> G{};
+  Matrix<T, n, n> A{}; // Matrix of the transformation
+  // Note A = P^-1 if the origin of the transformation is origined from the
+  // standard basis: Pa<-b = A^-1* B = A^-1 * I = A^-1
 
-  Matrix<T, n, n> A{}; // Matrix of the transformation: T(x) = Ax
-                       // (standard reprensentation matrix)
+  // Member functions
+  bool isLinearIndependent() const {
+    return !approximatelyEqualAbsRel(det(G), T{0});
+  }
+
+  bool isOrthogonal(const StaticVector<T, n> &v1,
+                    const StaticVector<T, n> &v2) const {
+    return approximatelyEqualAbsRel(dot(v1, v2), T{0});
+  }
+
+  bool isOrthonormal(const StaticVector<T, n> &v1,
+                     const StaticVector<T, n> &v2) const {
+    return approximatelyEqualAbsRel(norm(v1), T{1}) &&
+           approximatelyEqualAbsRel(norm(v2), T{1}) &&
+           approximatelyEqualAbsRel(dot(v1, v2), T{0});
+  }
+
+  bool isOrthogonalBasis() const {
+    for (Index i{0}; i < n; ++i) {
+      for (Index j{i + 1}; j < n; ++j) {
+        if (!approximatelyEqualAbsRel(dot(b[i], b[j]), T{0}))
+          return false;
+      }
+    }
+    return true;
+  }
+
+  bool isOrthonormalBasis() const {
+    for (Index i{0}; i < n; ++i) {
+      if (!approximatelyEqualAbsRel(norm(b[i]), T{1}))
+        return false;
+      for (Index j{i + 1}; j < n; ++j) {
+        if (!approximatelyEqualAbsRel(dot(b[i], b[j]), T{0}))
+          return false;
+      }
+    }
+    return true;
+  }
 
   T norm(const StaticVector<T, n> &v) const {
     return std::sqrt(dotProduct(v, G * v));
   }
 
-  static Matrix<T, n, n> changeBasisMatrix(const CoordSystem &B,
-                                           const CoordSystem &C) {
-    Matrix<T, n, n> P = C.A.inverse() * B.A;
-    return P;
+  T dot(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) const {
+    return (v1.transpose() * G * v2)[0];
   }
 
+  T angle(const StaticVector<T, n> &v1, const StaticVector<T, n> &v2) const {
+    T cost = dot(v1, v2) / (norm(v1) * norm(v2));
+    T theta = std::acos(cost);
+    return theta / T{constants::pi} * T{180.0}; // in degree
+  }
+
+  T volume() const { return std::sqrt(det(G)); }
+
+  // Linear transformation vector: T(x) = Ax
+  // Preserve the coordinate of x: x = x1.e1 + x2.e2
+  //                            -> T(x) = x1.T(e1) + x2.T(e2)
+  // [T(x)]c = [x]b with T(B) = C
+  // Note: Though they are different when expressed in standard basis
+  StaticVector<T, n> transform(const StaticVector<T, n> &v) const {
+    return A * v;
+  }
+
+  // Find the coordinate in new basis of a fixed transformed
+  // [x]c = P_{C<-B} * [x]b
   StaticVector<T, n> newBasisCoord(const StaticVector<T, n> &v_B,
                                    const CoordSystem &C) const {
-    Matrix<T, n, n> P = changeBasisMatrix(*this, C); // Pc<-b
+    Matrix<T, n, n> P = transitionMatrix(*this, C); // Pc<-b
     return P * v_B;
   }
 
   StaticVector<T, n> oldBasisCoord(const StaticVector<T, n> &v_C,
                                    const CoordSystem &C) const {
-    Matrix<T, n, n> P = changeBasisMatrix(*this, C); // Pc->b
+    Matrix<T, n, n> P = transitionMatrix(*this, C); // Pc->b
     return P.inverse() * v_C;
   }
 
@@ -70,7 +131,7 @@ template <typename T, Index n> struct CoordSystem {
   // [L]_C = P_{C<-B} [L]_B P_{B<-C}
   Matrix<T, n, n> newBasisOperator(const Matrix<T, n, n> &L_B,
                                    const CoordSystem &C) const {
-    const Matrix<T, n, n> P = changeBasisMatrix(*this, C);
+    const Matrix<T, n, n> P = transitionMatrix(*this, C);
     return P * L_B * P.inverse();
   }
 
@@ -78,7 +139,7 @@ template <typename T, Index n> struct CoordSystem {
   // [L]_B = P_{B<-C} [L]_C P_{C<-B}
   Matrix<T, n, n> oldBasisOperator(const Matrix<T, n, n> &L_C,
                                    const CoordSystem &C) const {
-    const Matrix<T, n, n> P = changeBasisMatrix(*this, C);
+    const Matrix<T, n, n> P = transitionMatrix(*this, C);
     return P.inverse() * L_C * P;
   }
 
@@ -88,6 +149,13 @@ template <typename T, Index n> struct CoordSystem {
     return CoordSystem(R.A * S.A);
   }
 };
+
+template <typename T, Index n>
+static Matrix<T, n, n> transitionMatrix(const CoordSystem<T, n> &B,
+                                        const CoordSystem<T, n> &C) {
+  Matrix<T, n, n> P = C.A.inverse() * B.A;
+  return P;
+}
 
 // 2D polar coordinate
 template <typename T> struct PolarCoord {

@@ -35,6 +35,44 @@ int main() {
   {
     using T = double;
 
+    // B = {e1, e2}
+    const StaticVector<StaticVector<T, 2>, 2> basisB{
+        StaticVector<T, 2>{1.0, 0.0},
+        StaticVector<T, 2>{0.0, 1.0},
+    };
+
+    // C = {v1, v2}, v1=(3,1), v2=(2,1)
+    const StaticVector<StaticVector<T, 2>, 2> basisC{
+        StaticVector<T, 2>{3.0, 1.0},
+        StaticVector<T, 2>{2.0, 1.0},
+    };
+
+    const CoordSystem<T, 2> B{basisB};
+    const CoordSystem<T, 2> C{basisC};
+
+    // T(x,y) = (x+y, y)  => [T]_B
+    // T(e1)=(1,0), T(e2)=(1,1) => columns of [T]_B
+    const Matrix<T, 2, 2> TB{{1.0, 1.0, 0.0, 1.0}};
+
+    // [T]_C = P_{C<-B} [T]_B P_{B<-C}
+    const Matrix<T, 2, 2> TC = B.newBasisOperator(TB, C);
+
+    // Expected
+    const Matrix<T, 2, 2> expectedTB{{1.0, 1.0, 0.0, 1.0}};
+    const Matrix<T, 2, 2> expectedTC{{2.0, 1.0, -1.0, 0.0}};
+
+    assert(TB == expectedTB);
+    assert(TC == expectedTC);
+
+    std::cout << "[T]_B =\n" << TB << '\n';
+    std::cout << "[T]_C =\n" << TC << '\n';
+
+    std::cout << "Problem test passed: [T]_B and [T]_C are correct\n";
+  }
+
+  {
+    using T = double;
+
     // Old basis B = Cartesian basis -> A_B = I
     const StaticVector<StaticVector<T, 2>, 2> basisB{
         StaticVector<T, 2>{1.0, 0.0},
@@ -51,8 +89,21 @@ int main() {
     const CoordSystem<T, 2> B{basisB};
     const CoordSystem<T, 2> C{basisC};
 
+    assert(B.isOrthogonalBasis());
+    assert(B.isOrthonormalBasis());
+    assert(C.isOrthogonalBasis());
+    assert(C.isOrthonormalBasis());
+
+    const StaticVector<StaticVector<T, 2>, 2> skewBasisB{
+        StaticVector<T, 2>{1.0, 0.0},
+        StaticVector<T, 2>{1.0, 1.0},
+    };
+    const CoordSystem<T, 2> SkewB{skewBasisB};
+    assert(!SkewB.isOrthogonalBasis());
+    assert(!SkewB.isOrthonormalBasis());
+
     // 1) Verify change-basis matrix formula P_{C<-B} = C^{-1} * B.
-    const Matrix<T, 2, 2> P = CoordSystem<T, 2>::changeBasisMatrix(B, C);
+    const Matrix<T, 2, 2> P = transitionMatrix(B, C);
     const Matrix<T, 2, 2> expectedP{{0.0, 1.0, -1.0, 0.0}};
     assert(almostEqualMat(P, expectedP));
 
@@ -106,8 +157,22 @@ int main() {
     const CoordSystem<T, 3> B{basisB};
     const CoordSystem<T, 3> C{basisC};
 
+    assert(B.isOrthogonalBasis());
+    assert(B.isOrthonormalBasis());
+    assert(C.isOrthogonalBasis());
+    assert(C.isOrthonormalBasis());
+
+    const StaticVector<StaticVector<T, 3>, 3> skewBasisB{
+        StaticVector<T, 3>{1.0, 0.0, 0.0},
+        StaticVector<T, 3>{1.0, 1.0, 0.0},
+        StaticVector<T, 3>{0.0, 0.0, 1.0},
+    };
+    const CoordSystem<T, 3> SkewB{skewBasisB};
+    assert(!SkewB.isOrthogonalBasis());
+    assert(!SkewB.isOrthonormalBasis());
+
     // 1) Verify change-basis matrix formula P_{C<-B} = C^{-1} * B.
-    const Matrix<T, 3, 3> P = CoordSystem<T, 3>::changeBasisMatrix(B, C);
+    const Matrix<T, 3, 3> P = transitionMatrix(B, C);
     const Matrix<T, 3, 3> expectedP{
         {0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0}};
     assert(almostEqualMat(P, expectedP));
