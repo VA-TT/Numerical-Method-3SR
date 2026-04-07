@@ -11,9 +11,9 @@
 #include <string>
 #include <string_view>
 
-// linear transformation
-template <typename T, Index n> struct changeCoor {
-  changeCoor(const StaticVector<StaticVector<T, n>, n> &b_new) : b{b_new} {
+// linear transformation of a coordinate system != Cartesian
+template <typename T, Index n> struct CoordSystem {
+  CoordSystem(const StaticVector<StaticVector<T, n>, n> &b_new) : b{b_new} {
     for (Index i{0}; i < n; ++i) {
       for (Index j{i}; j < n; ++j) {
         G(i, j) = dotProduct(b[i], b[j]);
@@ -26,7 +26,7 @@ template <typename T, Index n> struct changeCoor {
       }
     }
   }
-  changeCoor(const Matrix<T, n, n> &transformMatrix) : A{transformMatrix} {
+  CoordSystem(const Matrix<T, n, n> &transformMatrix) : A{transformMatrix} {
     for (Index j{0}; j < n; ++j) {
       b[j] = transformMatrix.getColVector(j);
     }
@@ -41,7 +41,6 @@ template <typename T, Index n> struct changeCoor {
   StaticVector<StaticVector<T, n>, n> b; // new basis
   Matrix<T, n, n> G{};                   // Matrix metric
 
-  // from Cartesian->another: change of basis = representation matrix (A = P)
   Matrix<T, n, n> A{}; // Matrix of the transformation: T(x) = Ax
                        // (standard reprensentation matrix)
 
@@ -49,27 +48,28 @@ template <typename T, Index n> struct changeCoor {
     return std::sqrt(dotProduct(v, G * v));
   }
 
-  StaticVector<T, n> newBasisCoor(const StaticVector<T, n> &v_B,
-                                  const changeCoor &C) const {
+  static Matrix<T, n, n> changeBasisMatrix(const CoordSystem &B,
+                                           const CoordSystem &C) {
+    Matrix<T, n, n> P = C.A.inverse() * B.A;
+    return P;
+  }
+
+  StaticVector<T, n> newBasisCoord(const StaticVector<T, n> &v_B,
+                                   const CoordSystem &C) const {
     Matrix<T, n, n> P = changeBasisMatrix(*this, C); // Pc<-b
     return P * v_B;
   }
 
-  StaticVector<T, n> oldBasisCoor(const StaticVector<T, n> &v,
-                                  const changeCoor &C) const {
-    Matrix<T, n, n> P = changeBasisMatrix(*this, C); // Pc<-b
-    return P.inverse() * v;
-  }
-
-  static Matrix<T, n, n> changeBasisMatrix(const changeCoor &B,
-                                           const changeCoor &C) {
-    return C.A.inverse() * B.A;
+  StaticVector<T, n> oldBasisCoord(const StaticVector<T, n> &v_C,
+                                   const CoordSystem &C) const {
+    Matrix<T, n, n> P = changeBasisMatrix(*this, C); // Pc->b
+    return P.inverse() * v_C;
   }
 
   // Change linear-operator matrix from basis B (this) to basis C:
   // [L]_C = P_{C<-B} [L]_B P_{B<-C}
   Matrix<T, n, n> newBasisOperator(const Matrix<T, n, n> &L_B,
-                                   const changeCoor &C) const {
+                                   const CoordSystem &C) const {
     const Matrix<T, n, n> P = changeBasisMatrix(*this, C);
     return P * L_B * P.inverse();
   }
@@ -77,22 +77,22 @@ template <typename T, Index n> struct changeCoor {
   // Change linear-operator matrix from basis C back to basis B (this):
   // [L]_B = P_{B<-C} [L]_C P_{C<-B}
   Matrix<T, n, n> oldBasisOperator(const Matrix<T, n, n> &L_C,
-                                   const changeCoor &C) const {
+                                   const CoordSystem &C) const {
     const Matrix<T, n, n> P = changeBasisMatrix(*this, C);
     return P.inverse() * L_C * P;
   }
 
   // (R o S) (u) = R(S(u)) = B.A.u
   // We can change from Cartesian -> another -> another
-  friend changeCoor operator*(const changeCoor &R, const changeCoor &S) {
-    return changeCoor(R.A * S.A);
+  friend CoordSystem operator*(const CoordSystem &R, const CoordSystem &S) {
+    return CoordSystem(R.A * S.A);
   }
 };
 
 // 2D polar coordinate
-template <typename T> struct PolarCoor {
+template <typename T> struct PolarCoord {
   // Constructor using (r,t) variables
-  PolarCoor(T r, T t) // theta is in degree unit
+  PolarCoord(T r, T t) // theta is in degree unit
   {
     this->r = r;
     this->t = t;
@@ -108,11 +108,11 @@ template <typename T> struct PolarCoor {
   }
 
   // Constructor using (x,y, "Cartesian") variables
-  PolarCoor(T x, T y, std::string_view coordSystem)
-      : PolarCoor(std::sqrt(x * x + y * y),
-                  std::atan2(y, x) * T{180} / T{constants::pi}) {
+  PolarCoord(T x, T y, std::string_view coordSystem)
+      : PolarCoord(std::sqrt(x * x + y * y),
+                   std::atan2(y, x) * T{180} / T{constants::pi}) {
     if (coordSystem != "Cartesian")
-      throw std::invalid_argument("PolarCoor: coordSystem must be Cartesian.");
+      throw std::invalid_argument("PolarCoord: coordSystem must be Cartesian.");
 
     // Preserve exact Cartesian inputs from caller.
     this->x = x;
@@ -130,7 +130,7 @@ template <typename T> struct PolarCoor {
   VectorFunction2D u; // u = (u1(r,t), u2(r,t))
   StaticVector<T, 2> gradient(ScalarFunction2D f_rt) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("PolarCoor::gradient requires r != 0.");
+      throw std::invalid_argument("PolarCoord::gradient requires r != 0.");
 
     Dual r_dr{r, 1.0};
     Dual t_dr{t, 0.0};
@@ -148,7 +148,7 @@ template <typename T> struct PolarCoor {
 
   T div(VectorFunction2D u_rt) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("PolarCoor::div requires r != 0.");
+      throw std::invalid_argument("PolarCoord::div requires r != 0.");
 
     Dual r_dr{r, 1.0};
     Dual t_dr{t, 0.0};
@@ -167,7 +167,7 @@ template <typename T> struct PolarCoor {
   // 2D curl = scalar z-component of the 3D curl:
   T curl(VectorFunction2D u_rt) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("PolarCoor::curl requires r != 0.");
+      throw std::invalid_argument("PolarCoord::curl requires r != 0.");
 
     Dual r_dr{r, 1.0};
     Dual t_dr{t, 0.0};
@@ -187,10 +187,10 @@ template <typename T> struct PolarCoor {
   // nabla^2 f = d2f/dr2 + (1/r) df/dr + (1/r^2) d2f/dt2
   T laplacian(ScalarFunction2D f_rt, T hr = T{1e-5}, T ht = T{1e-5}) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("PolarCoor::laplacian requires r != 0.");
+      throw std::invalid_argument("PolarCoord::laplacian requires r != 0.");
     if (hr <= T{0} || ht <= T{0})
       throw std::invalid_argument(
-          "PolarCoor::laplacian requires positive steps.");
+          "PolarCoord::laplacian requires positive steps.");
 
     auto eval = [&](T rr, T tt) -> T {
       return static_cast<T>(f_rt(Dual{static_cast<double>(rr), 0.0},
@@ -231,9 +231,9 @@ template <typename T> struct PolarCoor {
 };
 
 // 3D Cylindrical coordinates
-template <typename T> struct CylinCoor {
+template <typename T> struct CylinCoord {
   // Constructor using cylindrical variables (r, p, z), p in degrees.
-  CylinCoor(T r, T p, T z) {
+  CylinCoord(T r, T p, T z) {
     this->r = r;
     this->p = p;
     this->z = z;
@@ -252,9 +252,9 @@ template <typename T> struct CylinCoor {
   }
 
   // Constructor using Cartesian variables (x, y, z).
-  CylinCoor(T x, T y, T z, std::string_view coordSystem) {
+  CylinCoord(T x, T y, T z, std::string_view coordSystem) {
     if (coordSystem != "Cartesian")
-      throw std::invalid_argument("CylinCoor: coordSystem must be Cartesian.");
+      throw std::invalid_argument("CylinCoord: coordSystem must be Cartesian.");
 
     this->x = x;
     this->y = y;
@@ -288,7 +288,7 @@ template <typename T> struct CylinCoor {
 
   StaticVector<T, 3> gradient(ScalarFunction3D f_rpz) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("CylinCoor::gradient requires r != 0.");
+      throw std::invalid_argument("CylinCoord::gradient requires r != 0.");
 
     const T dfdr = static_cast<T>(
         f_rpz(Dual{r, 1.0}, Dual{p, 0.0}, Dual{z, 0.0}).getDer());
@@ -302,7 +302,7 @@ template <typename T> struct CylinCoor {
 
   T div(VectorFunction3D u_rpz) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("CylinCoor::div requires r != 0.");
+      throw std::invalid_argument("CylinCoord::div requires r != 0.");
 
     const auto u_dr = u_rpz(Dual{r, 1.0}, Dual{p, 0.0}, Dual{z, 0.0});
     const T du1dr = static_cast<T>(u_dr[0].getDer());
@@ -320,7 +320,7 @@ template <typename T> struct CylinCoor {
   // Curl in cylindrical components (r, p, z)
   StaticVector<T, 3> curl(VectorFunction3D u_rpz) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("CylinCoor::curl requires r != 0.");
+      throw std::invalid_argument("CylinCoord::curl requires r != 0.");
 
     const auto u_dr = u_rpz(Dual{r, 1.0}, Dual{p, 0.0}, Dual{z, 0.0});
     const T du2dr = static_cast<T>(u_dr[1].getDer());
@@ -347,10 +347,10 @@ template <typename T> struct CylinCoor {
   T laplacian(ScalarFunction3D f_rpz, T hr = T{1e-5}, T hp = T{1e-5},
               T hz = T{1e-5}) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("CylinCoor::laplacian requires r != 0.");
+      throw std::invalid_argument("CylinCoord::laplacian requires r != 0.");
     if (hr <= T{0} || hp <= T{0} || hz <= T{0})
       throw std::invalid_argument(
-          "CylinCoor::laplacian requires positive steps.");
+          "CylinCoord::laplacian requires positive steps.");
 
     auto eval = [&](T rr, T pp, T zz) -> T {
       return static_cast<T>(f_rpz(Dual{static_cast<double>(rr), 0.0},
@@ -394,18 +394,18 @@ template <typename T> struct CylinCoor {
 };
 
 // 3D Spherical coordinates
-template <typename T> struct SphereCoor {
+template <typename T> struct SphereCoord {
 public:
   // Constructor using (r,t,p) where:
   // t in [0,180] deg is polar angle (theta),
   // p in [0,360] deg is azimuth angle (phi).
-  SphereCoor(T r, T t, T p) {
+  SphereCoord(T r, T t, T p) {
     if (t < T{0} || t > T{180})
       throw std::invalid_argument(
-          "SphereCoor: theta must be in [0, 180] degrees.");
+          "SphereCoord: theta must be in [0, 180] degrees.");
     if (p < T{0} || p > T{360})
       throw std::invalid_argument(
-          "SphereCoor: phi must be in [0, 360] degrees.");
+          "SphereCoord: phi must be in [0, 360] degrees.");
 
     this->r = r;
     this->t = t;
@@ -437,9 +437,10 @@ public:
   }
 
   // Constructor from Cartesian coordinates.
-  SphereCoor(T x, T y, T z, std::string_view coordSystem) {
+  SphereCoord(T x, T y, T z, std::string_view coordSystem) {
     if (coordSystem != "Cartesian")
-      throw std::invalid_argument("SphereCoor: coordSystem must be Cartesian.");
+      throw std::invalid_argument(
+          "SphereCoord: coordSystem must be Cartesian.");
 
     this->x = x;
     this->y = y;
@@ -458,10 +459,10 @@ public:
 
     if (t < T{0} || t > T{180})
       throw std::invalid_argument(
-          "SphereCoor: theta must be in [0, 180] degrees.");
+          "SphereCoord: theta must be in [0, 180] degrees.");
     if (p < T{0} || p > T{360})
       throw std::invalid_argument(
-          "SphereCoor: phi must be in [0, 360] degrees.");
+          "SphereCoord: phi must be in [0, 360] degrees.");
 
     t_rad = t * T{constants::pi} / T{180};
     p_rad = p * T{constants::pi} / T{180};
@@ -500,10 +501,10 @@ public:
 
   StaticVector<T, 3> gradient(ScalarFunction3D f_rtp) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("SphereCoor::gradient requires r != 0.");
+      throw std::invalid_argument("SphereCoord::gradient requires r != 0.");
     if (approximatelyEqualAbsRel(sint, T{0}))
       throw std::invalid_argument(
-          "SphereCoor::gradient undefined for sin(theta)=0.");
+          "SphereCoord::gradient undefined for sin(theta)=0.");
 
     Dual r_dr{r, 1.0};
     Dual t_dr{t, 0.0};
@@ -525,10 +526,10 @@ public:
 
   T div(VectorFunction3D u_rtp) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("SphereCoor::div requires r != 0.");
+      throw std::invalid_argument("SphereCoord::div requires r != 0.");
     if (approximatelyEqualAbsRel(sint, T{0}))
       throw std::invalid_argument(
-          "SphereCoor::div undefined for sin(theta)=0.");
+          "SphereCoord::div undefined for sin(theta)=0.");
 
     auto r2ur = [u_rtp](Dual r_var, Dual t_var, Dual p_var) {
       auto val = u_rtp(r_var, t_var, p_var);
@@ -552,10 +553,10 @@ public:
 
   StaticVector<T, 3> curl(VectorFunction3D u_rtp) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("SphereCoor::curl requires r != 0.");
+      throw std::invalid_argument("SphereCoord::curl requires r != 0.");
     if (approximatelyEqualAbsRel(sint, T{0}))
       throw std::invalid_argument(
-          "SphereCoor::curl undefined for sin(theta)=0.");
+          "SphereCoord::curl undefined for sin(theta)=0.");
 
     auto sint_up = [u_rtp](Dual r_var, Dual t_var, Dual p_var) {
       auto val = u_rtp(r_var, t_var, p_var);
@@ -588,13 +589,13 @@ public:
   T laplacian(ScalarFunction3D f_rtp, T hr = T{1e-5}, T ht = T{1e-5},
               T hp = T{1e-5}) const {
     if (approximatelyEqualAbsRel(r, T{0}))
-      throw std::invalid_argument("SphereCoor::laplacian requires r != 0.");
+      throw std::invalid_argument("SphereCoord::laplacian requires r != 0.");
     if (approximatelyEqualAbsRel(sint, T{0}))
       throw std::invalid_argument(
-          "SphereCoor::laplacian undefined for sin(theta)=0.");
+          "SphereCoord::laplacian undefined for sin(theta)=0.");
     if (hr <= T{0} || ht <= T{0} || hp <= T{0})
       throw std::invalid_argument(
-          "SphereCoor::laplacian requires positive steps.");
+          "SphereCoord::laplacian requires positive steps.");
 
     auto eval = [&](T r_eval, T t_eval, T p_eval) -> T {
       return static_cast<T>(f_rtp(Dual{static_cast<double>(r_eval), 0.0},
