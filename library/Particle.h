@@ -2,6 +2,19 @@
 #define MY_PARTICLE_H
 
 #include "Vector.h"
+template <typename T> struct Particle1D {
+  // position
+  T pos{};
+  T vel{};
+  T acc{};
+
+  // Properties
+  T mass{};
+  T volume{};
+
+  // force
+  T force{};
+};
 
 template <typename T> struct Particle2D {
   // position
@@ -18,10 +31,10 @@ template <typename T> struct Particle2D {
   T radius{};
   T mass{};
   T inertia{};
+  T volume{};
 
-  
-  T kn{}, kt{};// Raideur
-  T vis{}; //viscocité
+  T kn{}, kt{}; // Raideur
+  T vis{};      // viscocité
 
   // force et moment de résultat (Cartesian)
   StaticVector<T, 2> force{}; // fx & fy
@@ -42,6 +55,7 @@ template <typename T> struct Particle3D {
   // Properties
   T radius{};
   T mass{};
+  T volume{};
   StaticVector<T, 3> inertia{};
 
   // Raideur
