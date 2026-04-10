@@ -11,10 +11,13 @@ class Dual {
 private:
   double m_val{1.0};
   double m_der{1.0};
+  double m_der2{0.0};
 
 public:
-  Dual(double val, double der) : m_val{val}, m_der{der} {}
-  Dual(double val) : m_val{val}, m_der{0.0} {}
+  Dual(double val, double der, double der2)
+      : m_val{val}, m_der{der}, m_der2{der2} {}
+  Dual(double val, double der) : m_val{val}, m_der{der}, m_der2{0.0} {}
+  Dual(double val) : m_val{val}, m_der{0.0}, m_der2{0.0} {}
   Dual() = default;
   Dual(const Dual &) = default;
   Dual(Dual &&) = default;
@@ -24,12 +27,15 @@ public:
 
   constexpr double getVal() const { return m_val; }
   constexpr double getDer() const { return m_der; }
+  constexpr double getDer2() const { return m_der2; }
   void setVal(double val) { m_val = val; }
   void setDer(double der) { m_der = der; }
+  void setDer2(double der2) { m_der2 = der2; }
   friend Dual operator*(double k, const Dual &d) {
     Dual result{d};
     result.m_val *= k;
     result.m_der *= k;
+    result.m_der2 *= k;
     return result;
   }
   friend Dual operator*(const Dual &d, double k) { return k * d; }
@@ -43,48 +49,70 @@ public:
     Dual result{d1};
     result.m_val += d2.m_val;
     result.m_der += d2.m_der;
+    result.m_der2 += d2.m_der2;
     return result;
   }
   friend Dual operator-(const Dual &d1, const Dual &d2) {
     return d1 + (-1) * d2;
   }
-  friend Dual operator-(const Dual &d) { return Dual{-d.m_val, -d.m_der}; }
+  friend Dual operator-(const Dual &d) {
+    return Dual{-d.m_val, -d.m_der, -d.m_der2};
+  }
   friend Dual operator*(const Dual &d1, const Dual &d2) {
     Dual result{};
     result.m_val = d1.m_val * d2.m_val;
     result.m_der = d1.m_val * d2.m_der + d1.m_der * d2.m_val;
-    return result;
-  }
-  friend Dual operator/(const Dual &d1, const Dual &d2) {
-    Dual result{};
-    result.m_val = d1.m_val / d2.m_val;
-    result.m_der =
-        (d1.m_der * d2.m_val - d1.m_val * d2.m_der) / (d2.m_val * d2.m_val);
+    result.m_der2 =
+        d1.m_der2 * d2.m_val + 2.0 * d1.m_der * d2.m_der + d1.m_val * d2.m_der2;
     return result;
   }
 
+  friend Dual inverse(const Dual &d) {
+    const double inv = 1.0 / d.m_val;
+    const double inv2 = inv * inv;
+    const double inv3 = inv2 * inv;
+    return Dual{inv, -d.m_der * inv2,
+                (2.0 * d.m_der * d.m_der - d.m_val * d.m_der2) * inv3};
+  }
+
+  friend Dual operator/(const Dual &d1, const Dual &d2) {
+    return d1 * inverse(d2);
+  }
+
   friend std::ostream &operator<<(std::ostream &out, const Dual &d) {
-    out << d.m_val << " + " << d.m_der << "E \n";
+    out << d.m_val << " + " << d.m_der << "E + " << d.m_der2 << "E2\n";
     return out;
   }
 };
 
 Dual sin(const Dual &d) {
-  return Dual{std::sin(d.getVal()), std::cos(d.getVal()) * d.getDer()};
+  const double s = std::sin(d.getVal());
+  const double c = std::cos(d.getVal());
+  return Dual{s, c * d.getDer(),
+              -s * d.getDer() * d.getDer() + c * d.getDer2()};
 }
 Dual cos(const Dual &d) {
-  return Dual{std::cos(d.getVal()), -std::sin(d.getVal()) * d.getDer()};
+  const double s = std::sin(d.getVal());
+  const double c = std::cos(d.getVal());
+  return Dual{c, -s * d.getDer(),
+              -c * d.getDer() * d.getDer() - s * d.getDer2()};
 }
 
 inline Dual log(const Dual &d) {
   // d/dx log(x) = 1/x
-  return Dual{std::log(d.getVal()), d.getDer() / d.getVal()};
+  const double inv = 1.0 / d.getVal();
+  return Dual{std::log(d.getVal()), d.getDer() * inv,
+              d.getDer2() * inv - d.getDer() * d.getDer() * inv * inv};
 }
 
 inline Dual pow(const Dual &d, double n) {
   // d/dx x^n = n*x^(n-1)
-  return Dual{std::pow(d.getVal(), n),
-              n * std::pow(d.getVal(), n - 1) * d.getDer()};
+  const double v_n = std::pow(d.getVal(), n);
+  const double v_n1 = std::pow(d.getVal(), n - 1.0);
+  const double v_n2 = std::pow(d.getVal(), n - 2.0);
+  return Dual{v_n, n * v_n1 * d.getDer(),
+              n * (n - 1.0) * v_n2 * d.getDer() * d.getDer() +
+                  n * v_n1 * d.getDer2()};
 }
 
 inline Dual pow(const Dual &d, int n) {
@@ -93,14 +121,12 @@ inline Dual pow(const Dual &d, int n) {
 }
 
 inline Dual operator-(const Dual &d, double b) {
-  return Dual{d.getVal() - b, d.getDer()};
+  return Dual{d.getVal() - b, d.getDer(), d.getDer2()};
 }
 inline Dual operator-(double a, const Dual &d) {
-  return Dual{a - d.getVal(), -d.getDer()};
+  return Dual{a - d.getVal(), -d.getDer(), -d.getDer2()};
 }
-inline Dual operator/(double a, const Dual &d) {
-  return Dual{a / d.getVal(), -a * d.getDer() / (d.getVal() * d.getVal())};
-}
+inline Dual operator/(double a, const Dual &d) { return Dual{a} / d; }
 
 // Generic automatic differentiation
 template <typename Func, typename T = double>
@@ -108,6 +134,13 @@ auto automaticDiff(Func func, T x0) -> double {
   Dual d{static_cast<double>(x0), 1.0};
   auto result = func(d);
   return static_cast<double>(result.getDer());
+}
+
+template <typename Func, typename T = double>
+auto automaticDiff2(Func func, T x0) -> double {
+  Dual d{static_cast<double>(x0), 1.0, 0.0};
+  auto result = func(d);
+  return static_cast<double>(result.getDer2());
 }
 
 // Compute gradient of a scalar function f(Dual x,Dual y) ->vector
@@ -284,20 +317,12 @@ StaticVector<double, 3> curl3D(VectorFunction3D u, double x0, double y0,
 
 // Laplacian scalar
 double laplacian3D(ScalarFunction3D f, double x0, double y0, double z0) {
-  const double h = 1e-5;
-  auto eval = [&](double x, double y, double z) {
-    return f(Dual{x, 0.0}, Dual{y, 0.0}, Dual{z, 0.0}).getVal();
-  };
-
   const double d2fdx2 =
-      (eval(x0 + h, y0, z0) - 2.0 * eval(x0, y0, z0) + eval(x0 - h, y0, z0)) /
-      (h * h);
+      f(Dual{x0, 1.0, 0.0}, Dual{y0, 0.0, 0.0}, Dual{z0, 0.0, 0.0}).getDer2();
   const double d2fdy2 =
-      (eval(x0, y0 + h, z0) - 2.0 * eval(x0, y0, z0) + eval(x0, y0 - h, z0)) /
-      (h * h);
+      f(Dual{x0, 0.0, 0.0}, Dual{y0, 1.0, 0.0}, Dual{z0, 0.0, 0.0}).getDer2();
   const double d2fdz2 =
-      (eval(x0, y0, z0 + h) - 2.0 * eval(x0, y0, z0) + eval(x0, y0, z0 - h)) /
-      (h * h);
+      f(Dual{x0, 0.0, 0.0}, Dual{y0, 0.0, 0.0}, Dual{z0, 1.0, 0.0}).getDer2();
 
   return d2fdx2 + d2fdy2 + d2fdz2;
 }

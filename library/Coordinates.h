@@ -256,25 +256,15 @@ template <typename T> struct PolarCoord {
   T laplacian(ScalarFunction2D f_rt, T hr = T{1e-5}, T ht = T{1e-5}) const {
     if (approximatelyEqualAbsRel(r, T{0}))
       throw std::invalid_argument("PolarCoord::laplacian requires r != 0.");
-    if (hr <= T{0} || ht <= T{0})
-      throw std::invalid_argument(
-          "PolarCoord::laplacian requires positive steps.");
+    (void)hr;
+    (void)ht;
 
-    auto eval = [&](T rr, T tt) -> T {
-      return static_cast<T>(f_rt(Dual{static_cast<double>(rr), 0.0},
-                                 Dual{static_cast<double>(tt), 0.0})
-                                .getVal());
-    };
+    const Dual f_dr = f_rt(Dual{r, 1.0, 0.0}, Dual{t, 0.0, 0.0});
+    const T dfdr = static_cast<T>(f_dr.getDer());
+    const T d2fdr2 = static_cast<T>(f_dr.getDer2());
 
-    const T f0 = eval(r, t);
-    const T fr_p = eval(r + hr, t);
-    const T fr_m = eval(r - hr, t);
-    const T ft_p = eval(r, t + ht);
-    const T ft_m = eval(r, t - ht);
-
-    const T d2fdr2 = (fr_p - T{2} * f0 + fr_m) / (hr * hr);
-    const T dfdr = (fr_p - fr_m) / (T{2} * hr);
-    const T d2fdt2 = (ft_p - T{2} * f0 + ft_m) / (ht * ht);
+    const Dual f_dt = f_rt(Dual{r, 0.0, 0.0}, Dual{t, 1.0, 0.0});
+    const T d2fdt2 = static_cast<T>(f_dt.getDer2());
 
     return d2fdr2 + T{1} / r * dfdr + T{1} / (r * r) * d2fdt2;
   }
@@ -416,29 +406,22 @@ template <typename T> struct CylinCoord {
               T hz = T{1e-5}) const {
     if (approximatelyEqualAbsRel(r, T{0}))
       throw std::invalid_argument("CylinCoord::laplacian requires r != 0.");
-    if (hr <= T{0} || hp <= T{0} || hz <= T{0})
-      throw std::invalid_argument(
-          "CylinCoord::laplacian requires positive steps.");
+    (void)hr;
+    (void)hp;
+    (void)hz;
 
-    auto eval = [&](T rr, T pp, T zz) -> T {
-      return static_cast<T>(f_rpz(Dual{static_cast<double>(rr), 0.0},
-                                  Dual{static_cast<double>(pp), 0.0},
-                                  Dual{static_cast<double>(zz), 0.0})
-                                .getVal());
-    };
+    const Dual f_dr =
+        f_rpz(Dual{r, 1.0, 0.0}, Dual{p, 0.0, 0.0}, Dual{z, 0.0, 0.0});
+    const T dfdr = static_cast<T>(f_dr.getDer());
+    const T d2fdr2 = static_cast<T>(f_dr.getDer2());
 
-    const T f0 = eval(r, p, z);
-    const T fr_p = eval(r + hr, p, z);
-    const T fr_m = eval(r - hr, p, z);
-    const T fp_p = eval(r, p + hp, z);
-    const T fp_m = eval(r, p - hp, z);
-    const T fz_p = eval(r, p, z + hz);
-    const T fz_m = eval(r, p, z - hz);
+    const Dual f_dp =
+        f_rpz(Dual{r, 0.0, 0.0}, Dual{p, 1.0, 0.0}, Dual{z, 0.0, 0.0});
+    const T d2fdp2 = static_cast<T>(f_dp.getDer2());
 
-    const T d2fdr2 = (fr_p - T{2} * f0 + fr_m) / (hr * hr);
-    const T dfdr = (fr_p - fr_m) / (T{2} * hr);
-    const T d2fdp2 = (fp_p - T{2} * f0 + fp_m) / (hp * hp);
-    const T d2fdz2 = (fz_p - T{2} * f0 + fz_m) / (hz * hz);
+    const Dual f_dz =
+        f_rpz(Dual{r, 0.0, 0.0}, Dual{p, 0.0, 0.0}, Dual{z, 1.0, 0.0});
+    const T d2fdz2 = static_cast<T>(f_dz.getDer2());
 
     return d2fdr2 + T{1} / r * dfdr + T{1} / (r * r) * d2fdp2 + d2fdz2;
   }
@@ -661,30 +644,23 @@ public:
     if (approximatelyEqualAbsRel(sint, T{0}))
       throw std::invalid_argument(
           "SphereCoord::laplacian undefined for sin(theta)=0.");
-    if (hr <= T{0} || ht <= T{0} || hp <= T{0})
-      throw std::invalid_argument(
-          "SphereCoord::laplacian requires positive steps.");
+    (void)hr;
+    (void)ht;
+    (void)hp;
 
-    auto eval = [&](T r_eval, T t_eval, T p_eval) -> T {
-      return static_cast<T>(f_rtp(Dual{static_cast<double>(r_eval), 0.0},
-                                  Dual{static_cast<double>(t_eval), 0.0},
-                                  Dual{static_cast<double>(p_eval), 0.0})
-                                .getVal());
-    };
+    const Dual f_dr =
+        f_rtp(Dual{r, 1.0, 0.0}, Dual{t, 0.0, 0.0}, Dual{p, 0.0, 0.0});
+    const T dfdr = static_cast<T>(f_dr.getDer());
+    const T d2fdr2 = static_cast<T>(f_dr.getDer2());
 
-    const T f0 = eval(r, t, p);
-    const T fr_p = eval(r + hr, t, p);
-    const T fr_m = eval(r - hr, t, p);
-    const T ft_p = eval(r, t + ht, p);
-    const T ft_m = eval(r, t - ht, p);
-    const T fp_p = eval(r, t, p + hp);
-    const T fp_m = eval(r, t, p - hp);
+    const Dual f_dt =
+        f_rtp(Dual{r, 0.0, 0.0}, Dual{t, 1.0, 0.0}, Dual{p, 0.0, 0.0});
+    const T dfdt = static_cast<T>(f_dt.getDer());
+    const T d2fdt2 = static_cast<T>(f_dt.getDer2());
 
-    const T d2fdr2 = (fr_p - T{2} * f0 + fr_m) / (hr * hr);
-    const T dfdr = (fr_p - fr_m) / (T{2} * hr);
-    const T d2fdt2 = (ft_p - T{2} * f0 + ft_m) / (ht * ht);
-    const T dfdt = (ft_p - ft_m) / (T{2} * ht);
-    const T d2fdp2 = (fp_p - T{2} * f0 + fp_m) / (hp * hp);
+    const Dual f_dp =
+        f_rtp(Dual{r, 0.0, 0.0}, Dual{t, 0.0, 0.0}, Dual{p, 1.0, 0.0});
+    const T d2fdp2 = static_cast<T>(f_dp.getDer2());
 
     const T cot_t = cost / sint;
     return d2fdr2 + (T{2} / r) * dfdr +
