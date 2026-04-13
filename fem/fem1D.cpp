@@ -1,4 +1,4 @@
-#include "../library/DualDiffrentiation.h"
+﻿#include "../library/DualDifferentiation.h"
 #include "../library/Matrix.h" //Approximative Comparsion
 #include "../library/Vector.h"
 #include "../library/clock.h"
@@ -54,7 +54,8 @@ auto rhsFunction = [](auto x) { return uniform_load; };
 ////////////////////////////////////////////////////////////
 
 // Initiate needed containers
-DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
+DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes),
+    N_x(nNodes);
 Matrix<double, nNodes, nNodes> K{};
 Matrix<double, nNodes, 1> U{};
 Matrix<double, nNodes, 1> F{};
@@ -225,12 +226,14 @@ int main() {
   // std::cout << K << std::endl;
   // std::cout << F << std::endl;
   U = solveLinearSystem(K, F);
-  std::cout << "Displacement vector U: \n" << DynamicVector<double>(U) << std::endl;
+  std::cout << "Displacement vector U: \n"
+            << DynamicVector<double>(U) << std::endl;
 
   // Calculate reaction forces using helper function
   calculateReactions(K_original, F_original, U);
 
-  std::cout << "Reaction force vector R: \n" << DynamicVector<double>(R) << std::endl;
+  std::cout << "Reaction force vector R: \n"
+            << DynamicVector<double>(R) << std::endl;
 
   {
     // Compute element axial forces (constant per linear element)

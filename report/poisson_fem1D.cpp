@@ -1,4 +1,4 @@
-#include "library/DualDiffrentiation.h"
+﻿#include "library/DualDifferentiation.h"
 #include "library/Matrix.h" //Approximative Comparsion
 #include "library/Vector.h"
 #include "library/clock.h"
@@ -38,7 +38,8 @@ constexpr double EA = 1.0;
 
 auto rhsFunction = [](auto x) { return x; };
 
-DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes), N_x(nNodes);
+DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes),
+    N_x(nNodes);
 Matrix<double, nNodes, nNodes> K{};
 Matrix<double, nNodes, 1> U{};
 Matrix<double, nNodes, 1> F{};

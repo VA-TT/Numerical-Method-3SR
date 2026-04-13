@@ -1,4 +1,4 @@
-#include "../library/DualDiffrentiation.h"
+﻿#include "../library/DualDifferentiation.h"
 #include "../library/Matrix.h"
 #include "../library/Vector.h"
 #include "../library/clock.h"
@@ -9,7 +9,7 @@
 #include <numbers>
 #include <vector>
 
-// Model giống console2D
+// Model giá»‘ng console2D
 #if 0
 |o-----o
       / |\
@@ -22,7 +22,7 @@ namespace modelParameters {
 // Dimension
 constexpr Index d{2};
 
-// Geometry (giống console2D)
+// Geometry (giá»‘ng console2D)
 constexpr Index nNodes{
     3}; // 3 nodes: 0 (origin), 1 (top-left), 2 (C - free node)
 constexpr Index nBars{2}; // 2 bars
@@ -45,17 +45,18 @@ DynamicVector<double> lengthBars(nBars), length0Bars(nBars);
 
 // Fixed nodes (0 and 1)
 DynamicVector<Index> nodeImposed{0, 1};
-DynamicVector<DynamicVector<double>> displacementImposed{{0.0, 0.0}, {0.0, 0.0}};
+DynamicVector<DynamicVector<double>> displacementImposed{{0.0, 0.0},
+                                                         {0.0, 0.0}};
 DynamicVector<Index> nodeFree{2}; // Only node 2 is free
 
-// Material properties (giống console2D)
+// Material properties (giá»‘ng console2D)
 double E{25e9};
 double b1{0.02}, h1{0.05};
 double b2{0.02}, h2{0.05};
 double A1{b1 * h1}, A2{b2 * h2};
 double alpha1{E * A1}, alpha2{E * A2};
 
-// External force (giống console2D)
+// External force (giá»‘ng console2D)
 double force{1.5e6};
 double theta{20.0};
 double thetaRadian{theta * std::numbers::pi / 180.0};
@@ -198,9 +199,12 @@ int main() {
     }
 
     // Flatten forces
-    DynamicVector<double> externalForceFlatten{flatten(externalForce, nNodes, d)};
-    DynamicVector<double> internalForceFlatten{flatten(internalForceNodes, nNodes, d)};
-    DynamicVector<double> residualForce = externalForceFlatten - internalForceFlatten;
+    DynamicVector<double> externalForceFlatten{
+        flatten(externalForce, nNodes, d)};
+    DynamicVector<double> internalForceFlatten{
+        flatten(internalForceNodes, nNodes, d)};
+    DynamicVector<double> residualForce =
+        externalForceFlatten - internalForceFlatten;
 
     // Calculate reactions
     for (Index ii = 0; ii < nNodes; ++ii) {
@@ -299,7 +303,8 @@ int main() {
     }
 
     // Solve
-    DynamicVector<double> deltaU{solveLinearSystem(assemblyStiffnessK, residualForce)};
+    DynamicVector<double> deltaU{
+        solveLinearSystem(assemblyStiffnessK, residualForce)};
     double incrementNorm = magnitude(deltaU);
 
     std::cout << "Iteration " << iteration

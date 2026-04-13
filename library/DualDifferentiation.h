@@ -1,5 +1,5 @@
-#ifndef DUAL_CLASS_DIFFERENTIATION_H
-#define DUAL_CLASS_DIFFERENTIATION_H
+﻿#ifndef DUAL_DIFFERENTIATION_H
+#define DUAL_DIFFERENTIATION_H
 
 #include "Matrix.h"
 #include "Vector.h"
@@ -7,11 +7,16 @@
 #include <functional>
 #include <iostream>
 
+// Define an epsilon that epsilon^3 = 0
+// Dual expansion: f(x+epsilon) = f(x) + epsilon.f'(x) + epsilon^2.f''(x)
+//                              = a    + epsilon.b     + epsilon.c
+//  => a = f(x); b = f'(x); c = f''(x)
+// Note: Must seed Dual x{x0,1.0} / x{x0,1.0,0.0}
 class Dual {
 private:
   double m_val{1.0};
-  double m_der{1.0};
-  double m_der2{0.0};
+  double m_der{1.0};  // first-order derivative
+  double m_der2{0.0}; // second-order derivative
 
 public:
   Dual(double val, double der, double der2)
@@ -52,9 +57,7 @@ public:
     result.m_der2 += d2.m_der2;
     return result;
   }
-  friend Dual operator-(const Dual &d1, const Dual &d2) {
-    return d1 + (-1) * d2;
-  }
+  friend Dual operator-(const Dual &d1, const Dual &d2) { return d1 + (-d2); }
   friend Dual operator-(const Dual &d) {
     return Dual{-d.m_val, -d.m_der, -d.m_der2};
   }
@@ -146,14 +149,10 @@ auto automaticDiff2(Func func, T x0) -> double {
 // Compute gradient of a scalar function f(Dual x,Dual y) ->vector
 using ScalarFunction2D = std::function<Dual(Dual, Dual)>;
 StaticVector<double, 2> grad2D(ScalarFunction2D f, double x0, double y0) {
-  Dual x_dx{x0, 1.0};
-  Dual y_dx{y0, 0.0};
-  Dual r_x = f(x_dx, y_dx);
+  Dual r_x = f({x0, 1.0}, {y0, 0.0});
   double dfdx = r_x.getDer();
 
-  Dual x_dy{x0, 0.0};
-  Dual y_dy{y0, 1.0};
-  Dual r_y = f(x_dy, y_dy);
+  Dual r_y = f({x0, 0.0}, {y0, 1.0});
   double dfdy = r_y.getDer();
 
   return {dfdx, dfdy};
@@ -162,15 +161,11 @@ StaticVector<double, 2> grad2D(ScalarFunction2D f, double x0, double y0) {
 // Compute gradient of vector function -> tensor
 using VectorFunction2D = std::function<StaticVector<Dual, 2>(Dual, Dual)>;
 Matrix<double, 2, 2> grad2D(VectorFunction2D u, double x0, double y0) {
-  Dual x_dx{x0, 1.0};
-  Dual y_dx{y0, 0.0};
-  auto u_dualX = u(x_dx, y_dx);
+  auto u_dualX = u({x0, 1.0}, {y0, 0.0});
   double du1dx = u_dualX.x().getDer();
   double du2dx = u_dualX.y().getDer();
 
-  Dual x_dy{x0, 0.0};
-  Dual y_dy{y0, 1.0};
-  auto u_dualY = u(x_dy, y_dy);
+  auto u_dualY = u({x0, 0.0}, {y0, 1.0});
   double du1dy = u_dualY.x().getDer();
   double du2dy = u_dualY.y().getDer();
 
@@ -178,26 +173,18 @@ Matrix<double, 2, 2> grad2D(VectorFunction2D u, double x0, double y0) {
 }
 
 double div2D(VectorFunction2D u, double x0, double y0) {
-  Dual x_dx{x0, 1.0};
-  Dual y_dx{y0, 0.0};
-  auto u_dualX = u(x_dx, y_dx);
+  auto u_dualX = u({x0, 1.0}, {y0, 0.0});
 
-  Dual x_dy{x0, 0.0};
-  Dual y_dy{y0, 1.0};
-  auto u_dualY = u(x_dy, y_dy);
+  auto u_dualY = u({x0, 0.0}, {y0, 1.0});
 
   return u_dualX.x().getDer() + u_dualY.y().getDer();
 }
 
 // 2D curl = scalar z-component of the 3D curl:
 double curl2D(VectorFunction2D u, double x0, double y0) {
-  Dual x_dx{x0, 1.0};
-  Dual y_dx{y0, 0.0};
-  auto u_dualX = u(x_dx, y_dx);
+  auto u_dualX = u({x0, 1.0}, {y0, 0.0});
 
-  Dual x_dy{x0, 0.0};
-  Dual y_dy{y0, 1.0};
-  auto u_dualY = u(x_dy, y_dy);
+  auto u_dualY = u({x0, 0.0}, {y0, 1.0});
 
   return u_dualX.y().getDer() - u_dualY.x().getDer();
 }
@@ -206,24 +193,15 @@ using ScalarFunction3D = std::function<Dual(Dual, Dual, Dual)>;
 StaticVector<double, 3> grad3D(ScalarFunction3D f, double x0, double y0,
                                double z0) {
   // df/dx
-  Dual x_dx{x0, 1.0};
-  Dual y_dx{y0, 0.0};
-  Dual z_dx{z0, 0.0};
-  Dual r_x = f(x_dx, y_dx, z_dx);
+  Dual r_x = f({x0, 1.0}, {y0, 0.0}, {z0, 0.0});
   double dfdx = r_x.getDer();
 
   // df/dy
-  Dual x_dy{x0, 0.0};
-  Dual y_dy{y0, 1.0};
-  Dual z_dy{z0, 0.0};
-  Dual r_y = f(x_dy, y_dy, z_dy);
+  Dual r_y = f({x0, 0.0}, {y0, 1.0}, {z0, 0.0});
   double dfdy = r_y.getDer();
 
   // df/dz
-  Dual x_dz{x0, 0.0};
-  Dual y_dz{y0, 0.0};
-  Dual z_dz{z0, 1.0};
-  Dual r_z = f(x_dz, y_dz, z_dz);
+  Dual r_z = f({x0, 0.0}, {y0, 0.0}, {z0, 1.0});
   double dfdz = r_z.getDer();
 
   return {dfdx, dfdy, dfdz};
@@ -233,26 +211,17 @@ using VectorFunction3D = std::function<StaticVector<Dual, 3>(Dual, Dual, Dual)>;
 
 Matrix<double, 3, 3> grad3D(VectorFunction3D u, double x0, double y0,
                             double z0) {
-  Dual x_dx{x0, 1.0};
-  Dual y_dx{y0, 0.0};
-  Dual z_dx{z0, 0.0};
-  auto u_dualX = u(x_dx, y_dx, z_dx);
+  auto u_dualX = u({x0, 1.0}, {y0, 0.0}, {z0, 0.0});
   double du1dx = u_dualX.x().getDer();
   double du2dx = u_dualX.y().getDer();
   double du3dx = u_dualX.z().getDer();
 
-  Dual x_dy{x0, 0.0};
-  Dual y_dy{y0, 1.0};
-  Dual z_dy{z0, 0.0};
-  auto u_dualY = u(x_dy, y_dy, z_dy);
+  auto u_dualY = u({x0, 0.0}, {y0, 1.0}, {z0, 0.0});
   double du1dy = u_dualY.x().getDer();
   double du2dy = u_dualY.y().getDer();
   double du3dy = u_dualY.z().getDer();
 
-  Dual x_dz{x0, 0.0};
-  Dual y_dz{y0, 0.0};
-  Dual z_dz{z0, 1.0};
-  auto u_dualZ = u(x_dz, y_dz, z_dz);
+  auto u_dualZ = u({x0, 0.0}, {y0, 0.0}, {z0, 1.0});
   double du1dz = u_dualZ.x().getDer();
   double du2dz = u_dualZ.y().getDer();
   double du3dz = u_dualZ.z().getDer();
@@ -263,24 +232,15 @@ Matrix<double, 3, 3> grad3D(VectorFunction3D u, double x0, double y0,
 double div3D(VectorFunction3D u, double x0, double y0, double z0) {
 
   // u_x,x
-  Dual x_dx{x0, 1.0};
-  Dual y_dx{y0, 0.0};
-  Dual z_dx{z0, 0.0};
-  auto u_dualX = u(x_dx, y_dx, z_dx);
+  auto u_dualX = u({x0, 1.0}, {y0, 0.0}, {z0, 0.0});
   double du1dx = u_dualX.x().getDer();
 
   // u_y,y
-  Dual x_dy{x0, 0.0};
-  Dual y_dy{y0, 1.0};
-  Dual z_dy{z0, 0.0};
-  auto u_dualY = u(x_dy, y_dy, z_dy);
+  auto u_dualY = u({x0, 0.0}, {y0, 1.0}, {z0, 0.0});
   double du2dy = u_dualY.y().getDer();
 
   // u_z,z
-  Dual x_dz{x0, 0.0};
-  Dual y_dz{y0, 0.0};
-  Dual z_dz{z0, 1.0};
-  auto u_dualZ = u(x_dz, y_dz, z_dz);
+  auto u_dualZ = u({x0, 0.0}, {y0, 0.0}, {z0, 1.0});
   double du3dz = u_dualZ.z().getDer();
 
   return du1dx + du2dy + du3dz;
@@ -289,26 +249,17 @@ double div3D(VectorFunction3D u, double x0, double y0, double z0) {
 StaticVector<double, 3> curl3D(VectorFunction3D u, double x0, double y0,
                                double z0) {
   // du_i/dx
-  Dual x_dx{x0, 1.0};
-  Dual y_dx{y0, 0.0};
-  Dual z_dx{z0, 0.0};
-  auto u_dualX = u(x_dx, y_dx, z_dx);
+  auto u_dualX = u({x0, 1.0}, {y0, 0.0}, {z0, 0.0});
   double du2dx = u_dualX.y().getDer();
   double du3dx = u_dualX.z().getDer();
 
   // du_i/dy
-  Dual x_dy{x0, 0.0};
-  Dual y_dy{y0, 1.0};
-  Dual z_dy{z0, 0.0};
-  auto u_dualY = u(x_dy, y_dy, z_dy);
+  auto u_dualY = u({x0, 0.0}, {y0, 1.0}, {z0, 0.0});
   double du1dy = u_dualY.x().getDer();
   double du3dy = u_dualY.z().getDer();
 
   // du_i/dz
-  Dual x_dz{x0, 0.0};
-  Dual y_dz{y0, 0.0};
-  Dual z_dz{z0, 1.0};
-  auto u_dualZ = u(x_dz, y_dz, z_dz);
+  auto u_dualZ = u({x0, 0.0}, {y0, 0.0}, {z0, 1.0});
   double du1dz = u_dualZ.x().getDer();
   double du2dz = u_dualZ.y().getDer();
 
@@ -317,12 +268,9 @@ StaticVector<double, 3> curl3D(VectorFunction3D u, double x0, double y0,
 
 // Laplacian scalar
 double laplacian3D(ScalarFunction3D f, double x0, double y0, double z0) {
-  const double d2fdx2 =
-      f(Dual{x0, 1.0, 0.0}, Dual{y0, 0.0, 0.0}, Dual{z0, 0.0, 0.0}).getDer2();
-  const double d2fdy2 =
-      f(Dual{x0, 0.0, 0.0}, Dual{y0, 1.0, 0.0}, Dual{z0, 0.0, 0.0}).getDer2();
-  const double d2fdz2 =
-      f(Dual{x0, 0.0, 0.0}, Dual{y0, 0.0, 0.0}, Dual{z0, 1.0, 0.0}).getDer2();
+  const double d2fdx2 = f({x0, 1.0}, {y0, 0.0}, {z0, 0.0}).getDer2();
+  const double d2fdy2 = f({x0, 0.0}, {y0, 1.0}, {z0, 0.0}).getDer2();
+  const double d2fdz2 = f({x0, 0.0}, {y0, 0.0}, {z0, 1.0}).getDer2();
 
   return d2fdx2 + d2fdy2 + d2fdz2;
 }

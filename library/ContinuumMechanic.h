@@ -1,8 +1,8 @@
-#ifndef CONTINUUM_MECHANICS_H
+﻿#ifndef CONTINUUM_MECHANICS_H
 #define CONTINUUM_MECHANICS_H
 
 #include "Coordinates.h"
-#include "DualDiffrentiation.h"
+#include "DualDifferentiation.h"
 #include "Matrix.h"
 #include "Vector.h"
 #include "parentElement.h"

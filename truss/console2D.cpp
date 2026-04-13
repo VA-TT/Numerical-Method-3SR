@@ -1,4 +1,4 @@
-#include "../library/DualDiffrentiation.h"
+﻿#include "../library/DualDifferentiation.h"
 #include "../library/Matrix.h" //Approximative Comparsion
 #include "../library/Vector.h"
 #include "../library/clock.h" // time-measuring

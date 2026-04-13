@@ -1,7 +1,7 @@
+﻿#include "library/DualDifferentiation.h"
 #include "library/Matrix.h" //Approximative Comparsion
 #include "library/Vector.h"
 #include "library/clock.h"
-#include "library/DualDiffrentiation.h"
 #include "vector"
 #include <cassert> // for assert
 #include <fstream> //working with files
@@ -54,7 +54,8 @@ DynamicVector<Index> barEnd{2, 1, 3, 3, 4, 4, 5, 5};
 DynamicVector<DynamicVector<double>> vectorBars(nBars), unitVectorBars(nBars);
 DynamicVector<double> lengthBars(nBars);
 DynamicVector<Index> nodeImposed{0, 1};
-DynamicVector<DynamicVector<double>> displacementImposed{{0.0, 0.0}, {0.0, 0.0}};
+DynamicVector<DynamicVector<double>> displacementImposed{{0.0, 0.0},
+                                                         {0.0, 0.0}};
 DynamicVector<Index> nodeFree(nNodes - nodeImposed.size());
 
 // Section dimension

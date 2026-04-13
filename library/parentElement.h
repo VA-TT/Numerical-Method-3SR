@@ -1,7 +1,7 @@
-#ifndef PARENT_ELEMENT_SHAPE_FUNCTION_H
+﻿#ifndef PARENT_ELEMENT_SHAPE_FUNCTION_H
 #define PARENT_ELEMENT_SHAPE_FUNCTION_H
 
-#include "DualDiffrentiation.h"
+#include "DualDifferentiation.h"
 #include "Matrix.h"
 #include "Vector.h"
 #include "gaussQuadrature.h"
@@ -123,7 +123,7 @@ inline auto dN3_deta = [](auto xi, auto eta) { return 0.25 * (1 + xi); };
 inline auto dN4_deta = [](auto xi, auto eta) { return 0.25 * (1 - xi); };
 
 // Mapping from parent [-1,1]x[-1,1] to physical coordinates
-// x = sum(N_i * x_i) = N · x_nodes, y = sum(N_i * y_i) = N · y_nodes
+// x = sum(N_i * x_i) = N Â· x_nodes, y = sum(N_i * y_i) = N Â· y_nodes
 template <typename T>
 std::pair<T, T> physicCoor(T xi, T eta, const DynamicVector<T> &x_nodes,
                            const DynamicVector<T> &y_nodes) {
@@ -164,8 +164,8 @@ Matrix<T, 2, 2> Jacobian(T xi, T eta, const DynamicVector<T> &x_nodes,
   dN_deta[2] = dN3_deta(xi, eta);
   dN_deta[3] = dN4_deta(xi, eta);
 
-  // J = [dN_dxi · x_nodes,  dN_deta · x_nodes]
-  //     [dN_dxi · y_nodes,  dN_deta · y_nodes]
+  // J = [dN_dxi Â· x_nodes,  dN_deta Â· x_nodes]
+  //     [dN_dxi Â· y_nodes,  dN_deta Â· y_nodes]
   J(0, 0) = dotProduct(dN_dxi, x_nodes);  // dx/dxi
   J(0, 1) = dotProduct(dN_deta, x_nodes); // dx/deta
   J(1, 0) = dotProduct(dN_dxi, y_nodes);  // dy/dxi
@@ -269,8 +269,9 @@ inline double integrationGauss2D_ref(
 
 // Compute derivatives of shape functions in physical coordinates
 template <typename T>
-std::pair<DynamicVector<T>, DynamicVector<T>> gradientN(T xi, T eta, const DynamicVector<T> &x_nodes,
-                                       const DynamicVector<T> &y_nodes) {
+std::pair<DynamicVector<T>, DynamicVector<T>>
+gradientN(T xi, T eta, const DynamicVector<T> &x_nodes,
+          const DynamicVector<T> &y_nodes) {
   assert(x_nodes.size() == 4 && "x_nodes must have 4 elements for Q4 element");
   assert(y_nodes.size() == 4 && "y_nodes must have 4 elements for Q4 element");
 

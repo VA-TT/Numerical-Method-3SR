@@ -1,4 +1,4 @@
-#include "library/DualDiffrentiation.h"
+﻿#include "library/DualDifferentiation.h"
 #include "library/Matrix.h" //Approximative Comparsion
 #include "library/Vector.h"
 #include "library/clock.h"
@@ -41,10 +41,10 @@ constexpr Index nNodes{8}; // number of nodes
 constexpr Index nBars{10}; // number of bars
 
 DynamicVector<DynamicVector<double>> nodes{
-    {0.0, 0.0, 0.0},     // Node 0
-    {10.0, 0.0, 0.0},    // Node 1
-    {0.0, 0.0, 10.0},    // Node 2
-    {10.0, 0.0, 10.0},   // Node 3
+    {0.0, 0.0, 0.0},   // Node 0
+    {10.0, 0.0, 0.0},  // Node 1
+    {0.0, 0.0, 10.0},  // Node 2
+    {10.0, 0.0, 10.0}, // Node 3
 
 };
 // Bar connectivity: store node indices for each bar's origin and end
@@ -304,7 +304,8 @@ int main() {
     }
 
     // Solve the linear system to find displacement
-    DynamicVector<double> deltaU{solveLinearSystem(assemblyStiffnessK, residualForce)};
+    DynamicVector<double> deltaU{
+        solveLinearSystem(assemblyStiffnessK, residualForce)};
     double incrementNorm = magnitude(deltaU);
 
     nodes += unflatten(deltaU, nNodes, d);

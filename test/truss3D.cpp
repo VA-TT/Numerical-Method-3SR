@@ -1,4 +1,4 @@
-#include "library/DualDiffrentiation.h"
+﻿#include "library/DualDifferentiation.h"
 #include "library/Matrix.h" //Approximative Comparsion
 #include "library/Vector.h"
 #include "library/clock.h"
@@ -205,8 +205,10 @@ int main() {
     }
 
     // Flatting vector F
-    DynamicVector<double> externalForceFlatten{flatten(externalForce, nNodes, d)};
-    DynamicVector<double> internalForceFlatten{flatten(internalForceNodes, nNodes, d)};
+    DynamicVector<double> externalForceFlatten{
+        flatten(externalForce, nNodes, d)};
+    DynamicVector<double> internalForceFlatten{
+        flatten(internalForceNodes, nNodes, d)};
     // Modify the right-hand side: F = F_external - F_internal
     DynamicVector<double> forceF = externalForceFlatten - internalForceFlatten;
 
@@ -287,7 +289,7 @@ int main() {
     DynamicVector<double> deltaU{solveLinearSystem(assemblyStiffnessK, forceF)};
     double incrementNorm = magnitude(deltaU);
 
-    // IN RA THÔNG TIN HỘI TỤ GIỐNG CODE 2D
+    // IN RA THÃ”NG TIN Há»˜I Tá»¤ GIá»NG CODE 2D
     std::cout << "Iteration " << iteration << ": |Fk| = " << residualNorm
               << ": |dx| = " << incrementNorm << std::endl;
 

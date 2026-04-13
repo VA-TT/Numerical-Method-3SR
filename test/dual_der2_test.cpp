@@ -1,4 +1,4 @@
-#include "../library/DualDiffrentiation.h"
+﻿#include "../library/DualDifferentiation.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>

@@ -1,4 +1,4 @@
-#include "library/DualDiffrentiation.h"
+﻿#include "library/DualDifferentiation.h"
 #include "library/Matrix.h" //Approximative Comparsion
 #include "library/Vector.h"
 #include "library/clock.h" // time-measuring
@@ -39,9 +39,9 @@ double theta{20}; // Inclined angle of the force with relative to vertical
 double thetaRadian{theta * std::numbers::pi / 180}; // converte to radian
 
 DynamicVector<double> f1{force * std::sin(thetaRadian) *
-                  i1}; // force's horizontal component
+                         i1}; // force's horizontal component
 DynamicVector<double> f2{-force * std::cos(thetaRadian) *
-                  i2}; // force's vertical component
+                         i2}; // force's vertical component
 DynamicVector<double> externalForce{f1 + f2};
 
 // Section dimension
@@ -69,12 +69,8 @@ int main() {
 
   // Define func as a lambda that matches the expected signature for
   // automaticDiff
-  auto func1 = [](auto x1) {
-    return constitutiveLaw(alpha1, x1, l01);
-  };
-  auto func2 = [](auto x2) {
-    return constitutiveLaw(alpha2, x2, l02);
-  };
+  auto func1 = [](auto x1) { return constitutiveLaw(alpha1, x1, l01); };
+  auto func2 = [](auto x2) { return constitutiveLaw(alpha2, x2, l02); };
 
   // Setting up
   int iteration{0};
@@ -117,20 +113,13 @@ int main() {
 
     // Calculate NablaF at itaration k
     nablaF = Matrix<double, n, n>{};
-    nablaF += -automaticDiff(func1, l1) *
-              tensorProduct<n, n>(e1, e1);
-    nablaF += -automaticDiff(func2, l2) *
-              tensorProduct<n, n>(e2, e2);
-    nablaF +=
-        -(func1(l1) / l1) *
-        (I - tensorProduct<n, n>(e1, e1));
-    nablaF +=
-        -(func2(l2) / l2) *
-        (I - tensorProduct<n, n>(e2, e2));
+    nablaF += -automaticDiff(func1, l1) * tensorProduct<n, n>(e1, e1);
+    nablaF += -automaticDiff(func2, l2) * tensorProduct<n, n>(e2, e2);
+    nablaF += -(func1(l1) / l1) * (I - tensorProduct<n, n>(e1, e1));
+    nablaF += -(func2(l2) / l2) * (I - tensorProduct<n, n>(e2, e2));
 
     // Solve the linear system
-    std::cout << tensorProduct<n, n>(e1, e1)
-              << '\n';
+    std::cout << tensorProduct<n, n>(e1, e1) << '\n';
     std::cout << std::setprecision(12);
     std::cout << "[DEBUG] l1=" << l1 << " l01=" << l01
               << " func1(l1)=" << func1(l1)
@@ -149,8 +138,8 @@ int main() {
   }
 
   if (iteration >= max_iteration) {
-    std::cout << "Failed to converge after " << max_iteration
-              << " iterations" << std::endl;
+    std::cout << "Failed to converge after " << max_iteration << " iterations"
+              << std::endl;
   }
 
   std::cout << "\nFinal displacement: " << deltaX << std::endl;

@@ -1,11 +1,15 @@
 #ifndef MY_MATRIX_CLASS_H
 #define MY_MATRIX_CLASS_H
 
-// Consider return m_elements[(i - 1) * nCols + (j - 1)]; in order to accessing
-// the matrices with index starting from 1 in mathematic
-// LU Decomposition (to be implemented) to be more optimized
-// Resize function?
-// Jacobian, Hessian Matrix
+// Note: most of the functionality is implemented for for mechanical modeling
+// purpose a.k.a symmetric matrix, real eigen value, inverse of square matrix,
+// ...etc
+//  TO BE IMPLEMENTED:
+//  Consider return m_elements[(i - 1) * nCols + (j - 1)]; in order to accessing
+//  the matrices with index starting from 1 in mathematic
+//  LU Decomposition (to be implemented) to be more optimized
+//  Resize function?
+//  Rank of matrix,  refractor inverse, inverse of hard type matrix,..
 
 #include "comparison.h"   //Approximative Comparsion
 #include "random.h"       //random
@@ -67,6 +71,26 @@ public:
     return result;
   }
   void resetIdentity() { (*this) = Matrix::identity(); }
+
+  static Matrix diag(T value) {
+    Matrix result{};
+    for (Index i = 0; i < std::min(nRows, nCols); ++i) {
+      result(i, i) = value;
+    }
+    return result;
+  }
+
+  template <Index nElements>
+  static Matrix diag(const StaticVector<T, nElements> &diagVector) {
+    Matrix result{};
+    constexpr Index n = std::min(nRows, nCols);
+    static_assert(n == nElements,
+                  "Size of the vector must match the number of diagonal elements");
+    for (Index i = 0; i < n; ++i) {
+      result(i, i) = diagVector[i];
+    }
+    return result;
+  }
 
   // Accessing the elements in the array with one parameter (i)
   T &operator[](Index i) {

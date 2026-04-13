@@ -1,7 +1,7 @@
-#ifndef MY_NEWTON_RAPHSON_ROOT_H
+﻿#ifndef MY_NEWTON_RAPHSON_ROOT_H
 #define MY_NEWTON_RAPHSON_ROOT_H
 
-#include "DualDiffrentiation.h"
+#include "DualDifferentiation.h"
 #include <algorithm>
 #include <cmath>
 #include <type_traits>

@@ -29,7 +29,7 @@ int main() {
   constexpr double tol = 1e-10;
 
   for (const auto &s : samples) {
-    PolarCoor<double> p{s.r, s.thetaDeg};
+    PolarCoord<double> p{s.r, s.thetaDeg};
 
     const double div_u = p.div(u_rt);
     const double curl_u = p.curl(u_rt);
@@ -48,7 +48,7 @@ int main() {
   const double R = 2.0;
   const auto jacobian_integrand = [](double r, double theta_rad) -> double {
     const double theta_deg = theta_rad * 180.0 / constants::pi;
-    PolarCoor<double> p{r, theta_deg};
+    PolarCoord<double> p{r, theta_deg};
     return p.jacobian();
   };
   const double area_num = integrationGauss2D(0.0, R, 0.0, 2.0 * constants::pi,

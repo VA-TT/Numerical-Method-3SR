@@ -1,4 +1,4 @@
-#include "../library/DualDiffrentiation.h"
+﻿#include "../library/DualDifferentiation.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -37,7 +37,7 @@ int main() {
   }
 
   {
-    VectorFunction u = [](Dual x, Dual y, Dual z) -> StaticVector<Dual, 3> {
+    VectorFunction3D u = [](Dual x, Dual y, Dual z) -> StaticVector<Dual, 3> {
       return {x + y, y + z, z + x};
     };
     const auto J = grad3D(u, 1.0, 2.0, 3.0);
@@ -53,7 +53,7 @@ int main() {
   }
 
   {
-    VectorFunction u = [](Dual x, Dual y, Dual z) -> StaticVector<Dual, 3> {
+    VectorFunction3D u = [](Dual x, Dual y, Dual z) -> StaticVector<Dual, 3> {
       return {x, y, z};
     };
     const double div = div3D(u, 0.5, -1.2, 4.0);
@@ -61,7 +61,7 @@ int main() {
   }
 
   {
-    VectorFunction v = [](Dual x, Dual y, Dual z) -> StaticVector<Dual, 3> {
+    VectorFunction3D v = [](Dual x, Dual y, Dual z) -> StaticVector<Dual, 3> {
       (void)z;
       return {y, -x, x * y};
     };
@@ -72,7 +72,7 @@ int main() {
   }
 
   {
-    VectorFunction v = [](Dual x, Dual y, Dual z) -> StaticVector<Dual, 3> {
+    VectorFunction3D v = [](Dual x, Dual y, Dual z) -> StaticVector<Dual, 3> {
       return {x * x, y * y, z * z};
     };
     auto l = laplacian3D(v, 2.0, -3.0, 1.5);

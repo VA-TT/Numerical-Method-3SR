@@ -1,4 +1,4 @@
-#include "../library/DualDiffrentiation.h"
+﻿#include "../library/DualDifferentiation.h"
 #include "../library/Matrix.h" //Approximative Comparsion
 #include "../library/Vector.h"
 #include "../library/clock.h"
@@ -62,7 +62,8 @@ DynamicVector<Index> eleOrigin;
 DynamicVector<Index> eleEnd;
 DynamicVector<double> length(nElements);
 DynamicVector<DynamicVector<double>> element(nElements);
-DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes), B(nNodes);
+DynamicVector<DynamicVector<std::function<double(double)>>> N(nNodes),
+    B(nNodes);
 DynamicVector<double> N_p(nNodes), B_p(nNodes);
 DynamicVector<double> m_i(nNodes), v_i(nNodes), mv_i(nNodes);
 
@@ -203,8 +204,8 @@ int main() {
       // Note: Currently only 1 particle at x_p_current
       // N_p[i] = shape function value of node i at particle p's position
       for (Index i{0}; i < nNodes; i++) {
-        m_i[i] += N_p[i] * mass_p;        // m_i = Σ_p N_i(x_p) * mass_p
-        mv_i[i] += N_p[i] * mass_p * v_p; // mv_i = Σ_p N_i(x_p) * mass_p * v_p
+        m_i[i] += N_p[i] * mass_p;        // m_i = Î£_p N_i(x_p) * mass_p
+        mv_i[i] += N_p[i] * mass_p * v_p; // mv_i = Î£_p N_i(x_p) * mass_p * v_p
       }
     }
     // 3.Compute nodal force
@@ -215,7 +216,7 @@ int main() {
     for (Index p{0}; p < nMPs; p++) {
       for (Index i{0}; i < nNodes; i++) {
         f_int_i[i] += -B_p[i] * V_p *
-                      modelParameters::stress_p; // m_i = Σ_p N_i(x_p) * mass_p
+                      modelParameters::stress_p; // m_i = Î£_p N_i(x_p) * mass_p
       }
     }
     f_total_i = f_int_i + f_ext_i; // Unbalanced at this point
@@ -228,9 +229,9 @@ int main() {
     mv_i += f_total_i * dt;
 
     // 5. Node to particle
-    // Update particle velocity: v_p^{n+1} = v_p^n + Δt * Σ_i N_i(x_p) * a_i
+    // Update particle velocity: v_p^{n+1} = v_p^n + Î”t * Î£_i N_i(x_p) * a_i
     // where a_i = f_i / m_i
-    // Update particle position: x_p^{n+1} = x_p^n + Δt * Σ_i N_i(x_p) *
+    // Update particle position: x_p^{n+1} = x_p^n + Î”t * Î£_i N_i(x_p) *
     // v_i^{n+1} where v_i^{n+1} = mv_i^{n+1} / m_i
     for (Index i{0}; i < nNodes; i++) {
       v_p += N_p[i] * (f_total_i[i] / m_i[i]) * dt;

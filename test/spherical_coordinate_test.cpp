@@ -9,7 +9,7 @@ int main() {
   const double t0 = 60.0; // degree
   const double p0 = 40.0; // degree
 
-  SphereCoor<double> s{r0, t0, p0};
+  SphereCoord<double> s{r0, t0, p0};
 
   constexpr double tol = 1e-6;
 

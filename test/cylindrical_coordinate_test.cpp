@@ -9,7 +9,7 @@ int main() {
   const double r0 = 2.0;
   const double p0_deg = 30.0;
   const double z0 = 3.0;
-  CylinCoor<double> c{r0, p0_deg, z0};
+  CylinCoord<double> c{r0, p0_deg, z0};
 
   constexpr double tol = 1e-8;
 

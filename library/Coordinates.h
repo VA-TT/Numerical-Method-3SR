@@ -1,7 +1,7 @@
-#ifndef COORDINATE_SYSTEMS_H
+﻿#ifndef COORDINATE_SYSTEMS_H
 #define COORDINATE_SYSTEMS_H
 
-#include "DualDiffrentiation.h"
+#include "DualDifferentiation.h"
 #include "Matrix.h"
 #include "Vector.h"
 #include "comparison.h"
@@ -200,13 +200,9 @@ template <typename T> struct PolarCoord {
     if (approximatelyEqualAbsRel(r, T{0}))
       throw std::invalid_argument("PolarCoord::gradient requires r != 0.");
 
-    Dual r_dr{r, 1.0};
-    Dual t_dr{t, 0.0};
-    auto f_dualR = f_rt(r_dr, t_dr);
+    auto f_dualR = f_rt({r, 1.0}, {t, 0.0});
     double dfdr = f_dualR.getDer();
-    Dual r_dt{r, 0.0};
-    Dual t_dt{t, 1.0};
-    auto f_dualT = f_rt(r_dt, t_dt);
+    auto f_dualT = f_rt({r, 0.0}, {t, 1.0});
     double dfdt = f_dualT.getDer();
     return {dfdr, T{1} / r * dfdt}; // polor coordinate
   }
@@ -218,15 +214,11 @@ template <typename T> struct PolarCoord {
     if (approximatelyEqualAbsRel(r, T{0}))
       throw std::invalid_argument("PolarCoord::div requires r != 0.");
 
-    Dual r_dr{r, 1.0};
-    Dual t_dr{t, 0.0};
-    auto u_dualR = u_rt(r_dr, t_dr);
+    auto u_dualR = u_rt({r, 1.0}, {t, 0.0});
     double du1dr = u_dualR[0].getDer();
     double u1 = u_dualR[0].getVal();
 
-    Dual r_dt{r, 0.0};
-    Dual t_dt{t, 1.0};
-    auto u_dualT = u_rt(r_dt, t_dt);
+    auto u_dualT = u_rt({r, 0.0}, {t, 1.0});
     double du2dt = u_dualT[1].getDer();
 
     return du1dr + T{1} / r * (u1 + du2dt);
@@ -237,14 +229,10 @@ template <typename T> struct PolarCoord {
     if (approximatelyEqualAbsRel(r, T{0}))
       throw std::invalid_argument("PolarCoord::curl requires r != 0.");
 
-    Dual r_dr{r, 1.0};
-    Dual t_dr{t, 0.0};
-    auto u_dualR = u_rt(r_dr, t_dr);
+    auto u_dualR = u_rt({r, 1.0}, {t, 0.0});
     double du2dr = u_dualR[1].getDer();
 
-    Dual r_dt{r, 0.0};
-    Dual t_dt{t, 1.0};
-    auto u_dualT = u_rt(r_dt, t_dt);
+    auto u_dualT = u_rt({r, 0.0}, {t, 1.0});
     double du1dt = u_dualT[0].getDer();
     double u2 = u_dualT[1].getVal();
 
@@ -557,20 +545,11 @@ public:
       throw std::invalid_argument(
           "SphereCoord::gradient undefined for sin(theta)=0.");
 
-    Dual r_dr{r, 1.0};
-    Dual t_dr{t, 0.0};
-    Dual p_dr{p, 0.0};
-    double dfdr = f_rtp(r_dr, t_dr, p_dr).getDer();
+    double dfdr = f_rtp({r, 1.0}, {t, 0.0}, {p, 0.0}).getDer();
 
-    Dual r_dt{r, 0.0};
-    Dual t_dt{t, 1.0};
-    Dual p_dt{p, 0.0};
-    double dfdt = f_rtp(r_dt, t_dt, p_dt).getDer();
+    double dfdt = f_rtp({r, 0.0}, {t, 1.0}, {p, 0.0}).getDer();
 
-    Dual r_dp{r, 0.0};
-    Dual t_dp{t, 0.0};
-    Dual p_dp{p, 1.0};
-    double dfdp = f_rtp(r_dp, t_dp, p_dp).getDer();
+    double dfdp = f_rtp({r, 0.0}, {t, 0.0}, {p, 1.0}).getDer();
 
     return {dfdr, T{1} / r * dfdt, T{1} / (r * sint) * dfdp};
   }
