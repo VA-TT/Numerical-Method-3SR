@@ -79,7 +79,7 @@ int main() {
 
   // Initial state (t=0)
   {
-    const auto mp = collumn.getMesh().getMPCoord(tracked_mp);
+    const auto mp = collumn.getMesh().getMPpos(tracked_mp);
     hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << mp.first
          << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';
@@ -103,7 +103,7 @@ int main() {
     }
 
     // Record results
-    const auto mp = collumn.getMesh().getMPCoord(tracked_mp);
+    const auto mp = collumn.getMesh().getMPpos(tracked_mp);
     hist << std::fixed << std::setprecision(10) << time << '\t' << mp.first
          << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';

@@ -11,7 +11,7 @@ int main() {
 
   std::cout << "MP count: " << mesh.getNumMPs() << "\n";
   for (Index p = 0; p < mesh.getNumMPs(); ++p) {
-    const auto [x, y] = mesh.getMPCoord(p);
+    const auto [x, y] = mesh.getMPpos(p);
     std::cout << "MP " << p << " at (" << x << "," << y
               << ") mask=" << static_cast<int>(mask[p]) << "\n";
   }

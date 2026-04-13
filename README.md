@@ -22,7 +22,7 @@ Created for learning purpose at:
 
 **2. Formation - Discrete Element Modeling**  
 **Professors :  Krishna KUMAR, Shyamini KULARATHNA**  
-**[Online tutorial of CB-Geo High-Performance Material Point Method](https://www.geoelements.org/LearnMPM/intro.html/)** 
+**[Online tutorial of CB-Geo High-Performance Material Point Method](https://www.geoelements.org/LearnMPM/intro.html/)**
 **University of Texas at Austin**  
   * MPM 1D
   * MPM 2D
