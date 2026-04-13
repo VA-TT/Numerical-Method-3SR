@@ -132,6 +132,10 @@ public:
     return dKdt(t) * ref;
   }
 
+  StaticVector<T, n> displacementMaterial(T t) {};
+  StaticVector<T, n> displacementSpatial(T t) {};
+
+  StaticVector<T, n> accelerationMaterial(T t) {};
   // Material acceleration: a(X,t) = d2x/dt2 = d2K/dt2 * X.
   StaticVector<T, n> accelerationMaterial(T t) const {
     if (!hasRef)
@@ -172,7 +176,34 @@ public:
   }
 
   // Deformation gradient F for this linear map is exactly K(t).
+  // Fij = dxi/dXj
+
   Matrix<T, n, n> deformationGradient(T t) const { return deformMap(t); }
+
+  T Jacobian(T t) { return det(deformationGradient(t)); }
+
+  // An element at point P at time t has direction and magnitude -> find
+  // reference configuaration and vice versa: dx = F.dX
+  void elementDeformed() {};
+
+
+  //Nanson's formula: F^T .dA_x = J dA_X and vice versa
+  void areaDeformed(){}
+
+  //Material and spatial derivative of material/spatial description of a property field(scalar)
+
+  // Polar decomposition of the deformation Gradient F = RU = VR; U^2 = F^T.F,
+  // V^2 = F.F^T
+
+  //left and right Cauchy deformation tensor
+
+  //Green strain tensor
+
+  //infinite tesimal strain tensor
+
+  //traction vector
+
+  //Cauchy stress tensor
 
   // Right Cauchy-Green tensor C = F^T F.
   Matrix<T, n, n> rightStretchTensor(T t) const {
