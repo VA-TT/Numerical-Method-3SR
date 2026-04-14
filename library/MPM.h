@@ -66,15 +66,7 @@ private:
   DynamicVector<T> n_forceExternal{}, n_forceInternal{}, n_forceTotal{};
 
   // Material Points p
-  DynamicVector<T> p_volume{};   // Volume
-  DynamicVector<T> p_mass{};     // Mass
-  DynamicVector<T> p_position{}; // Position
-  DynamicVector<T> p_velocity{}; // Velocity
-  DynamicVector<T> p_momentum{}; // Momentum
-  DynamicVector<T> p_stress{};
-  DynamicVector<T> p_strain{};
-  DynamicVector<T> p_strainRate{};
-  DynamicVector<T> p_dStrain{}; // Stress + strain
+  DynamicVector<Particle1D<T>> p_particles{};
 
   static bool endsWith(const std::string &s, const std::string &suffix) {
     return s.size() >= suffix.size() &&
@@ -126,16 +118,20 @@ public:
 
     // Initialize MP vectors
     Index nMPs = m_mesh.getNumMPs();
-    p_volume.resize(nMPs, m_volume / nMPs);
-    p_mass.resize(nMPs, m_mass / nMPs); // MP's mass is constant
-    // position_p.resize(nMPs);
-    p_position = m_mesh.getMPCoords(); // Initialize position of MPs
-    p_velocity.resize(nMPs, m_v0);     // Initial velocity
-    p_momentum.resize(nMPs, T{});
-    p_stress.resize(nMPs, T{});
-    p_strain.resize(nMPs, T{});
-    p_strainRate.resize(nMPs, T{});
-    p_dStrain.resize(nMPs, T{});
+    p_particles = m_mesh.getMPs();
+    for (Index p{0}; p < nMPs; ++p) {
+      p_particles[p].volume = m_volume / nMPs;
+      p_particles[p].mass = m_mass / nMPs; // MP's mass is constant
+      p_particles[p].vel = m_v0;
+      p_particles[p].acc = T{};
+      p_particles[p].force = T{};
+      p_particles[p].momentum = T{};
+      p_particles[p].stress = T{};
+      p_particles[p].strain = T{};
+      p_particles[p].strainRate = T{};
+      p_particles[p].dStrain = T{};
+    }
+    m_mesh.setMPs(p_particles);
 
     m_mesh.print();
   };
@@ -174,15 +170,15 @@ public:
   T getNodalIntForce(Index i) const { return n_forceInternal[i]; }
   T getNodalTotalForce(Index i) const { return n_forceTotal[i]; }
 
-  T getMPvolume(Index p) const { return p_volume[p]; }
-  T getMPmass(Index p) const { return p_mass[p]; }
-  T getMPvelocity(Index p) const { return p_velocity[p]; }
-  T getMPposition(Index p) const { return p_position[p]; }
-  T getMPmomentum(Index p) const { return p_momentum[p]; }
-  T getMPstrain(Index p) const { return p_strain[p]; }
-  T getMPstrainRate(Index p) const { return p_strainRate[p]; }
-  T getMPdStrain(Index p) const { return p_dStrain[p]; }
-  T getMPstress(Index p) const { return p_stress[p]; }
+  T getMPvolume(Index p) const { return p_particles[p].volume; }
+  T getMPmass(Index p) const { return p_particles[p].mass; }
+  T getMPvelocity(Index p) const { return p_particles[p].vel; }
+  T getMPposition(Index p) const { return p_particles[p].pos; }
+  T getMPmomentum(Index p) const { return p_particles[p].momentum; }
+  T getMPstrain(Index p) const { return p_particles[p].strain; }
+  T getMPstrainRate(Index p) const { return p_particles[p].strainRate; }
+  T getMPdStrain(Index p) const { return p_particles[p].dStrain; }
+  T getMPstress(Index p) const { return p_particles[p].stress; }
 
   // Setters
   void setCurrentTime(T value) { m_currentTime = value; }
@@ -192,7 +188,7 @@ public:
     m_analyticSolution = sol;
   }
   void setComportmentLaw(std::function<T(T)> law) { m_law = law; }
-  void setMPvelocity(Index p, T value) { p_velocity[p] = value; }
+  void setMPvelocity(Index p, T value) { p_particles[p].vel = value; }
 
   // Setters: store constraint values + mark constrained
   void setNodalVeloConstraint(Index i, T value) {
@@ -251,18 +247,18 @@ public:
     Index nMPs = m_mesh.getNumMPs();
     // Map nodal mass + momentum
     for (Index p{0}; p < nMPs; ++p) {
-      p_momentum[p] = p_mass[p] * p_velocity[p];
+      p_particles[p].momentum = p_particles[p].mass * p_particles[p].vel;
       Index e = m_mesh.getMPelementID(p);
       if (e != -1) {
-        T x_p = p_position[p];
+        T x_p = p_particles[p].pos;
         Index n1 = m_mesh.getEleConnectivity(e)[0];
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
-        n_mass[n1] += N1_ref(xi) * p_mass[p];
-        n_mass[n2] += N2_ref(xi) * p_mass[p];
-        n_momentum[n1] += N1_ref(xi) * p_momentum[p];
-        n_momentum[n2] += N2_ref(xi) * p_momentum[p];
+        n_mass[n1] += N1_ref(xi) * p_particles[p].mass;
+        n_mass[n2] += N2_ref(xi) * p_particles[p].mass;
+        n_momentum[n1] += N1_ref(xi) * p_particles[p].momentum;
+        n_momentum[n2] += N2_ref(xi) * p_particles[p].momentum;
       }
     }
 
@@ -274,16 +270,18 @@ public:
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
       Index e = m_mesh.getMPelementID(p);
       if (e != -1) {
-        T x_p = p_position[p];
+        T x_p = p_particles[p].pos;
         Index n1 = m_mesh.getEleConnectivity(e)[0];
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
-        n_bodyForce[n1] += m_G * N1_ref(xi) * p_mass[p];
-        n_bodyForce[n2] += m_G * N2_ref(xi) * p_mass[p];
+        n_bodyForce[n1] += m_G * N1_ref(xi) * p_particles[p].mass;
+        n_bodyForce[n2] += m_G * N2_ref(xi) * p_particles[p].mass;
         // Traction force t_i (to be implemented)
-        n_forceInternal[n1] -= p_volume[p] * dN1_dx(x1, x2) * p_stress[p];
-        n_forceInternal[n2] -= p_volume[p] * dN2_dx(x1, x2) * p_stress[p];
+        n_forceInternal[n1] -=
+            p_particles[p].volume * dN1_dx(x1, x2) * p_particles[p].stress;
+        n_forceInternal[n2] -=
+            p_particles[p].volume * dN2_dx(x1, x2) * p_particles[p].stress;
       }
     }
     n_forceExternal = n_bodyForce + n_tractionForce;
@@ -315,37 +313,37 @@ public:
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
       Index e = m_mesh.getMPelementID(p);
       if (e != -1) {
-        T x_p = p_position[p];
+        T x_p = p_particles[p].pos;
         Index n1 = m_mesh.getEleConnectivity(e)[0];
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
         // Update velocity and position using FLIP style
-        p_velocity[p] += (N1_ref(xi) * n_acceleration[n1] +
-                          N2_ref(xi) * n_acceleration[n2]) *
-                         m_dt;
+        p_particles[p].acc =
+            N1_ref(xi) * n_acceleration[n1] + N2_ref(xi) * n_acceleration[n2];
+        p_particles[p].vel += p_particles[p].acc * m_dt;
         // Hybrid
         // T v_pic = N1 * velocity_n[n1] + N2 * velocity_n[n2];
         // T v_flip = velocity_p[p] + (N1 * a_n1 + N2 * a_n2) * dt;
         // velocity_p[p] = alpha * v_pic + '(1-alpha)' * v_flip;
         // position_p[p] += velocity_p[p] * m_dt;
-        p_position[p] += (N1_ref(xi) * n_momentum[n1] / n_mass[n1] +
-                          N2_ref(xi) * n_momentum[n2] / n_mass[n2]) *
-                         m_dt;
-        p_momentum[p] = p_mass[p] * p_velocity[p];
+        p_particles[p].pos += (N1_ref(xi) * n_momentum[n1] / n_mass[n1] +
+                               N2_ref(xi) * n_momentum[n2] / n_mass[n2]) *
+                              m_dt;
+        p_particles[p].momentum = p_particles[p].mass * p_particles[p].vel;
       }
     }
 
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
       Index e = m_mesh.getMPelementID(p);
       if (e != -1) {
-        T x_p = p_position[p];
+        T x_p = p_particles[p].pos;
         Index n1 = m_mesh.getEleConnectivity(e)[0];
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
-        n_velocity[n1] += p_momentum[p] * N1_ref(xi) / n_mass[n1];
-        n_velocity[n2] += p_momentum[p] * N2_ref(xi) / n_mass[n2];
+        n_velocity[n1] += p_particles[p].momentum * N1_ref(xi) / n_mass[n1];
+        n_velocity[n2] += p_particles[p].momentum * N2_ref(xi) / n_mass[n2];
       }
     }
     applyNodalVeloConstraint();
@@ -353,32 +351,33 @@ public:
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
       Index e = m_mesh.getMPelementID(p);
       if (e != -1) {
-        T x_p = p_position[p];
+        T x_p = p_particles[p].pos;
         Index n1 = m_mesh.getEleConnectivity(e)[0];
         Index n2 = m_mesh.getEleConnectivity(e)[1];
         auto [x1, x2] = m_mesh.getElementNodes(e);
         T xi = parentCoor(x_p, x1, x2);
         // Attention: x1-x2 belong to nodes (their positions don't get
         // updated), while the velocity is measured at MPs (updated at t+dt)
-        p_strainRate[p] =
+        p_particles[p].strainRate =
             dN1_dx(x1, x2) * n_velocity[n1] + dN2_dx(x1, x2) * n_velocity[n2];
-        p_dStrain[p] = p_strainRate[p] * m_dt;
-        p_strain[p] += p_dStrain[p];
+        p_particles[p].dStrain = p_particles[p].strainRate * m_dt;
+        p_particles[p].strain += p_particles[p].dStrain;
 
         // Constitutive law:
         if (m_law) {
-          p_stress[p] += m_law(p_dStrain[p]);
+          p_particles[p].stress += m_law(p_particles[p].dStrain);
         } else {
-          p_stress[p] += m_E * p_dStrain[p]; // Default linear elastic
+          p_particles[p].stress +=
+              m_E * p_particles[p].dStrain; // Default linear elastic
         }
         // Update volume
-        p_volume[p] *= (T{1} + p_dStrain[p]);
+        p_particles[p].volume *= (T{1} + p_particles[p].dStrain);
       }
     }
   }
 
   void resetMesh() {
-    m_mesh.setMPCoords(p_position); // Saving the updated MPs' position to Mesh
+    m_mesh.setMPs(p_particles); // Saving updated MP state back to mesh
 
     n_mass.resetZero();
     n_momentum.resetZero();
@@ -406,16 +405,16 @@ public:
     std::cout << std::string(55, '-') << '\n';
 
     // Find MP closest to m_xloc
-    T min_dist = std::abs(p_position[0] - m_xloc);
+    T min_dist = std::abs(p_particles[0].pos - m_xloc);
     Index closest_p = 0;
     for (Index p = 1; p < m_mesh.getNumMPs(); ++p) {
-      T dist = std::abs(p_position[p] - m_xloc);
+      T dist = std::abs(p_particles[p].pos - m_xloc);
       if (dist < min_dist) {
         min_dist = dist;
         closest_p = p;
       }
     }
-    T x_numerical = p_position[closest_p];
+    T x_numerical = p_particles[closest_p].pos;
 
     T x_exact = m_analyticSolution(m_currentTime);
     T error = std::abs(x_numerical - x_exact);
@@ -451,7 +450,7 @@ public:
       throw std::runtime_error("MPM1D::exportResult: cannot open file: " +
                                vtkFile);
 
-    const Index nPoints = p_position.size();
+    const Index nPoints = p_particles.size();
 
     vtk << "# vtk DataFile Version 3.0\n";
     vtk << "MPM1D particles\n";
@@ -459,7 +458,7 @@ public:
     vtk << "DATASET POLYDATA\n";
     vtk << "POINTS " << nPoints << " double\n";
     for (Index p = 0; p < nPoints; ++p) {
-      vtk << p_position[p] << " 0 0\n";
+      vtk << p_particles[p].pos << " 0 0\n";
     }
 
     vtk << "VERTICES " << nPoints << " " << (nPoints * 2) << "\n";
@@ -470,19 +469,19 @@ public:
     vtk << "POINT_DATA " << nPoints << "\n";
     vtk << "VECTORS velocity double\n";
     for (Index p = 0; p < nPoints; ++p) {
-      vtk << p_velocity[p] << " 0 0\n";
+      vtk << p_particles[p].vel << " 0 0\n";
     }
 
     vtk << "SCALARS mass double 1\n";
     vtk << "LOOKUP_TABLE default\n";
     for (Index p = 0; p < nPoints; ++p) {
-      vtk << p_mass[p] << "\n";
+      vtk << p_particles[p].mass << "\n";
     }
 
     vtk << "SCALARS volume double 1\n";
     vtk << "LOOKUP_TABLE default\n";
     for (Index p = 0; p < nPoints; ++p) {
-      vtk << p_volume[p] << "\n";
+      vtk << p_particles[p].volume << "\n";
     }
 
     // ---- Mesh grid export (VTK legacy, UNSTRUCTURED_GRID) ----
@@ -638,11 +637,8 @@ private:
       n_forceTotal{};
 
   // Material Points p
-  DynamicVector<T> p_volume{};  // Volume
+  DynamicVector<Particle2D<T>> p_particles{};
   DynamicVector<T> p_volume0{}; // Initial volume (for large-strain update)
-  DynamicVector<T> p_mass{};    // Mass
-  DynamicVector<DynamicVector<T>> p_position{}; // Position
-  DynamicVector<DynamicVector<T>> p_velocity{}; // Velocity
   DynamicVector<DynamicVector<T>> p_momentum{}; // Momentum
 
   DynamicVector<Matrix<T, 2, 2>> p_stress{}, p_strain{}, p_strainRate{},
@@ -718,12 +714,20 @@ public:
     n_forceTotal.resize(nNodes, DynamicVector<T>{0, 0});
 
     // Initialize MP vectors
-    p_volume.resize(nMPs, m_volume / nMPs);
+    p_particles = m_mesh.getMPs();
+    const T mpVolume = m_volume / nMPs;
+    const T mpMass = m_mass / nMPs;
+    for (Index p{0}; p < nMPs; ++p) {
+      p_particles[p].volume = mpVolume;
+      p_particles[p].mass = mpMass;
+      p_particles[p].vel = m_v0;
+      p_particles[p].acc.resetZero();
+      p_particles[p].force.resetZero();
+    }
+    m_mesh.setMPs(p_particles);
+
     p_volume0.resize(nMPs, m_volume / nMPs);
-    p_mass.resize(nMPs, m_mass / nMPs); // MP's mass is constant
-    p_position = m_mesh.getMPCoordsVec();
     p_momentum.resize(nMPs, DynamicVector<T>{0, 0}); // Compute later
-    p_velocity.resize(nMPs, m_v0);                   // Initial velocity
 
     p_stress.resize(nMPs, Matrix<T, 2, 2>::zero());
     p_strain.resize(nMPs, Matrix<T, 2, 2>::zero());
@@ -732,7 +736,7 @@ public:
     p_dStrain.resize(nMPs, Matrix<T, 2, 2>::zero());
 
     for (Index p{0}; p < nMPs; ++p) {
-      m_totalEnergy0 += m_G * p_position[p].y() * p_mass[p];
+      m_totalEnergy0 += m_G * p_particles[p].pos.y() * p_particles[p].mass;
     }
 
     // m_mesh.print();
@@ -770,10 +774,10 @@ public:
   T getNodalIntForce(Index i) const { return n_forceInternal[i].x(); }
   T getNodalTotalForce(Index i) const { return n_forceTotal[i].x(); }
 
-  T getMPvolume(Index p) const { return p_volume[p]; }
-  T getMPmass(Index p) const { return p_mass[p]; }
-  T getMPvelocity(Index p) const { return p_velocity[p].x(); }
-  T getMPposition(Index p) const { return p_position[p].x(); }
+  T getMPvolume(Index p) const { return p_particles[p].volume; }
+  T getMPmass(Index p) const { return p_particles[p].mass; }
+  T getMPvelocity(Index p) const { return p_particles[p].vel.x(); }
+  T getMPposition(Index p) const { return p_particles[p].pos.x(); }
   T getMPmomentum(Index p) const { return p_momentum[p].x(); }
   T getMPstrain(Index p) const { return p_strain[p].xx(); }
   T getMPstrainRate(Index p) const { return p_strainRate[p].xx(); }
@@ -800,10 +804,12 @@ public:
     };
   }
   void setMPvelocity(Index p, const DynamicVector<T> &value) {
-    p_velocity[p] = value;
+    p_particles[p].vel.x() = value.x();
+    p_particles[p].vel.y() = value.y();
   }
   void setMPvelocity(Index p, T value) {
-    p_velocity[p] = DynamicVector<T>{value, T{}};
+    p_particles[p].vel.x() = value;
+    p_particles[p].vel.y() = T{};
   }
 
   // Setters: store constraint values + mark constrained
@@ -956,7 +962,7 @@ public:
   void initializeStress() {
     T ymax = m_pHeight - MP_size / 2;
     for (Index p{0}; p < this->getNumMps(); ++p) {
-      p_stress[p].yy() = -m_G * m_rho * (ymax - p_position[p].y());
+      p_stress[p].yy() = -m_G * m_rho * (ymax - p_particles[p].pos.y());
       p_stress[p].xx() = m_K0 * p_stress[p].yy();
     }
   }
@@ -965,9 +971,9 @@ public:
     m_potentEnergy = T{};
     m_kinEnergy = T{};
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
-      m_potentEnergy += m_G * p_mass[p] * p_position[p].y();
-      m_kinEnergy +=
-          T{0.5} * p_mass[p] * dotProduct(p_velocity[p], p_velocity[p]);
+      m_potentEnergy += m_G * p_particles[p].mass * p_particles[p].pos.y();
+      m_kinEnergy += T{0.5} * p_particles[p].mass *
+                     dotProduct(p_particles[p].vel, p_particles[p].vel);
     }
     m_dissiEnergy = m_totalEnergy0 - m_potentEnergy - m_kinEnergy;
   }
@@ -981,7 +987,9 @@ public:
 
   void p2n() {
     for (Index p{0}; p < m_mesh.getNumMPs(); ++p) {
-      p_momentum[p] = p_mass[p] * p_velocity[p];
+      p_momentum[p] =
+          DynamicVector<T>{p_particles[p].mass * p_particles[p].vel.x(),
+                           p_particles[p].mass * p_particles[p].vel.y()};
     }
 
     // Map nodal mass + momentum
@@ -1004,14 +1012,14 @@ public:
       const auto [x_nodes, y_nodes] = m_mesh.getElementNodes(e);
 
       for (const Index p : mps) {
-        const T x_p = p_position[p].x();
-        const T y_p = p_position[p].y();
+        const T x_p = p_particles[p].pos.x();
+        const T y_p = p_particles[p].pos.y();
         const auto [xi, eta] = parentCoor(x_p, y_p, x_nodes, y_nodes);
 
-        n_mass[n1] += N1_ref(xi, eta) * p_mass[p];
-        n_mass[n2] += N2_ref(xi, eta) * p_mass[p];
-        n_mass[n3] += N3_ref(xi, eta) * p_mass[p];
-        n_mass[n4] += N4_ref(xi, eta) * p_mass[p];
+        n_mass[n1] += N1_ref(xi, eta) * p_particles[p].mass;
+        n_mass[n2] += N2_ref(xi, eta) * p_particles[p].mass;
+        n_mass[n3] += N3_ref(xi, eta) * p_particles[p].mass;
+        n_mass[n4] += N4_ref(xi, eta) * p_particles[p].mass;
 
         n_momentum[n1] += N1_ref(xi, eta) * p_momentum[p];
         n_momentum[n2] += N2_ref(xi, eta) * p_momentum[p];
@@ -1045,28 +1053,32 @@ public:
       const auto [x_nodes, y_nodes] = m_mesh.getElementNodes(e);
 
       for (const Index p : mps) {
-        const T x_p = p_position[p].x();
-        const T y_p = p_position[p].y();
+        const T x_p = p_particles[p].pos.x();
+        const T y_p = p_particles[p].pos.y();
         const auto [xi, eta] = parentCoor(x_p, y_p, x_nodes, y_nodes);
 
         // Gravity body force (y-direction) : G should be negative!
-        n_bodyForce[n1].y() += N1_ref(xi, eta) * m_G * p_mass[p];
-        n_bodyForce[n2].y() += N2_ref(xi, eta) * m_G * p_mass[p];
-        n_bodyForce[n3].y() += N3_ref(xi, eta) * m_G * p_mass[p];
-        n_bodyForce[n4].y() += N4_ref(xi, eta) * m_G * p_mass[p];
+        n_bodyForce[n1].y() += N1_ref(xi, eta) * m_G * p_particles[p].mass;
+        n_bodyForce[n2].y() += N2_ref(xi, eta) * m_G * p_particles[p].mass;
+        n_bodyForce[n3].y() += N3_ref(xi, eta) * m_G * p_particles[p].mass;
+        n_bodyForce[n4].y() += N4_ref(xi, eta) * m_G * p_particles[p].mass;
 
         // Traction force t_i (to be implemented)
 
         // Internal force (both x and y)
         const auto [dN_dx, dN_dy] = gradientN(xi, eta, x_nodes, y_nodes);
         n_forceInternal[n1] -=
-            p_volume[p] * (p_stress[p] * DynamicVector<T>{dN_dx[0], dN_dy[0]});
+            p_particles[p].volume *
+            (p_stress[p] * DynamicVector<T>{dN_dx[0], dN_dy[0]});
         n_forceInternal[n2] -=
-            p_volume[p] * (p_stress[p] * DynamicVector<T>{dN_dx[1], dN_dy[1]});
+            p_particles[p].volume *
+            (p_stress[p] * DynamicVector<T>{dN_dx[1], dN_dy[1]});
         n_forceInternal[n3] -=
-            p_volume[p] * (p_stress[p] * DynamicVector<T>{dN_dx[2], dN_dy[2]});
+            p_particles[p].volume *
+            (p_stress[p] * DynamicVector<T>{dN_dx[2], dN_dy[2]});
         n_forceInternal[n4] -=
-            p_volume[p] * (p_stress[p] * DynamicVector<T>{dN_dx[3], dN_dy[3]});
+            p_particles[p].volume *
+            (p_stress[p] * DynamicVector<T>{dN_dx[3], dN_dy[3]});
       }
     };
 
@@ -1123,8 +1135,8 @@ public:
       const Index n4 = conn[3];
 
       const auto [x_nodes, y_nodes] = m_mesh.getElementNodes(e);
-      const T x_p = p_position[p].x();
-      const T y_p = p_position[p].y();
+      const T x_p = p_particles[p].pos.x();
+      const T y_p = p_particles[p].pos.y();
       const auto [xi, eta] = parentCoor(x_p, y_p, x_nodes, y_nodes);
 
       const T N1 = N1_ref(xi, eta);
@@ -1142,9 +1154,12 @@ public:
           N1_ref(xi, eta) * n_velocity[n1] + N2_ref(xi, eta) * n_velocity[n2] +
           N3_ref(xi, eta) * n_velocity[n3] + N4_ref(xi, eta) * n_velocity[n4];
 
-      p_velocity[p] += a_next * m_dt;
-      p_position[p] += v_next * m_dt;
-      p_momentum[p] = p_mass[p] * p_velocity[p];
+      p_particles[p].acc = a_next;
+      p_particles[p].vel += StaticVector<T, 2>{a_next * m_dt};
+      p_particles[p].pos += StaticVector<T, 2>{v_next * m_dt};
+      p_momentum[p] =
+          DynamicVector<T>{p_particles[p].mass * p_particles[p].vel.x(),
+                           p_particles[p].mass * p_particles[p].vel.y()};
 
       // Update stress and strain
       const auto [dN_dx, dN_dy] = gradientN(xi, eta, x_nodes, y_nodes);
@@ -1181,7 +1196,7 @@ public:
       p_deformGradient[p] =
           p_deformGradient[p] * (Matrix<T, 2, 2>::identity() + L * m_dt);
       const T J = det(p_deformGradient[p]);
-      p_volume[p] = J * p_volume0[p];
+      p_particles[p].volume = J * p_volume0[p];
 
       // Strain increment (small-strain measure) from nodal velocities:
       //   dε = sym(L) dt
@@ -1229,8 +1244,8 @@ public:
   }
 
   void resetMesh() {
-    // Saving the updated MPs' position to Mesh
-    m_mesh.setMPCoords(p_position);
+    // Save updated MP state back to mesh
+    m_mesh.setMPs(p_particles);
 
     n_mass.resetZero();
     n_momentum.resetZero();
@@ -1276,7 +1291,7 @@ public:
       throw std::runtime_error("MPM2D::exportResult: cannot open file: " +
                                vtkFile);
 
-    const Index nPoints = p_position.size();
+    const Index nPoints = p_particles.size();
 
     vtk << "# vtk DataFile Version 3.0\n";
     vtk << "MPM2D particles\n";
@@ -1284,8 +1299,8 @@ public:
     vtk << "DATASET POLYDATA\n";
     vtk << "POINTS " << nPoints << " double\n";
     for (Index p = 0; p < nPoints; ++p) {
-      const T x = p_position[p].size() > 0 ? p_position[p][0] : T{0};
-      const T y = p_position[p].size() > 1 ? p_position[p][1] : T{0};
+      const T x = p_particles[p].pos.x();
+      const T y = p_particles[p].pos.y();
       vtk << x << " " << y << " 0\n";
     }
 
@@ -1298,21 +1313,21 @@ public:
 
     vtk << "VECTORS velocity double\n";
     for (Index p = 0; p < nPoints; ++p) {
-      const T vx = p_velocity[p].size() > 0 ? p_velocity[p][0] : T{0};
-      const T vy = p_velocity[p].size() > 1 ? p_velocity[p][1] : T{0};
+      const T vx = p_particles[p].vel.x();
+      const T vy = p_particles[p].vel.y();
       vtk << vx << " " << vy << " 0\n";
     }
 
     vtk << "SCALARS mass double 1\n";
     vtk << "LOOKUP_TABLE default\n";
     for (Index p = 0; p < nPoints; ++p) {
-      vtk << p_mass[p] << "\n";
+      vtk << p_particles[p].mass << "\n";
     }
 
     vtk << "SCALARS volume double 1\n";
     vtk << "LOOKUP_TABLE default\n";
     for (Index p = 0; p < nPoints; ++p) {
-      vtk << p_volume[p] << "\n";
+      vtk << p_particles[p].volume << "\n";
     }
 
     vtk << "TENSORS stress double\n";

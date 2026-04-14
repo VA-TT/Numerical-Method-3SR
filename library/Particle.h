@@ -14,6 +14,13 @@ template <typename T> struct Particle1D {
 
   // force
   T force{};
+
+  // MPM 1D state
+  T momentum{};
+  T stress{};
+  T strain{};
+  T strainRate{};
+  T dStrain{};
 };
 
 template <typename T> struct Particle2D {

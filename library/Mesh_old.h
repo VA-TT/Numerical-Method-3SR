@@ -1,7 +1,6 @@
 #ifndef DISCRETIZING_RECTANGULAR_MESH_H
 #define DISCRETIZING_RECTANGULAR_MESH_H
 
-#include "Particle.h"
 #include "Vector.h"
 #include "comparison.h"
 #include "parentElement.h"
@@ -20,10 +19,9 @@ private:
   DynamicVector<T> m_nodes{};
   DynamicVector<char> m_activeNodes{}; // Use char instead of bool to avoid
                                        // std::vector<bool> issues
-  DynamicVector<Particle1D<T>> m_MPs{};
-  mutable DynamicVector<T> m_mpCoordsCache{}; // Backward-compat coordinate view
-  DynamicVector<Index> m_mpElementId{};       // Cached element ID for each MP
-  DynamicVector<T> m_nodes_initial{}; // Store initial configuration for reset
+  DynamicVector<T> m_MPs{};
+  DynamicVector<Index> m_mpElementId{}; // Cached element ID for each MP
+  DynamicVector<T> m_nodes_initial{};   // Store initial configuration for reset
   DynamicVector<DynamicVector<Index>>
       m_connectivity{};                // [node_i, node_j]:representing element
   static constexpr Index idError = -1; // default id error for mpElementID
@@ -55,14 +53,12 @@ public:
 
     // Initialize Material Points (MPs) if needed
     if (m_nMPperEle > 0) {
-      m_MPs.resize(m_nMPs);
-      Index mpId{0};
+      m_MPs.reserve(m_nMPs);
       for (Index e{0}; e < m_nElements; ++e) {
         T x_start = m_nodes[e];
         T le = getLengthEle(e);
         for (Index p{0}; p < m_nMPperEle; ++p) {
-          m_MPs[mpId].pos = x_start + (p + 1) * le / (m_nMPperEle + 1);
-          ++mpId;
+          m_MPs.push_back(x_start + (p + 1) * le / (m_nMPperEle + 1));
         }
       }
     }
@@ -70,7 +66,7 @@ public:
     // Initialize cached element IDs for MPs
     m_mpElementId.resize(m_nMPs, idError);
     for (Index p{0}; p < m_MPs.size(); ++p) {
-      m_mpElementId[p] = findCageID(m_MPs[p].pos);
+      m_mpElementId[p] = findCageID(m_MPs[p]);
     }
   };
   // Other defaults
@@ -87,26 +83,13 @@ public:
   Index getNumMPs() const { return m_nMPs; }
   const DynamicVector<char> &getActiveNodes() const { return m_activeNodes; }
   const DynamicVector<T> &nodeCoords() const { return m_nodes; }
-  const DynamicVector<Particle1D<T>> &getMPs() const { return m_MPs; }
-
-  const DynamicVector<T> &getMPCoords() const {
-    m_mpCoordsCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpCoordsCache[p] = m_MPs[p].pos;
-    }
-    return m_mpCoordsCache;
-  }
+  const DynamicVector<T> &getMPCoords() const { return m_MPs; }
   const DynamicVector<Index> &getMPelementIDs() const { return m_mpElementId; }
   const DynamicVector<T> &getInitialNodes() const { return m_nodes_initial; }
 
-  Particle1D<T> getMP(Index p) const {
+  T getMPCoord(Index p) const {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
-  }
-
-  T getMPpos(Index p) const {
-    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return m_MPs[p].pos;
   }
   const DynamicVector<DynamicVector<Index>> &getConnectivity() const {
     return m_connectivity;
@@ -161,27 +144,18 @@ public:
   void setMPCoords(const DynamicVector<T> &mp_positions) {
     assert(mp_positions.size() == m_nMPs &&
            "Size mismatch: mp_positions must match mesh MP count");
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_MPs[p].pos = mp_positions[p];
-    }
+    m_MPs = mp_positions;
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpElementId[p] = findCageID(m_MPs[p].pos);
+      m_mpElementId[p] = findCageID(m_MPs[p]);
     }
-  }
-
-  void setMPs(const DynamicVector<Particle1D<T>> &particles) {
-    assert(particles.size() == m_nMPs &&
-           "Size mismatch: particles must match mesh MP count");
-    m_MPs = particles;
-    updateMPElementIds();
   }
 
   void setMPCoord(Index p, T x) {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    m_MPs[p].pos = x;
+    m_MPs[p] = x;
     // Keep cached element id consistent
     m_mpElementId[p] = findCageID(x);
   }
@@ -189,7 +163,7 @@ public:
   // Update cached element IDs using the mesh-internal MP coordinates.
   void updateMPElementIds() {
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpElementId[p] = findCageID(m_MPs[p].pos);
+      m_mpElementId[p] = findCageID(m_MPs[p]);
     }
   }
 
@@ -277,12 +251,9 @@ private:
   static constexpr Index idError = -1; // default id error for mpElementID
 
   T m_MP_size{}; // MP spacing / particle size used for square-grid MPs
-  DynamicVector<Particle2D<T>> m_MPs{}; // Material Points with full attributes
-  DynamicVector<Particle2D<T>> m_MPs_initial{}; // Initial MP state for reset
-  mutable DynamicVector<std::pair<T, T>> m_mpCoordsCache{}; // Backward-compat
-  mutable DynamicVector<T> m_mpXCache{}, m_mpYCache{};      // Backward-compat
-  mutable DynamicVector<T> m_mpXInitialCache{},
-      m_mpYInitialCache{};              // Backward-compat
+  DynamicVector<std::pair<T, T>> m_MPs{}; // Material Points coordinates
+  DynamicVector<T> m_MP_x{}, m_MP_y{};    // MP coordinates
+  DynamicVector<T> m_MP_x_initial{}, m_MP_y_initial{}; // Initial MP coordinates
   DynamicVector<Index> m_mpElementId{}; // Cached element ID for each MP
   DynamicVector<DynamicVector<Index>>
       m_mpsInElement{}; // MPs grouped per element
@@ -290,8 +261,11 @@ private:
   void generateMPGridPerElement(Index nMPperEle) {
     if (nMPperEle <= 0) {
       m_nMPs = 0;
-      m_MPs = DynamicVector<Particle2D<T>>{};
-      m_MPs_initial = DynamicVector<Particle2D<T>>{};
+      m_MPs = DynamicVector<std::pair<T, T>>{};
+      m_MP_x = DynamicVector<T>{};
+      m_MP_y = DynamicVector<T>{};
+      m_MP_x_initial = DynamicVector<T>{};
+      m_MP_y_initial = DynamicVector<T>{};
       m_mpElementId = DynamicVector<Index>{};
       return;
     }
@@ -306,12 +280,16 @@ private:
     const Index perEle = nMPperEle * nMPperEle;
     m_nMPs = m_nElements * perEle;
 
-    m_MPs.resize(m_nMPs);
-    m_MPs_initial.resize(m_nMPs);
-    m_mpElementId.resize(m_nMPs, idError);
+    m_MPs = DynamicVector<std::pair<T, T>>{};
+    m_MP_x = DynamicVector<T>{};
+    m_MP_y = DynamicVector<T>{};
+    m_mpElementId = DynamicVector<Index>{};
+    m_MPs.reserve(m_nMPs);
+    m_MP_x.reserve(m_nMPs);
+    m_MP_y.reserve(m_nMPs);
+    m_mpElementId.reserve(m_nMPs);
 
     // Element ordering follows connectivity generation: i + j*(nx-1)
-    Index mpId{0};
     for (Index ey{0}; ey < m_ny - 1; ++ey) {
       for (Index ex{0}; ex < m_nx - 1; ++ex) {
         const Index elemID = ex + ey * (m_nx - 1);
@@ -323,16 +301,17 @@ private:
                 x_left + (static_cast<T>(i) + static_cast<T>(0.5)) * mp_dx;
             const T y =
                 y_bot + (static_cast<T>(j) + static_cast<T>(0.5)) * mp_dy;
-            m_MPs[mpId].pos.x() = x;
-            m_MPs[mpId].pos.y() = y;
-            m_mpElementId[mpId] = elemID;
-            ++mpId;
+            m_MP_x.push_back(x);
+            m_MP_y.push_back(y);
+            m_MPs.push_back({x, y});
+            m_mpElementId.push_back(elemID);
           }
         }
       }
     }
 
-    m_MPs_initial = m_MPs;
+    m_MP_x_initial = m_MP_x;
+    m_MP_y_initial = m_MP_y;
   }
 
   // MP grid generation methods
@@ -341,11 +320,19 @@ private:
     // Defensive: avoid division by 0 / invalid ranges
     if (!(MP_size > T{0}) || !(x1 > x0) || !(y1 > y0)) {
       m_nMPs = 0;
-      m_MPs = DynamicVector<Particle2D<T>>{};
-      m_MPs_initial = DynamicVector<Particle2D<T>>{};
+      m_MPs = DynamicVector<std::pair<T, T>>{};
+      m_MP_x = DynamicVector<T>{};
+      m_MP_y = DynamicVector<T>{};
+      m_MP_x_initial = DynamicVector<T>{};
+      m_MP_y_initial = DynamicVector<T>{};
       m_mpElementId = DynamicVector<Index>{};
       return;
     }
+
+    // Regenerate MPs: clear previous state first
+    m_MPs = DynamicVector<std::pair<T, T>>{};
+    m_MP_x = DynamicVector<T>{};
+    m_MP_y = DynamicVector<T>{};
 
     Index npx = static_cast<Index>((x1 - x0) / MP_size);
     Index npy = static_cast<Index>((y1 - y0) / MP_size);
@@ -353,30 +340,27 @@ private:
 
     // Initialize Material Points (MPs) if needed
     if (m_nMPs > 0) {
-      m_MPs.resize(m_nMPs);
-      m_MPs_initial.resize(m_nMPs);
+      m_MPs.reserve(m_nMPs);
+      m_MP_x.reserve(m_nMPs);
+      m_MP_y.reserve(m_nMPs);
       m_mpElementId.resize(m_nMPs, idError);
-      Index mpId{0};
       for (Index j{0}; j < npy; ++j) {
         for (Index i{0}; i < npx; ++i) {
           T x = x0 + MP_size / 2 + i * MP_size;
           T y = y0 + MP_size / 2 + j * MP_size;
-          m_MPs[mpId].pos.x() = x;
-          m_MPs[mpId].pos.y() = y;
-          ++mpId;
+          m_MP_x.push_back(x);
+          m_MP_y.push_back(y);
+          m_MPs.push_back({x, y});
         }
       }
-      m_MPs_initial = m_MPs;
-    } else {
-      m_MPs = DynamicVector<Particle2D<T>>{};
-      m_MPs_initial = DynamicVector<Particle2D<T>>{};
+      m_MP_x_initial = m_MP_x;
+      m_MP_y_initial = m_MP_y;
     }
 
     // Initialize cached element IDs for MPs
     m_mpElementId.resize(m_nMPs, idError);
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpElementId[p] =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
+      m_mpElementId[p] = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
     }
   }
 
@@ -397,8 +381,11 @@ private:
     // To be continued
     if (!(MP_size > T{0}) || !(radius > T{0})) {
       m_nMPs = 0;
-      m_MPs = DynamicVector<Particle2D<T>>{};
-      m_MPs_initial = DynamicVector<Particle2D<T>>{};
+      m_MPs = DynamicVector<std::pair<T, T>>{};
+      m_MP_x = DynamicVector<T>{};
+      m_MP_y = DynamicVector<T>{};
+      m_MP_x_initial = DynamicVector<T>{};
+      m_MP_y_initial = DynamicVector<T>{};
       m_mpElementId = DynamicVector<Index>{};
       return;
     }
@@ -418,8 +405,9 @@ private:
     const T ymax = gridOriginY + radius;
 
     // Regenerate MPs: clear previous state first
-    m_MPs = DynamicVector<Particle2D<T>>{};
-    m_MPs_initial = DynamicVector<Particle2D<T>>{};
+    m_MPs = DynamicVector<std::pair<T, T>>{};
+    m_MP_x = DynamicVector<T>{};
+    m_MP_y = DynamicVector<T>{};
     m_mpElementId = DynamicVector<Index>{};
 
     const double dx = static_cast<double>(xmax - xmin);
@@ -427,7 +415,8 @@ private:
     const double ds = static_cast<double>(MP_size);
     if (!(dx >= 0.0) || !(dy >= 0.0) || !(ds > 0.0)) {
       m_nMPs = 0;
-      m_MPs_initial = DynamicVector<Particle2D<T>>{};
+      m_MP_x_initial = DynamicVector<T>{};
+      m_MP_y_initial = DynamicVector<T>{};
       return;
     }
 
@@ -441,7 +430,8 @@ private:
     const Index reserveCount =
         static_cast<Index>(std::max(0.0, approxCount * 1.1));
     m_MPs.reserve(reserveCount);
-    m_MPs_initial.reserve(reserveCount);
+    m_MP_x.reserve(reserveCount);
+    m_MP_y.reserve(reserveCount);
 
     const double cx = static_cast<double>(center.first);
     const double cy = static_cast<double>(center.second);
@@ -455,22 +445,21 @@ private:
         const double dxp = x - cx;
         const double dyp = y - cy;
         if (dxp * dxp + dyp * dyp <= r2) {
-          Particle2D<T> mp{};
-          mp.pos.x() = static_cast<T>(x);
-          mp.pos.y() = static_cast<T>(y);
-          m_MPs.push_back(mp);
+          m_MP_x.push_back(static_cast<T>(x));
+          m_MP_y.push_back(static_cast<T>(y));
+          m_MPs.push_back({static_cast<T>(x), static_cast<T>(y)});
         }
       }
     }
 
     m_nMPs = static_cast<Index>(m_MPs.size());
-    m_MPs_initial = m_MPs;
+    m_MP_x_initial = m_MP_x;
+    m_MP_y_initial = m_MP_y;
 
     // Initialize cached element IDs for MPs
     m_mpElementId.resize(m_nMPs, idError);
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpElementId[p] =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
+      m_mpElementId[p] = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
     }
   }
 
@@ -593,21 +582,7 @@ public:
   Index nx() const { return m_nx; }
   Index ny() const { return m_ny; }
   const DynamicVector<std::pair<T, T>> &getNodes() const { return m_nodes; }
-  DynamicVector<Particle2D<T>> &getParticles() { return m_MPs; }
-  const DynamicVector<Particle2D<T>> &getParticles() const { return m_MPs; }
-  Particle2D<T> getMP(Index p) const {
-    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return m_MPs[p];
-  }
-
-  // Backward-compatible API: returns MP coords as (x, y) pairs.
-  const DynamicVector<std::pair<T, T>> &getMPCoords() const {
-    m_mpCoordsCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpCoordsCache[p] = {m_MPs[p].pos.x(), m_MPs[p].pos.y()};
-    }
-    return m_mpCoordsCache;
-  }
+  const DynamicVector<std::pair<T, T>> &getMPCoords() const { return m_MPs; }
 
   // Convenience API: return MP coords as DynamicVector<T>{x,y} for math
   // operations.
@@ -615,7 +590,7 @@ public:
     DynamicVector<DynamicVector<T>> out;
     out.resize(m_MPs.size());
     for (Index p{0}; p < m_nMPs; ++p) {
-      out[p] = DynamicVector<T>{m_MPs[p].pos.x(), m_MPs[p].pos.y()};
+      out[p] = DynamicVector<T>{m_MPs[p].first, m_MPs[p].second};
     }
     return out;
   }
@@ -646,49 +621,25 @@ public:
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_mpElementId[p];
   }
-  std::pair<T, T> getMPpos(Index p) const {
+  std::pair<T, T> getMPCoord(Index p) const {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return {m_MPs[p].pos.x(), m_MPs[p].pos.y()};
+    return m_MPs[p];
   }
   const DynamicVector<T> &getXCoords() const { return m_nodes_x; }
   const DynamicVector<T> &getYCoords() const { return m_nodes_y; }
 
   // MP getters
-  const DynamicVector<T> &getMPXCoords() const {
-    m_mpXCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpXCache[p] = m_MPs[p].pos.x();
-    }
-    return m_mpXCache;
-  }
-  const DynamicVector<T> &getMPYCoords() const {
-    m_mpYCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpYCache[p] = m_MPs[p].pos.y();
-    }
-    return m_mpYCache;
-  }
-  const DynamicVector<T> &getInitialMPXCoords() const {
-    m_mpXInitialCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpXInitialCache[p] = m_MPs_initial[p].pos.x();
-    }
-    return m_mpXInitialCache;
-  }
-  const DynamicVector<T> &getInitialMPYCoords() const {
-    m_mpYInitialCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpYInitialCache[p] = m_MPs_initial[p].pos.y();
-    }
-    return m_mpYInitialCache;
-  }
+  const DynamicVector<T> &getMPXCoords() const { return m_MP_x; }
+  const DynamicVector<T> &getMPYCoords() const { return m_MP_y; }
+  const DynamicVector<T> &getInitialMPXCoords() const { return m_MP_x_initial; }
+  const DynamicVector<T> &getInitialMPYCoords() const { return m_MP_y_initial; }
   T getMPXCoord(Index p) const {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return m_MPs[p].pos.x();
+    return m_MP_x[p];
   }
   T getMPYCoord(Index p) const {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return m_MPs[p].pos.y();
+    return m_MP_y[p];
   }
 
   // Boundary-contact helpers for MPs (axis-aligned rectangular domain)
@@ -708,8 +659,8 @@ public:
     assert(R >= T{0} && "Support radius R must be non-negative");
     DynamicVector<char> mask(static_cast<std::size_t>(m_nMPs));
     for (Index p{0}; p < m_nMPs; ++p) {
-      const T x = m_MPs[p].pos.x();
-      const T y = m_MPs[p].pos.y();
+      const T x = m_MP_x[p];
+      const T y = m_MP_y[p];
       char m = 0;
       const T xMinus = x - R;
       const T xPlus = x + R;
@@ -859,8 +810,9 @@ public:
   // MP setters
   void setMPCoord(Index p, T x, T y) {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    m_MPs[p].pos.x() = x;
-    m_MPs[p].pos.y() = y;
+    m_MP_x[p] = x;
+    m_MP_y[p] = y;
+    m_MPs[p] = {x, y};
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
@@ -870,12 +822,13 @@ public:
   void setMPCoords(const DynamicVector<T> &mp_x, const DynamicVector<T> &mp_y) {
     assert(mp_x.size() == m_nMPs && mp_y.size() == m_nMPs &&
            "Size mismatch: mp coordinates must match mesh MP count");
+    m_MP_x = mp_x;
+    m_MP_y = mp_y;
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_MPs[p].pos.x() = mp_x[p];
-      m_MPs[p].pos.y() = mp_y[p];
+      m_MPs[p] = {mp_x[p], mp_y[p]};
       m_mpElementId[p] = findCageID(mp_x[p], mp_y[p], m_mpElementId[p]);
     }
   }
@@ -883,14 +836,14 @@ public:
   void setMPCoords(const DynamicVector<std::pair<T, T>> &mp_positions) {
     assert(mp_positions.size() == m_nMPs &&
            "Size mismatch: mp_positions must match mesh MP count");
+    m_MPs = mp_positions;
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_MPs[p].pos.x() = mp_positions[p].first;
-      m_MPs[p].pos.y() = mp_positions[p].second;
-      m_mpElementId[p] = findCageID(mp_positions[p].first,
-                                    mp_positions[p].second, m_mpElementId[p]);
+      m_MP_x[p] = mp_positions[p].first;
+      m_MP_y[p] = mp_positions[p].second;
+      m_mpElementId[p] = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
     }
   }
 
@@ -904,16 +857,18 @@ public:
     for (Index p{0}; p < m_nMPs; ++p) {
       const T x = mp_positions[p].x();
       const T y = mp_positions[p].y();
-      m_MPs[p].pos.x() = x;
-      m_MPs[p].pos.y() = y;
+      m_MP_x[p] = x;
+      m_MP_y[p] = y;
+      m_MPs[p] = {x, y};
       m_mpElementId[p] = findCageID(x, y, m_mpElementId[p]);
     }
   }
 
   void updateMPCoord(Index p, T x, T y) {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    m_MPs[p].pos.x() = x;
-    m_MPs[p].pos.y() = y;
+    m_MP_x[p] = x;
+    m_MP_y[p] = y;
+    m_MPs[p] = {x, y};
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
@@ -924,24 +879,26 @@ public:
                     const DynamicVector<T> &new_mp_y) {
     assert(new_mp_x.size() == m_nMPs && new_mp_y.size() == m_nMPs &&
            "Size mismatch");
+    m_MP_x = new_mp_x;
+    m_MP_y = new_mp_y;
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_MPs[p].pos.x() = new_mp_x[p];
-      m_MPs[p].pos.y() = new_mp_y[p];
+      m_MPs[p] = {new_mp_x[p], new_mp_y[p]};
       m_mpElementId[p] = findCageID(new_mp_x[p], new_mp_y[p], m_mpElementId[p]);
     }
   }
 
   void resetMPs() {
-    m_MPs = m_MPs_initial;
+    m_MP_x = m_MP_x_initial;
+    m_MP_y = m_MP_y_initial;
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpElementId[p] =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
+      m_MPs[p] = {m_MP_x_initial[p], m_MP_y_initial[p]};
+      m_mpElementId[p] = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
     }
   }
 
@@ -951,8 +908,7 @@ public:
       m_mpElementId.resize(m_nMPs, idError);
     }
     for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpElementId[p] =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
+      m_mpElementId[p] = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
     }
   }
 
@@ -1128,8 +1084,7 @@ public:
       m_mpElementId.resize(m_nMPs, idError);
     }
     for (Index p{0}; p < m_nMPs; ++p) {
-      const Index elemID =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
+      const Index elemID = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
       m_mpElementId[p] = elemID;
       if (elemID != idError) {
         const auto &conn = m_connectivity[elemID];
@@ -1163,8 +1118,7 @@ public:
     }
 
     for (Index p = 0; p < m_nMPs; ++p) {
-      const Index elemID =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
+      const Index elemID = findCageID(m_MP_x[p], m_MP_y[p], m_mpElementId[p]);
       m_mpElementId[p] = elemID;
       if (elemID != idError) {
         m_activeElements[elemID] = 1;
