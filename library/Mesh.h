@@ -287,6 +287,7 @@ private:
   DynamicVector<DynamicVector<Index>>
       m_mpsInElement{}; // MPs grouped per element
 
+  // Used for DEM also
   void generateMPGridPerElement(Index nMPperEle) {
     if (nMPperEle <= 0) {
       m_nMPs = 0;

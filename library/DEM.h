@@ -15,6 +15,7 @@ void periodicBC() {};
 
 void reducedCoordinate() {};
 
+// Rigid wall DEM 2D
 template <typename T, Index ngl, Index ngh> class DEM2D {
 private:
   constexpr Index m_npc{ngl * ngh};
@@ -48,6 +49,9 @@ private:
   // L'énergie de système
   T m_kinEnergy{}, m_potentEnergy{}, m_totalEnergy0{}, m_dissiEnergy{};
 
+  // MP henetaed mesh
+  Mesh2D m_mesh{};
+
 public:
   DEM2D(T rho, T rmin, T rmax, T kn, T kt, T muy, T eta, T c, T dt,
         T duration = 10000.0)
@@ -59,15 +63,13 @@ public:
     // Initiate particles' position
     T legnth = rmax * T{2} * ngl;
     T height = rmax * T{2} * ngh;
-    m_mesh = Mesh2D<T>(length, height, ngl + 1, ngw + 1);
-    Index indexEle{0};
+    m_mesh = Mesh2D<T>(length, height, ngl + 1, ngw + 1,
+                       1);          // une particule par maille
     T vRand{rmin / T{(50) * m_dt}}; // Emperical value
     for (auto &p : m_particles) {
       p.radius = Random::get(rmin, rmax);
       p.mass = rho * constants::pi * p.radius * p.radius;
       p.inertia = T{0.5} * p.mass * p.radis * p.radius;
-      p.pos.x() = m_mesh.getEleCenter(Index index);
-      p.pos.y() = m_mesh.getEleCenter(Index index);
       p.vel.x() = Random::get(-vRand, vRand);
       p.vel.y() = Random::get(-vRand, vRand);
       p.kn = kn;
@@ -76,7 +78,6 @@ public:
       totalR += p.radius;
       m_Msolid += p.mass;
       m_Vsolid += constant::pi * p.radius * p.radius;
-      ++indexEle;
     }
     T meanMass = totalM / static_cast<T>(npc);
     T meanRadius = totalR / static_cast<T>(npc);
@@ -216,9 +217,7 @@ public:
   }
   void computeHalfVel() {}
   void updatePosition() {}
-  void computeInteraction(){
-    
-  }
+  void computeInteraction() {}
   void computeAcc() {}
   void computeFullVel() {}
   void coulombFriction() {}
