@@ -2,6 +2,7 @@
 #define MY_NEWTON_RAPHSON_ROOT_H
 
 #include "DualDifferentiation.h"
+#include "Matrix.h"
 #include <algorithm>
 #include <cmath>
 #include <type_traits>
@@ -26,8 +27,8 @@ template <typename T> auto polyFunc(const std::vector<double> &coef, T x) {
   }
 
   for (const auto &c : coef) {
-    result = result + c * std::pow(x_power);
-    x_power = std::pow(x_power, x);
+    result = result + c * x_power;
+    x_power = x_power * x;
   }
   return result;
 }
@@ -143,6 +144,71 @@ findAllRoots(const std::vector<double> &coef,
       roots.end());
 
   return roots;
+}
+
+StaticVector<double, 2>
+newtonRaphsonSystemEquations(const VectorFunction2D &u,
+                             const StaticVector<double, 2> &initValue) {
+  StaticVector<double, 2> X{initValue};
+
+  StaticVector<double, 2> dX{};
+  constexpr int maxIter = 100;
+
+  for (int iter = 0; iter < maxIter; ++iter) {
+    Matrix<double, 2, 2> J = Jacobian(u, X);
+
+    auto uVal = u(X[0], X[1]);
+    StaticVector<double, 2> rhs{-uVal.x().getVal(), -uVal.y().getVal()};
+
+    dX = solveLinearSystem(J, rhs);
+    X += dX;
+
+    bool isSolved = true;
+    for (const auto e : dX) {
+      if (!approximatelyEqualAbsRel(e, 0.0)) {
+        isSolved = false;
+        break;
+      }
+    }
+
+    if (isSolved)
+      return X;
+  }
+
+  return X;
+}
+
+StaticVector<double, 3>
+newtonRaphsonSystemEquations(const VectorFunction3D &u,
+                             const StaticVector<double, 3> &initValue) {
+  StaticVector<double, 3> X{initValue};
+
+  StaticVector<double, 3> dX{};
+  constexpr int maxIter = 100;
+
+  for (int iter = 0; iter < maxIter; ++iter) {
+    Matrix<double, 3, 3> J = Jacobian(u, X);
+
+    auto uVal = u(X[0], X[1], X[2]);
+    StaticVector<double, 3> rhs{-uVal.x().getVal(), -uVal.y().getVal(),
+                                -uVal.z().getVal()};
+
+    dX = solveLinearSystem(J, rhs);
+    X += dX;
+
+    bool isSolved = true;
+    for (const auto e : dX) {
+      if (!approximatelyEqualAbsRel(e, 0.0)) {
+        isSolved = false;
+        break;
+      }
+    }
+
+    if (isSolved)
+      return X;
+  }
+
+  return X;
 }
 
 #endif
