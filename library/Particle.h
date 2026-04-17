@@ -2,7 +2,56 @@
 #define MY_PARTICLE_H
 
 #include "Vector.h"
-template <typename T> struct Particle1D {
+
+template <typename T> struct Node1D {
+  T mass{};
+  T pos{}, posInit{};
+  T vel{};
+  T acc{};
+  T momen{};
+  bool velCon{0};
+  bool accCon{0};
+  bool MomenCon{0};
+  bool forceCon{0};
+
+  // Constraint values (so constraints can be set anytime and enforced later)
+  T velConVal{};
+  T accConVal{};
+  T momenConVal{};
+  T forceConVal{};
+  T bodyForce{}, tractionForce{};
+  // Nodal external forces
+  T forceExt{}, forceInt{}, forceTot{};
+
+  bool isActiveNode{false};
+}
+
+template <typename T>
+struct Node2D {
+  T mass{};
+  T pos{}, posInit{};
+  T velocity{};
+  T acceleration{};
+  T nomentum{};
+  bool velocityConstrained{};
+  bool accelerationConstrained{};
+  bool momentumConstrained{};
+  bool forceConstrained{};
+
+  // Constraint values (so constraints can be set anytime and enforced later)
+  T velocityConstraintValue{};
+  T accelerationConstraintValue{};
+  T momentumConstraintValue{};
+  T forceConstraintValue{};
+  T bodyForce{}, tractionForce{};
+  // Nodal external forces
+  T forceExternal{}, forceInternal{}, forceTotal{};
+
+  bool isActiveNode{false};
+}
+
+template <typename T>
+struct Particle1D {
   // position
   T pos{};
   T vel{};
@@ -21,6 +70,8 @@ template <typename T> struct Particle1D {
   T strain{};
   T strainRate{};
   T dStrain{};
+
+  Index eleID{-1}; // default: error
 };
 
 template <typename T> struct Particle2D {
@@ -46,6 +97,8 @@ template <typename T> struct Particle2D {
   // force et moment de résultat (Cartesian)
   StaticVector<T, 2> force{}; // fx & fy
   T moment{};                 // torque
+
+  Index eleID{-1}; // default: error
 };
 
 template <typename T> struct Particle3D {
@@ -73,10 +126,23 @@ template <typename T> struct Particle3D {
   StaticVector<T, 3> force{};  // fx & fy & fz
   StaticVector<T, 3> moment{}; // frot
 
+  Index eleID{-1}; // default: error
+
   // Quaternion q{};
 };
 
-template <typename T> struct Interaction {
+template <typename T> struct Interaction2D {
+  Index i{};
+  Index j{};
+  T dn{}; //  Overlaps
+  bool touch{false};
+
+  T fn{};
+  T ft{};
+  Interaction(Index i_, Index j_) : i(i_), j(j_) {}
+};
+
+template <typename T> struct Interaction3D {
   Index i{};
   Index j{};
   T dn{}; //  Overlaps

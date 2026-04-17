@@ -7,8 +7,38 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <stdexcept>
+#include <type_traits>
 
 // Note : To interpolate a polynomal of degree n, we need n+1 points!
+
+namespace interpolation_detail {
+
+template <typename T>
+void assertInsideDomain(const DynamicVector<double> &data_x, const T &x,
+                        const char *funcName) {
+  const double xMin = data_x[0];
+  const double xMax = data_x[data_x.size() - 1];
+  assert(x >= xMin && x <= xMax);
+  if (x < xMin || x > xMax) {
+    throw std::out_of_range(std::string(funcName) +
+                            ": x is out of data_x domain");
+  }
+}
+
+template <Index n, typename T>
+void assertInsideDomain(const StaticVector<double, n> &data_x, const T &x,
+                        const char *funcName) {
+  const double xMin = data_x[0];
+  const double xMax = data_x[n - 1];
+  assert(x >= xMin && x <= xMax);
+  if (x < xMin || x > xMax) {
+    throw std::out_of_range(std::string(funcName) +
+                            ": x is out of data_x domain");
+  }
+}
+
+} // namespace interpolation_detail
 
 // Lagrange basis at x : l_i(x)
 // N_i(x) = l_i(x) = Product((x - x_i) / (x_i - x_j))
@@ -41,6 +71,7 @@ T interpolatePolynomial(const DynamicVector<double> &data_x,
   assert(data_x.size() == data_y.size() &&
          "Size of data x and y must matched!");
   assert(data_x.size() >= 2 && "Must have at least 2 points!");
+  interpolation_detail::assertInsideDomain(data_x, x, "interpolatePolynomial");
   T y{0.0};
   for (Index i{0}; i < data_y.size(); ++i) {
     y += data_y[i] * basisLagrange<T>(i, data_x, x);
@@ -51,6 +82,7 @@ T interpolatePolynomial(const DynamicVector<double> &data_x,
 template <Index n, typename T>
 T interpolatePolynomial(const StaticVector<double, n> &data_x,
                         const StaticVector<double, n> &data_y, T x) {
+  interpolation_detail::assertInsideDomain(data_x, x, "interpolatePolynomial");
   T y{0.0};
   for (Index i{0}; i < data_y.size(); ++i) {
     y += data_y[i] * basisLagrange(i, data_x, x);
@@ -71,27 +103,29 @@ T interpolateLinear(const DynamicVector<double> &data_x,
   assert(data_x.size() == data_y.size() &&
          "Size of data x and y must matched!");
   assert(data_x.size() >= 2 && "Must have at least 2 points!");
+  interpolation_detail::assertInsideDomain(data_x, x, "interpolateLinear");
+
   for (Index i{0}; i < data_y.size() - 1; ++i) {
     if (data_x[i] <= x && x <= data_x[i + 1]) {
       T a_i = (data_y[i + 1] - data_y[i]) / (data_x[i + 1] - data_x[i]);
       return a_i * (x - data_x[i]) + data_y[i];
     }
   }
-  std::cout << "x is out of the domain of data\n";
-  return T{};
+  throw std::out_of_range("interpolateLinear: x is out of data_x domain");
 }
 
 template <Index n, typename T>
 T interpolateLinear(const StaticVector<double, n> &data_x,
                     const StaticVector<double, n> &data_y, T x) {
+  interpolation_detail::assertInsideDomain(data_x, x, "interpolateLinear");
+
   for (Index i{0}; i < data_y.size() - 1; ++i) {
     if (data_x[i] <= x && x <= data_x[i + 1]) {
       T a_i = (data_y[i + 1] - data_y[i]) / (data_x[i + 1] - data_x[i]);
       return a_i * (x - data_x[i]) + data_y[i];
     }
   }
-  std::cout << "x is out of the domain of data\n";
-  return T{};
+  throw std::out_of_range("interpolateLinear: x is out of data_x domain");
 }
 
 // Cubic spline interpolation: ai(x-x_i)^3 + b_i(x-x_i)^2 + c_i(x-x_i) + d_i
@@ -100,7 +134,9 @@ template <Index nPoints, typename T>
 T interpolateCubicSpline(const StaticVector<double, nPoints> &data_x,
                          const StaticVector<double, nPoints> &data_y, T x) {
   static_assert(nPoints >= 3, "Must have at least 3 points!");
-  if constexpr (nPoints == 3) {
+  interpolation_detail::assertInsideDomain(data_x, x, "interpolateCubicSpline");
+
+  if constexpr (nPoints <= 4) {
     // Knot-a-not constraints become singular for only 3 points.
     return interpolatePolynomial(data_x, data_y, x);
   }
@@ -145,8 +181,7 @@ T interpolateCubicSpline(const StaticVector<double, nPoints> &data_x,
       return result;
     }
   }
-  std::cout << "x is out of the domain of data\n";
-  return T{};
+  throw std::out_of_range("interpolateCubicSpline: x is out of data_x domain");
 }
 
 #endif

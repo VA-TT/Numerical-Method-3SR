@@ -82,6 +82,85 @@ public:
     return d1 * inverse(d2);
   }
 
+  // Comparison operators - compare value parts only
+  friend bool operator<(const Dual &d, double b) { return d.m_val < b; }
+  friend bool operator<(double a, const Dual &d) { return a < d.m_val; }
+  friend bool operator>(const Dual &d, double b) { return d.m_val > b; }
+  friend bool operator>(double a, const Dual &d) { return a > d.m_val; }
+  friend bool operator<=(const Dual &d, double b) { return d.m_val <= b; }
+  friend bool operator<=(double a, const Dual &d) { return a <= d.m_val; }
+  friend bool operator>=(const Dual &d, double b) { return d.m_val >= b; }
+  friend bool operator>=(double a, const Dual &d) { return a >= d.m_val; }
+  friend bool operator==(const Dual &d, double b) { return d.m_val == b; }
+  friend bool operator==(double a, const Dual &d) { return a == d.m_val; }
+  friend bool operator!=(const Dual &d, double b) { return d.m_val != b; }
+  friend bool operator!=(double a, const Dual &d) { return a != d.m_val; }
+
+  // Dual vs Dual comparisons
+  friend bool operator<(const Dual &d1, const Dual &d2) {
+    return d1.m_val < d2.m_val;
+  }
+  friend bool operator>(const Dual &d1, const Dual &d2) {
+    return d1.m_val > d2.m_val;
+  }
+  friend bool operator<=(const Dual &d1, const Dual &d2) {
+    return d1.m_val <= d2.m_val;
+  }
+  friend bool operator>=(const Dual &d1, const Dual &d2) {
+    return d1.m_val >= d2.m_val;
+  }
+  friend bool operator==(const Dual &d1, const Dual &d2) {
+    return d1.m_val == d2.m_val;
+  }
+  friend bool operator!=(const Dual &d1, const Dual &d2) {
+    return d1.m_val != d2.m_val;
+  }
+
+  // Compound assignment operators
+  Dual &operator+=(const Dual &d) {
+    m_val += d.m_val;
+    m_der += d.m_der;
+    m_der2 += d.m_der2;
+    return *this;
+  }
+  Dual &operator+=(double a) {
+    m_val += a;
+    return *this;
+  }
+  Dual &operator-=(const Dual &d) {
+    m_val -= d.m_val;
+    m_der -= d.m_der;
+    m_der2 -= d.m_der2;
+    return *this;
+  }
+  Dual &operator-=(double a) {
+    m_val -= a;
+    return *this;
+  }
+  Dual &operator*=(const Dual &d) {
+    // (a + ae*E + ae2*E^2) * (b + be*E + be2*E^2)
+    m_der2 = m_der2 * d.m_val + 2.0 * m_der * d.m_der + m_val * d.m_der2;
+    m_der = m_val * d.m_der + m_der * d.m_val;
+    m_val = m_val * d.m_val;
+    return *this;
+  }
+  Dual &operator*=(double k) {
+    m_val *= k;
+    m_der *= k;
+    m_der2 *= k;
+    return *this;
+  }
+  Dual &operator/=(const Dual &d) {
+    *this = *this / d;
+    return *this;
+  }
+  Dual &operator/=(double k) {
+    m_val /= k;
+    m_der /= k;
+    m_der2 /= k;
+    return *this;
+  }
+
   friend std::ostream &operator<<(std::ostream &out, const Dual &d) {
     out << d.m_val << " + " << d.m_der << "E + " << d.m_der2 << "E2\n";
     return out;

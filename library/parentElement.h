@@ -123,7 +123,7 @@ inline auto dN3_deta = [](auto xi, auto eta) { return 0.25 * (1 + xi); };
 inline auto dN4_deta = [](auto xi, auto eta) { return 0.25 * (1 - xi); };
 
 // Mapping from parent [-1,1]x[-1,1] to physical coordinates
-// x = sum(N_i * x_i) = N Â· x_nodes, y = sum(N_i * y_i) = N Â· y_nodes
+// x = sum(N_i * x_i)
 template <typename T>
 std::pair<T, T> physicCoor(T xi, T eta, const DynamicVector<T> &x_nodes,
                            const DynamicVector<T> &y_nodes) {

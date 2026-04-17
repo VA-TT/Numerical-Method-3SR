@@ -20,9 +20,9 @@ template <typename T, Index ngl, Index ngh> class DEM2D {
 private:
   constexpr Index m_npc{ngl * ngh};
   T m_legnth{}, m_height{};
-  StaticVector<Particle2D<T>, m_npc> m_particles {}
-  DynamicVector<Particle2D<T>> m_interactions {}
-  DynamicVector<Particle2D<T>> m_neighbors {}
+  StaticVector<Particle2D<T>, m_npc> m_particles{};
+  DynamicVector<Interaction2D<T>> m_interactions{};
+  DynamicVector<Particle2D<T>> m_neighbors{};
   T m_z{};             // Nombre de coordination
   T m_e{};             // Indice de vide
   T m_I{};             // Nombre d'inertie
@@ -33,30 +33,30 @@ private:
   T m_solidFraction{}; // Solid Fraction
   // T m_p{1000};          // Isotropic compression
   // T m_v{};              // Velocité de cissailement
-  T m_h{};               // matrix de condition limite
+  // T m_h{};               // matrix de condition limite
   T m_muy{};             // Coefficient de frottement
   T m_c{};               // Cohesion
-  T m_dmax{};            // distance maximale pour etre voisin
+  T m_dmax{};            // distance maximale pour être voisin
   T m_Vsolid{};          // Somme des veloumes des perticules
   T m_Msolid{};          // Somme des masses des perticules
   Index m_stepUpdate{50} // nombre de pas de MAJ la liste de voisinage
   T m_g{};               // aceeleration gravitaire
-  T m_fnMax{};           // max de fn
-  T m_dt{};
-  Index m_iStep{}; // compte de pas
-  Index m_nStep{}; // nombre de pas
+  T m_fnMax{};           // max de fn -> dessiner
+  T m_dt{};              // Pas de temps
+  Index m_iStep{};       // compte de pas
+  Index m_nStep{};       // nombre de pas
 
   // L'énergie de système
   T m_kinEnergy{}, m_potentEnergy{}, m_totalEnergy0{}, m_dissiEnergy{};
 
-  // MP henetaed mesh
+  // Maillage initiale des particules
   Mesh2D m_mesh{};
 
 public:
-  DEM2D(T rho, T rmin, T rmax, T kn, T kt, T muy, T eta, T c, T dt,
-        T duration = 10000.0)
+  DEM2D(T rho, T rmax, T rmin T kn, T kt, T muy, T eta, T c, T dt,
+        T duration = T{10000}, T alpha = T{1})
       : m_muy{muy}, m_c{c}, m_dt{dt}, m_dmax{0.95 * rmin},
-        m_nStep{static_cast<Index>{m_duration / m_nStep}} {
+        m_nStep{static_cast<Index>{duration / dt}}, m_alpha{alpha} {
     assert(T{0} < eta && eta < T{1} && "Eta must be in range [0,1]");
     T totalM{};
     T totalR{};
@@ -65,19 +65,20 @@ public:
     T height = rmax * T{2} * ngh;
     m_mesh = Mesh2D<T>(length, height, ngl + 1, ngw + 1,
                        1);          // une particule par maille
-    T vRand{rmin / T{(50) * m_dt}}; // Emperical value
+    T vRand{rmin / T{(50) * m_dt}}; // valeur empérique
     for (auto &p : m_particles) {
       p.radius = Random::get(rmin, rmax);
-      p.mass = rho * constants::pi * p.radius * p.radius;
-      p.inertia = T{0.5} * p.mass * p.radis * p.radius;
+      totalR += p.radius;
+      p.volume = constants::pi * p.radius * p.radius;
+      m_Vsolid += p.volume;
+      p.mass = rho * p.volume;
+      m_Msolid += p.mass;
+      p.inertia = T{0.5} * p.mass * p.radius * p.radius;
       p.vel.x() = Random::get(-vRand, vRand);
       p.vel.y() = Random::get(-vRand, vRand);
       p.kn = kn;
       p.kt = kt;
       p.visco = T{2} * eta * std::sqrt(p.mass / kn);
-      totalR += p.radius;
-      m_Msolid += p.mass;
-      m_Vsolid += constant::pi * p.radius * p.radius;
     }
     T meanMass = totalM / static_cast<T>(npc);
     T meanRadius = totalR / static_cast<T>(npc);
@@ -143,7 +144,7 @@ public:
     }
   }
   void updateNeighborList() {}
-  void timeIntegration() {}
+  void timeIntegration() { fowardEuler(); }
   void fowardEuler() {
     for (auto &p : m_particles) {
       p.pos += m_dt * p.vel + T{0.5} * p.acc * m_dt;
@@ -153,11 +154,6 @@ public:
       p.rot += m_dt * p.vrot + T{0.5} * p.arot * m_dt;
       p.vrot += m_dt * p.arot;
       p.vrot *= m_alpha; // Amortissement artificiel
-
-      // reset the resultant forces on grains
-      grain[i].fx = 0.0;
-      grain[i].fy = 0.0;
-      grain[i].frot = 0.0;
     }
   }
   void artificialDissipation() {
@@ -218,7 +214,16 @@ public:
   void computeHalfVel() {}
   void updatePosition() {}
   void computeInteraction() {}
-  void computeAcc() {}
+  void computeAcc() {
+    // reset the resultant forces on grains
+    for (Index i{0}; i < m_npc - 1; ++i) {
+      grain[i].fx = 0.0;
+      grain[i].fy = 0.0;
+      grain[i].frot = 0.0;
+    }
+
+
+  }
   void computeFullVel() {}
   void coulombFriction() {}
   void updateNeighbotList() {}
