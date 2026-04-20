@@ -2,6 +2,7 @@
 #define MY_PARTICLE_H
 
 #include "Vector.h"
+static constexpr Index idError = -1; // default id error
 
 template <typename T> struct Node1D {
   T mass{};
@@ -23,11 +24,10 @@ template <typename T> struct Node1D {
   // Nodal external forces
   T forceExt{}, forceInt{}, forceTot{};
 
-  bool isActiveNode{false};
-}
+  bool isActive{false};
+};
 
-template <typename T>
-struct Node2D {
+template <typename T> struct Node2D {
   T mass{};
   T pos{}, posInit{};
   T velocity{};
@@ -47,11 +47,10 @@ struct Node2D {
   // Nodal external forces
   T forceExternal{}, forceInternal{}, forceTotal{};
 
-  bool isActiveNode{false};
-}
+  bool isActive{false};
+};
 
-template <typename T>
-struct Particle1D {
+template <typename T> struct Particle1D {
   // position
   T pos{};
   T vel{};
@@ -71,7 +70,7 @@ struct Particle1D {
   T strainRate{};
   T dStrain{};
 
-  Index eleID{-1}; // default: error
+  Index eleID{idError}; // default: error
 };
 
 template <typename T> struct Particle2D {
@@ -98,7 +97,7 @@ template <typename T> struct Particle2D {
   StaticVector<T, 2> force{}; // fx & fy
   T moment{};                 // torque
 
-  Index eleID{-1}; // default: error
+  Index eleID{idError}; // default: error
 };
 
 template <typename T> struct Particle3D {
@@ -126,7 +125,7 @@ template <typename T> struct Particle3D {
   StaticVector<T, 3> force{};  // fx & fy & fz
   StaticVector<T, 3> moment{}; // frot
 
-  Index eleID{-1}; // default: error
+  Index eleID{idError}; // default: error
 
   // Quaternion q{};
 };

@@ -7,6 +7,7 @@
 #include "gaussQuadrature.h"
 #include "interpolate.h"
 #include <cassert>
+#include "newtonRaphson.h
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -62,7 +63,7 @@ inline double integrationGauss1D_ref(double x1, double x2,
 
   const double *xi_ptr = nullptr;
   const double *w_ptr = nullptr;
-  valueXiW(n, xi_ptr, w_ptr);
+  gaussQuadrature::valueXiW(n, xi_ptr, w_ptr);
   double I = 0.0;
   double J = Jacobian(x1, x2);
   for (int i = 0; i < n; ++i) {
@@ -246,7 +247,7 @@ inline double integrationGauss2D_ref(
 
   const double *xi_ptr = nullptr;
   const double *w_ptr = nullptr;
-  valueXiW(n, xi_ptr, w_ptr);
+  gaussQuadrature::valueXiW(n, xi_ptr, w_ptr);
 
   double I = 0.0;
 

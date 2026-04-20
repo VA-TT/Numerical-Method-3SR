@@ -33,13 +33,10 @@ constexpr std::array<double, 4> wFour = {
     (18.0 - constexpr_sqrt(30.0)) / 36.0, (18.0 + constexpr_sqrt(30.0)) / 36.0,
     (18.0 + constexpr_sqrt(30.0)) / 36.0, (18.0 - constexpr_sqrt(30.0)) / 36.0};
 
-}; // namespace gaussQuadrature
-
-// Function to set up the wegiht coefficient and points of integration based on
-// numbers of integration points
-void valueXiW(int n, const double *&xi_ptr, const double *&w_ptr) {
+// Function to set up the weight coefficient and points of integration based on
+// number of integration points.
+inline void valueXiW(int n, const double *&xi_ptr, const double *&w_ptr) {
   assert(n >= 1 && n <= 4 && "Number of Gauss points must be in [1,4]");
-  using namespace gaussQuadrature;
 
   // Uses pointers and member function .data() to the xi/w arrays to avoid
   // copying; selects arrays by n.
@@ -63,20 +60,20 @@ void valueXiW(int n, const double *&xi_ptr, const double *&w_ptr) {
   }
 }
 
-// Generic 1-D Gauss integration on [a,b] using n points (1 <= n <= 4).
-// By default n = 2 for light calculation
-double integrationGauss1D(double x1, double x2, std::function<double(double)> f,
-                          int n = 2) {
-  using namespace gaussQuadrature;
+}; // namespace gaussQuadrature
 
+// Generic 1-D Gauss integration on [a,b] using n points (1 <= n <= 4).
+// By default n = 2 for light calculation.
+template <typename T, typename Func>
+T integrationGauss1D(T x1, T x2, Func f, int n = 2) {
   const double *xi_ptr = nullptr;
   const double *w_ptr = nullptr;
-  valueXiW(n, xi_ptr, w_ptr);
-  double I = 0.0;
-  double c1{(x2 - x1) / 2.0}; // mapping from [-1,1] to [a,b]
-  double c2{(x2 + x1) / 2.0};
+  gaussQuadrature::valueXiW(n, xi_ptr, w_ptr);
+  T I{0.0};
+  T c1{(x2 - x1) / T{2}}; // mapping from [-1,1] to [a,b]
+  T c2{(x2 + x1) / T{2}};
   for (int i = 0; i < n; ++i) {
-    I += c1 * w_ptr[i] * f(c1 * xi_ptr[i] + c2);
+    I += c1 * static_cast<T>(w_ptr[i]) * f(c1 * static_cast<T>(xi_ptr[i]) + c2);
   }
   return I;
 }
@@ -84,12 +81,11 @@ double integrationGauss1D(double x1, double x2, std::function<double(double)> f,
 // Implement 2D: Intergration in both x and y direction for a rectangular shape
 // Assuming that number of Gauss points taken in both direction is the same
 
-double integrationGauss2D(double x1, double x2, double y1, double y2,
-                          std::function<double(double, double)> f, int n = 2) {
-  using namespace gaussQuadrature;
+template <typename T, typename Func>
+T integrationGauss2D(T x1, T x2, T y1, T y2, Func f, int n = 2) {
   const double *xi_ptr = nullptr;
   const double *w_ptr = nullptr;
-  valueXiW(n, xi_ptr, w_ptr);
+  gaussQuadrature::valueXiW(n, xi_ptr, w_ptr);
   // use the same xi/w in both directions (tensor product)
   // Not actually necessary but choose to do like this for future implement
   // For example : triangular element:  m_x != m_y
@@ -100,15 +96,17 @@ double integrationGauss2D(double x1, double x2, double y1, double y2,
   int m_x = n;
   int m_y = n;
 
-  double I = 0.0;
+  T I{0.0};
 
-  double c1{(x2 - x1) / 2.0};
-  double c2{(x1 + x2) / 2.0};
-  double d1{(y2 - y1) / 2.0};
-  double d2{(y1 + y2) / 2.0};
+  T c1{(x2 - x1) / T{2}};
+  T c2{(x1 + x2) / T{2}};
+  T d1{(y2 - y1) / T{2}};
+  T d2{(y1 + y2) / T{2}};
   for (int i = 0; i < m_x; ++i) {
     for (int j = 0; j < m_y; ++j) {
-      I += c1 * d1 * w_x[i] * w_y[j] * f(c1 * xi_x[i] + c2, d1 * xi_y[j] + d2);
+      I += c1 * d1 * static_cast<T>(w_x[i]) * static_cast<T>(w_y[j]) *
+           f(c1 * static_cast<T>(xi_x[i]) + c2,
+             d1 * static_cast<T>(xi_y[j]) + d2);
     }
   }
   return I;

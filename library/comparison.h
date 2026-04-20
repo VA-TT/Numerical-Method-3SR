@@ -32,6 +32,23 @@ constexpr bool approximatelyEqualAbsRel(double a, double b,
   return approximatelyEqualRel(a, b, relEpsilon);
 }
 
+// Generic value extraction for custom numeric types (e.g. Dual).
+template <typename T> inline double comparisonValue(const T &x) {
+  if constexpr (requires(const T &v) { v.getVal(); }) {
+    return x.getVal();
+  } else {
+    return static_cast<double>(x);
+  }
+}
+
+template <typename A, typename B>
+inline bool approximatelyEqualAbsRel(const A &a, const B &b,
+                                     double absEpsilon = 1e-11,
+                                     double relEpsilon = 1e-8) {
+  return approximatelyEqualAbsRel(comparisonValue(a), comparisonValue(b),
+                                  absEpsilon, relEpsilon);
+}
+
 #endif // MATRIX_COMPARISON_HPP
 
 // Credit:

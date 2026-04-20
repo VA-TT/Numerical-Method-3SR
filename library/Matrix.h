@@ -418,9 +418,9 @@ public:
   Index indexRowMax(Index col, Index startRow = 0) const {
     assert(col < nCols && startRow < nRows && col >= 0 && "Index problem!");
     Index maxRow = startRow;
-    T maxValue = std::abs((*this)(startRow, col));
+    double maxValue = std::abs(comparisonValue((*this)(startRow, col)));
     for (Index i = startRow + 1; i < nRows; ++i) {
-      T value = std::abs((*this)(i, col));
+      double value = std::abs(comparisonValue((*this)(i, col)));
       if (value > maxValue) {
         maxValue = value;
         maxRow = i;

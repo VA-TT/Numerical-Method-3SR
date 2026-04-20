@@ -14,8 +14,8 @@
 // Note: Must seed Dual x{x0,1.0} / x{x0,1.0,0.0}
 class Dual {
 private:
-  double m_val{1.0};
-  double m_der{1.0};  // first-order derivative
+  double m_val{0.0};
+  double m_der{0.0};  // first-order derivative
   double m_der2{0.0}; // second-order derivative
 
 public:
