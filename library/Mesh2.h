@@ -266,7 +266,7 @@ private:
   // Material Points / Particles DEM
   // (Must use Dynamic Vector as number of MPs could be 0)
   DynamicVector<Particle2D<T>> m_MPs{};
-  // DynamicVector<Particle2D<T>> m_MPs_initial{}; // Initial MP state for reset
+  DynamicVector<Particle2D<T>> m_MPs_initial{}; // Initial MP state for reset
   T m_MP_size{}; // MP spacing / particle size used for square-grid MPs
 
   // mutable DynamicVector<std::pair<T, T>> m_mpCoordsCache{}; //
@@ -582,32 +582,17 @@ public:
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
     return m_nodes[nodeID];
   }
-  ElementQ4<T> getElement(Index elemID) const {
-    assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
-    const auto &conn = m_connectivity[elemID];
-    const Node2D<T> *ptr = (m_nNodes > 0) ? &m_nodes[0] : nullptr;
-    std::span<const Node2D<T>> nodeSpan(ptr,
-                                        static_cast<std::size_t>(m_nNodes));
-    return ElementQ4<T>(conn[0], conn[1], conn[2], conn[3], nodeSpan);
+  const ElementQ4<T> &getElement(Index e) const {
+    assert(e >= 0 && e < m_nElements && "Invalid element ID");
+    return m_elements[e];
   }
-  DynamicVector<Particle2D<T>> &getMPs() { return m_MPs; }
-  const DynamicVector<Particle2D<T>> &getMPs() const { return m_MPs; }
-
-  // Backward-compatible name kept for existing call sites/tests.
-  DynamicVector<Particle2D<T>> &getParticles() { return m_MPs; }
-  const DynamicVector<Particle2D<T>> &getParticles() const { return m_MPs; }
-  Particle2D<T> getMP(Index p) const {
+  const Particle2D<T> &getMP(Index p) const {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
   }
-
-  // Backward-compatible API: returns MP coords as (x, y) pairs.
-  const DynamicVector<std::pair<T, T>> &getMPCoords() const {
-    m_mpCoordsCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpCoordsCache[p] = {m_MPs[p].pos.x(), m_MPs[p].pos.y()};
-    }
-    return m_mpCoordsCache;
+  const Node2D<T> &getNode(Index i) const {
+    assert(i >= 0 && i < m_nNodes && "Invalid nodal index");
+    return m_nodes[i];
   }
 
   // Convenience API: return MP coords as DynamicVector<T>{x,y} for math
@@ -621,71 +606,19 @@ public:
     return out;
   }
 
-  StaticVector<T, 2> getEleCenter(Index elemID) const {
-    const auto &element_nodeIDs = getEleConnectivity(elemID);
+  // StaticVector<T, 2> getMPcoord(Index p) const {
+  //   assert(p >= 0 && p < m_nMPs && "Invalid MP index");
+  //   return {m_MPs[p].pos.x(), m_MPs[p].pos.y()};
+  // }
 
-    StaticVector<T, 2> center{};
-    for (Index id : element_nodeIDs) {
-      center.x() += m_nodes_x[id];
-      center.y() += m_nodes_y[id];
-    }
-
-    const T nNodesPerEle = static_cast<T>(element_nodeIDs.size());
-    center.x() /= nNodesPerEle;
-    center.y() /= nNodesPerEle;
-    return center;
-  }
-
-  // Cached MP element IDs
-  const DynamicVector<Index> &getMPelementIDs() const { return m_mpElementId; }
-  Index getMPelementID(Index p) const {
-    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return m_mpElementId[p];
-  }
-  std::pair<T, T> getMPpos(Index p) const {
-    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return {m_MPs[p].pos.x(), m_MPs[p].pos.y()};
-  }
-  const DynamicVector<T> &getXCoords() const { return m_nodes_x; }
-  const DynamicVector<T> &getYCoords() const { return m_nodes_y; }
-
-  // MP getters
-  const DynamicVector<T> &getMPXCoords() const {
-    m_mpXCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpXCache[p] = m_MPs[p].pos.x();
-    }
-    return m_mpXCache;
-  }
-  const DynamicVector<T> &getMPYCoords() const {
-    m_mpYCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpYCache[p] = m_MPs[p].pos.y();
-    }
-    return m_mpYCache;
-  }
-  const DynamicVector<T> &getInitialMPXCoords() const {
-    m_mpXInitialCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpXInitialCache[p] = m_MPs_initial[p].pos.x();
-    }
-    return m_mpXInitialCache;
-  }
-  const DynamicVector<T> &getInitialMPYCoords() const {
-    m_mpYInitialCache.resize(m_nMPs);
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpYInitialCache[p] = m_MPs_initial[p].pos.y();
-    }
-    return m_mpYInitialCache;
-  }
-  T getMPXCoord(Index p) const {
-    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return m_MPs[p].pos.x();
-  }
-  T getMPYCoord(Index p) const {
-    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    return m_MPs[p].pos.y();
-  }
+  // T getMPXCoord(Index p) const {
+  //   assert(p >= 0 && p < m_nMPs && "Invalid MP index");
+  //   return m_MPs[p].pos.x();
+  // }
+  // T getMPYCoord(Index p) const {
+  //   assert(p >= 0 && p < m_nMPs && "Invalid MP index");
+  //   return m_MPs[p].pos.y();
+  // }
 
   // Boundary-contact helpers for MPs (axis-aligned rectangular domain)
   // Bitmask values: left=1, right=2, bottom=4, top=8
