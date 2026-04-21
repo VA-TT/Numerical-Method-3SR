@@ -247,8 +247,6 @@ template <typename T> class Mesh2D {
 private:
   // domain
   T m_length{}, m_height{};
-
-  // T m_MP_size{}; // MP spacing / particle size used for square-grid MPs
   // Number of nodes on x & y-axis
   Index m_nx{}, m_ny{}, m_nNodes{};
 
@@ -268,7 +266,8 @@ private:
   // Material Points / Particles DEM
   // (Must use Dynamic Vector as number of MPs could be 0)
   DynamicVector<Particle2D<T>> m_MPs{};
-  DynamicVector<Particle2D<T>> m_MPs_initial{}; // Initial MP state for reset
+  // DynamicVector<Particle2D<T>> m_MPs_initial{}; // Initial MP state for reset
+  T m_MP_size{}; // MP spacing / particle size used for square-grid MPs
 
   // mutable DynamicVector<std::pair<T, T>> m_mpCoordsCache{}; //
   // Backward-compat mutable DynamicVector<T> m_mpXCache{}, m_mpYCache{}; //
@@ -295,8 +294,8 @@ private:
     const T dy = m_height / static_cast<T>(m_ny - 1);
     const T mp_dx = dx / static_cast<T>(nMPperEleSide);
     const T mp_dy = dy / static_cast<T>(nMPperEleSide);
-    // m_MP_size = static_cast<T>(
-    //     std::min(static_cast<double>(mp_dx), static_cast<double>(mp_dy)));
+    m_MP_size = static_cast<T>(
+        std::min(static_cast<double>(mp_dx), static_cast<double>(mp_dy)));
 
     m_MPs.resize(m_nMPs);
     // m_MPs_initial.resize(m_nMPs);
@@ -347,22 +346,21 @@ private:
       Index mpId{0};
       for (Index j{0}; j < npy; ++j) {
         for (Index i{0}; i < npx; ++i) {
-          T x = x0 + MP_size / 2 + i * MP_size;
-          T y = y0 + MP_size / 2 + j * MP_size;
-          m_MPs[mpId].pos.x() = x;
-          m_MPs[mpId].pos.y() = y;
+          m_MPs[mpId].pos.x() = x0 + MP_size / T{2} + i * MP_size;
+          m_MPs[mpId].pos.y() = y0 + MP_size / T{2} + j * MP_size;
           ++mpId;
         }
       }
-      m_MPs_initial = m_MPs;
+      // m_MPs_initial = m_MPs;
     } else {
       m_MPs = DynamicVector<Particle2D<T>>{};
-      m_MPs_initial = DynamicVector<Particle2D<T>>{};
+      // m_MPs_initial = DynamicVector<Particle2D<T>>{};
     }
 
     // Initialize cached element IDs for MPs
-    m_mpElementId.resize(m_nMPs, idError);
+
     for (Index p{0}; p < m_nMPs; ++p) {
+      m_MPs[p].eleID = idError;
       m_mpElementId[p] =
           findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
     }
@@ -473,19 +471,16 @@ public:
 
     // Resize vectors before using them
     m_nodes.resize(m_nNodes);
-    m_nodes_initial.resize(m_nNodes);
-    m_nodes_x.resize(m_nNodes);
-    m_nodes_y.resize(m_nNodes);
-    m_nodes_x_initial.resize(m_nNodes);
-    m_nodes_y_initial.resize(m_nNodes);
-    m_activeNodes.resize(m_nNodes);
-    m_activeElements.resize(m_nElements);
-    m_mpsInElement.resize(m_nElements);
-    m_connectivity.resize(m_nElements);
+    m_elements.resize(m_nElements);
+    // m_nodes_initial.resize(m_nNodes);
+    // m_nodes_x.resize(m_nNodes);
+    // m_nodes_y.resize(m_nNodes);
+    // m_nodes_x_initial.resize(m_nNodes);
+    // m_nodes_y_initial.resize(m_nNodes);
 
     T dx = length / (nx - 1);
     T dy = height / (ny - 1);
-    // Node numbering: row-major (i + j*nx)
+    // Node numbering: row-major aka natural ordering (i + j*nx)
     // y ^
     //   |  6--7--8
     //   |  3--4--5
@@ -495,20 +490,18 @@ public:
     for (Index j{0}; j < ny; j++) {
       for (Index i{0}; i < nx; i++) {
         nodeID = j * nx + i;
-        T x = dx * i;
-        T y = dy * j;
-        m_nodes_x[nodeID] = x;
-        m_nodes_y[nodeID] = y;
-        m_nodes[nodeID].pos.x() = x;
-        m_nodes[nodeID].pos.y() = y;
+        // m_nodes_x[nodeID] = x;
+        // m_nodes_y[nodeID] = y;
+        m_nodes[nodeID].pos.x() = dx * i;
+        m_nodes[nodeID].pos.y() = dy * j;
         m_nodes[nodeID].posInit = m_nodes[nodeID].pos;
       }
     }
     // Copy to initial configuration (more efficient than per-element
     // assignment)
-    m_nodes_x_initial = m_nodes_x;
-    m_nodes_y_initial = m_nodes_y;
-    m_nodes_initial = m_nodes;
+    // m_nodes_x_initial = m_nodes_x;
+    // m_nodes_y_initial = m_nodes_y;
+    // m_nodes_initial = m_nodes;
 
     // Generate connectivity for Q4 elements
     // Element node ordering (counterclockwise from bottom-left):
@@ -517,14 +510,13 @@ public:
     //   |          |
     //   n1 ------ n2
     Index elemID{0};
-    StaticVector<Index, 4> eleConnectivity;
     for (Index j{0}; j < ny - 1; j++) {
       for (Index i{0}; i < nx - 1; i++) {
-        eleConnectivity[0] = i + j * nx;
-        eleConnectivity[1] = (i + 1) + j * nx;
-        eleConnectivity[2] = (i + 1) + (j + 1) * nx;
-        eleConnectivity[3] = i + (j + 1) * nx;
-        m_connectivity[elemID] = eleConnectivity;
+        Index n1 = i + j * nx;
+        Index n2 = (i + 1) + j * nx;
+        Index n3 = (i + 1) + (j + 1) * nx;
+        Index n4 = i + (j + 1) * nx;
+        m_elements[elemID] = ElementQ4{n1, n2, n3, n4, m_nodes};
         ++elemID;
       }
     }
@@ -537,6 +529,7 @@ public:
     if ((MP_size > T{0}) && (x1 > x0) && (y1 > y0)) {
       generateSquareGridMP(x0, y0, x1, y1, MP_size);
     }
+    activateNodeAndElement();
   }
 
   // Pair-based convenience ctor: delegates to the full-parameter constructor.
@@ -553,6 +546,7 @@ public:
       : Mesh2D(length, height, nx, ny) {
     assert(nMPperEle > 0 && "nMPperEle must be > 0");
     generateMPGridPerElement(nMPperEle);
+    activateNodeAndElement();
   }
 
   // 3) Explicit full-parameter circle constructor
@@ -562,6 +556,7 @@ public:
     if ((MP_size > T{0}) && (radius > T{0})) {
       generateCircleMPgrid(center, radius, MP_size);
     }
+    activateNodeAndElement();
   }
 
   // Other defaults
@@ -624,11 +619,6 @@ public:
       out[p] = DynamicVector<T>{m_MPs[p].pos.x(), m_MPs[p].pos.y()};
     }
     return out;
-  }
-
-  // Backward-compatible name used by tests
-  const DynamicVector<Index> &getConnectivity(Index elemID) const {
-    return getEleConnectivity(elemID);
   }
 
   StaticVector<T, 2> getEleCenter(Index elemID) const {
@@ -870,14 +860,14 @@ public:
     if (m_mpElementId.size() != m_nMPs) {
       m_mpElementId.resize(m_nMPs, idError);
     }
-    m_mpElementId[p] = findCageID(x, y, m_mpElementId[p]);
+    activateNodeAndElement();
   }
 
   void setMPs(const DynamicVector<Particle2D<T>> &particles) {
     assert(particles.size() == m_nMPs &&
            "Size mismatch: particles must match mesh MP count");
     m_MPs = particles;
-    updateMPElementIds();
+    activateNodeAndElement();
   }
 
   void setMPCoords(const DynamicVector<T> &mp_x, const DynamicVector<T> &mp_y) {
@@ -889,26 +879,12 @@ public:
     for (Index p{0}; p < m_nMPs; ++p) {
       m_MPs[p].pos.x() = mp_x[p];
       m_MPs[p].pos.y() = mp_y[p];
-      m_mpElementId[p] = findCageID(mp_x[p], mp_y[p], m_mpElementId[p]);
     }
+    activateNodeAndElement();
   }
-
-  void setMPCoords(const DynamicVector<std::pair<T, T>> &mp_positions) {
-    assert(mp_positions.size() == m_nMPs &&
-           "Size mismatch: mp_positions must match mesh MP count");
-    if (m_mpElementId.size() != m_nMPs) {
-      m_mpElementId.resize(m_nMPs, idError);
-    }
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_MPs[p].pos.x() = mp_positions[p].first;
-      m_MPs[p].pos.y() = mp_positions[p].second;
-      m_mpElementId[p] = findCageID(mp_positions[p].first,
-                                    mp_positions[p].second, m_mpElementId[p]);
-    }
-  }
-
-  // Convenience overload: set MP coords from DynamicVector<T>{x,y}.
-  void setMPCoords(const DynamicVector<DynamicVector<T>> &mp_positions) {
+  s
+      // Convenience overload: set MP coords from DynamicVector<T>{x,y}.
+      void setMPCoords(const DynamicVector<DynamicVector<T>> &mp_positions) {
     assert(mp_positions.size() == m_nMPs &&
            "Size mismatch: mp_positions must match mesh MP count");
     if (m_mpElementId.size() != m_nMPs) {
@@ -919,8 +895,8 @@ public:
       const T y = mp_positions[p].y();
       m_MPs[p].pos.x() = x;
       m_MPs[p].pos.y() = y;
-      m_mpElementId[p] = findCageID(x, y, m_mpElementId[p]);
     }
+    activateNodeAndElement();
   }
 
   void updateMPCoord(Index p, T x, T y) {
@@ -943,36 +919,25 @@ public:
     for (Index p{0}; p < m_nMPs; ++p) {
       m_MPs[p].pos.x() = new_mp_x[p];
       m_MPs[p].pos.y() = new_mp_y[p];
-      m_mpElementId[p] = findCageID(new_mp_x[p], new_mp_y[p], m_mpElementId[p]);
     }
+    activateNodeAndElement();
   }
 
-  void resetMPs() {
-    m_MPs = m_MPs_initial;
-    if (m_mpElementId.size() != m_nMPs) {
-      m_mpElementId.resize(m_nMPs, idError);
-    }
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpElementId[p] =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
-    }
+  // Get connectivity of a single element
+  StaticVector<Index, 4> getEleConnectivity(Index e) const {
+    assert(e >= 0 && e < m_nElements && "Invalid element ID");
+    return {m_elements[e].n1, m_elements[e].n2, m_elements[e].n3,
+            m_elements[e].n4};
   }
 
-  // Update cached element IDs using the mesh-internal MP coordinates.
-  void updateMPElementIds() {
-    if (m_mpElementId.size() != m_nMPs) {
-      m_mpElementId.resize(m_nMPs, idError);
-    }
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_mpElementId[p] =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
-    }
-  }
-
-  // Get element connectivity
-  const DynamicVector<Index> &getEleConnectivity(Index elemID) const {
-    assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
-    return m_connectivity[elemID];
+  StaticVector<StaticVector<T, 2>, 4> getElementNodes(Index e) const {
+    assert(e >= 0 && e < m_nElements && "Invalid element ID");
+    StaticVector<T, 4> x_pos{m_MPs[e].getX_nodes()};
+    StaticVector<T, 4> y_pos{m_MPs[e].getY_nodes()};
+    return {{x_pos[0], y_pos[0]},
+            {x_pos[1], y_pos[1]},
+            {x_pos[2], y_pos[2]},
+            {x_pos[3], y_pos[3]}};
   }
 
   // Static-size variant for Q4 operations.
@@ -1133,57 +1098,30 @@ public:
     return idError; // Not found (outside domain)
   }
 
-  //   Activate nodes that contain Material Points
-  void activateNodes() {
-    if (m_activeNodes.size() != m_nNodes) {
-      m_activeNodes.resize(m_nNodes);
-    }
-    m_activeNodes.resetZero();
-    if (m_mpElementId.size() != m_nMPs) {
-      m_mpElementId.resize(m_nMPs, idError);
-    }
-    for (Index p{0}; p < m_nMPs; ++p) {
-      const Index elemID =
-          findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
-      m_mpElementId[p] = elemID;
-      if (elemID != idError) {
-        const auto &conn = m_connectivity[elemID];
-        for (Index i{0}; i < 4; ++i) {
-          m_activeNodes[conn[i]] = 1;
-        }
-      }
-    }
-  }
-
-  bool isActiveNode(Index nodeID) const {
-    assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
-    return m_activeNodes[nodeID] != 0;
-  }
-
-  inline void activateElements() {
-    if (m_activeElements.size() != m_nElements) {
-      m_activeElements.resize(m_nElements);
-    }
-    m_activeElements.resetZero();
-
-    if (m_mpElementId.size() != m_nMPs) {
-      m_mpElementId.resize(m_nMPs, idError);
-    }
-
-    if (m_mpsInElement.size() != m_nElements) {
-      m_mpsInElement.resize(m_nElements);
+  // Update cached element IDs using the mesh-internal MP coordinates.
+  void activateNodeAndElement() {
+    // Reset all nodes and elements to inactive
+    for (Index n{0}; n < m_nNodes; ++n) {
+      m_nodes[n].isActive = false;
+      m_nodes[n].eleID = idError;
     }
     for (Index e{0}; e < m_nElements; ++e) {
-      m_mpsInElement[e].resize(0);
+      m_elements[e].isActive = false;
     }
-
-    for (Index p = 0; p < m_nMPs; ++p) {
-      const Index elemID =
+    for (Index p{0}; p < m_nMPs; ++p) {
+      Index activeEleID =
           findCageID(m_MPs[p].pos.x(), m_MPs[p].pos.y(), m_mpElementId[p]);
-      m_mpElementId[p] = elemID;
-      if (elemID != idError) {
-        m_activeElements[elemID] = 1;
-        m_mpsInElement[elemID].push_back(p);
+      if (activeEleID != idError) {
+        m_MPs[p].eleID = activeEleID;
+        m_elements[activeEleID].isActive = true;
+        Index n1 = m_elements[activeEleID].n1;
+        Index n2 = m_elements[activeEleID].n2;
+        Index n3 = m_elements[activeEleID].n3;
+        Index n4 = m_elements[activeEleID].n4;
+        m_nodes[n1].isActive = m_nodes[n2].isActive = m_nodes[n3].isActive =
+            m_nodes[n4].isActive = true;
+        m_nodes[n1].eleID = m_nodes[n2].eleID = m_nodes[n3].eleID =
+            m_nodes[n4].eleID = activeEleID;
       }
     }
   }
