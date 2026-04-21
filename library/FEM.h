@@ -3,10 +3,10 @@
 #define FINITE_ELEMENT_METHOD_H
 
 #include "Matrix.h"
-#include "Mesh.h"
+#include "Mesh2.h"
+#include "ParentElement.h"
 #include "Vector.h"
 #include "gaussQuadrature.h"
-#include "parentElement.h"
 #include <cassert>
 #include <fstream>
 #include <functional>
@@ -34,6 +34,7 @@ private:
   Matrix<T, nNodes, 1> m_U{};
   Matrix<T, nNodes, 1> m_F{}, m_F_original{};
   Matrix<T, nNodes, 1> m_R{};
+  Matrix<T, nNodes, 1> m_N{};
 
   // Distributed force: f(x)
   std::function<T(T)> m_rhsFunction;
@@ -68,6 +69,7 @@ public:
   const Matrix<T, nNodes, 1> &getU() const { return m_U; }
   const Matrix<T, nNodes, 1> &getF() const { return m_F; }
   const Matrix<T, nNodes, 1> &getR() const { return m_R; }
+  const Matrix<T, nNodes, 1> &getN() const { return m_N; }
   T getDisplacement(Index node) const {
     assert(node >= 0 && node < nNodes && "Invalid node index");
     return m_U(node, 0);
@@ -91,7 +93,7 @@ public:
   void assembleKF() {
     // Building global matrix via stiffness matrix: need connectitivty matrix
     // C in order to assemble (2x2) into (nNodes x nNodes)
-    // Avoiding use of connectivity matrix C for efficiency
+    // Avoiding use of connectivity matrix C for computational efficiency
     m_K.resetZero();
     m_F.resetZero();
     for (Index e{0}; e < m_mesh.getNumElements(); ++e) {
@@ -104,15 +106,15 @@ public:
       m_K(e + 1, e + 1) += k;
 
       // Elementary force matrix assembly: F_e = int_element N^T * f(x) dx
-      auto [x1, x2] = m_mesh.getElementNodes(e);
+      auto element = m_mesh.getElement(e);
       auto integrand0 = [=, this](T xi) {
-        return m_rhsFunction(physicCoor(xi, x1, x2)) * N1_ref(xi);
+        return m_rhsFunction(element.physicCoord(xi)) * element.N1_ref(xi);
       };
       auto integrand1 = [=, this](T xi) {
-        return m_rhsFunction(physicCoor(xi, x1, x2)) * N2_ref(xi);
+        return m_rhsFunction(element.physicCoord(xi)) * element.N2_ref(xi);
       };
-      m_F[e] += integrationGauss1D_ref(x1, x2, integrand0, 2);
-      m_F[e + 1] += integrationGauss1D_ref(x1, x2, integrand1, 2);
+      m_F[e] += element.integrationGauss1D_ref(integrand0, 2);
+      m_F[e + 1] += element.integrationGauss1D_ref(integrand1, 2);
     }
     // K is singular before BC applied (no constraints)
   }
@@ -160,7 +162,29 @@ public:
   void calculateReaction() {
     // Compute reaction vector R = K_original * U - F_original
     m_R = -(m_F_original - m_K_original * m_U);
-    std::cout << "Reaction force vector R: \n" << DynamicVector<T>(m_R) << std::endl;
+    std::cout << "Reaction force vector R: \n"
+              << DynamicVector<T>(m_R) << std::endl;
+  }
+
+  void calculateAxialForce() {
+    const Index nElements = m_mesh.getNumElements();
+    assert(nElements > 0 && "Mesh must contain at least one element");
+
+    DynamicVector<T> element_forces(nElements);
+    for (Index e = 0; e < nElements; ++e) {
+      auto conn = m_mesh.getEleConnectivity(e);
+      const Index i = conn[0];
+      const Index j = conn[1];
+      const T h = m_mesh.getLengthEle(e);
+      element_forces[e] = m_EA * (m_U[j] - m_U[i]) / h;
+    }
+
+    // Map element-constant force to nodal values for post-processing.
+    m_N[0] = element_forces[0];
+    for (Index i = 1; i < nNodes - 1; ++i) {
+      m_N[i] = T{0.5} * (element_forces[i - 1] + element_forces[i]);
+    }
+    m_N[nNodes - 1] = element_forces[nElements - 1];
   }
 
   void compareAnalytic() {
@@ -179,7 +203,7 @@ public:
     T sum_sq_error = 0.0;
 
     for (Index i = 0; i < nNodes; ++i) {
-      T x = m_mesh.nodeCoords()[i];
+      T x = m_mesh.getNode(i).pos;
       T u_fem = m_U(i, 0);
       T u_exact = m_analyticSolution(x);
       T error = std::abs(u_fem - u_exact);
@@ -200,24 +224,7 @@ public:
 
   void exportResult(const std::string &filename = "fem1D_results.txt") {
     std::cout << "\n=== Exporting Results ===\n";
-
-    // Compute element axial forces: N_e = EA * (u[j] - u[i]) / h_e
-    // Store element forces, then assign to nodes
-    DynamicVector<T> element_forces(m_mesh.getNumElements());
-    for (Index e = 0; e < m_mesh.getNumElements(); ++e) {
-      T h = m_mesh.getLengthEle(e);
-      element_forces[e] = m_EA * (m_U[e + 1] - m_U[e]) / h;
-    }
-
-    // Assign element forces to nodes
-    DynamicVector<T> axial_force(nNodes);
-    axial_force[0] = element_forces[0]; // First node: force from first element
-    for (Index i = 1; i < nNodes - 1; ++i) {
-      // Internal nodes: average of adjacent elements (equilibrium)
-      axial_force[i] = 0.5 * (element_forces[i - 1] + element_forces[i]);
-    }
-    axial_force[nNodes - 1] =
-        element_forces[m_mesh.getNumElements() - 1]; // Last node: last element
+    calculateAxialForce();
 
     // Export to file
     std::ofstream file(filename);
@@ -234,10 +241,10 @@ public:
          << "u(x)" << std::setw(18) << "N(x)" << '\n';
 
     for (Index i = 0; i < nNodes; ++i) {
-      T x = m_mesh.nodeCoords()[i];
+      T x = m_mesh.getNode(i).pos;
       file << std::setw(8) << i << std::setw(15) << std::fixed
            << std::setprecision(6) << x << std::setw(18) << std::setprecision(8)
-           << m_U[i] << std::setw(18) << axial_force[i] << '\n';
+           << m_U[i] << std::setw(18) << m_N[i] << '\n';
     }
 
     file.close();

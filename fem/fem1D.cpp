@@ -33,6 +33,7 @@ int main() {
 
   // Post-processing
   beam.calculateReaction();
+  beam.calculateAxialForce();
   beam.compareAnalytic();
   beam.exportResult("fem1D_6nodes.txt");
 

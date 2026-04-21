@@ -12,10 +12,13 @@
 #include <iostream>
 #include <span>
 
-// Range of 1D parent element Sr: [-1,1] -> mapping to [x1,x2] physical element
-// First order polynomial shape function using Lagrange's basis in range [-1,1]
-// Element node ordering (left to right):
-//   (-1) n1 ------ n2 (1)
+// Linear mapping of 1D and 2D line elements, interpomation.h contains more type
+// of interpolation
+
+//  Range of 1D parent element Sr: [-1,1] -> mapping to [x1,x2] physical element
+//  First order polynomial shape function using Lagrange's basis in range [-1,1]
+//  Element node ordering (left to right):
+//    (-1) n1 ------ n2 (1)
 template <typename T> struct ElementL2 {
   // Variables
   Index n1{}, n2{};                   // nodes' ID in Mesh
@@ -313,20 +316,5 @@ template <typename T> struct ElementQ4 {
 //     }
 //   }
 // }
-
-// inline auto cubicBSpline = [](auto x, auto h) {
-//   if (-2.0 * h <= x && x <= -h)
-//     return (x * x * x) / (6.0 * h * h * h) + x * x / (h * h) + 2.0 * x / h +
-//            4.0 / 3.0;
-//   if (-h <= x && x <= 0.0)
-//     return (-x * x * x) / (2.0 * h * h * h) - x * x / (h * h) + 4.0 / 3.0;
-//   if (-2.0 * h <= x && x <= -h)
-//     return (x * x * x) / (2.0 * h * h * h) - x * x / (h * h) + 4.0 / 3.0;
-//   if (-2.0 * h <= x && x <= -h)
-//     return (-x * x * x) / (6.0 * h * h * h) + x * x / (h * h) - 2.0 * x / h +
-//            4.0 / 3.0;
-//   else
-//     return 0;
-// };
 
 #endif

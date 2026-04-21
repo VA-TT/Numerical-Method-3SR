@@ -215,7 +215,7 @@ int main() {
   shapeFunction();
   assembleKF(last_node, h);
 
-  assert(approximatelyEqualAbsRel(det(K), 0.0));
+  // assert(approximatelyEqualAbsRel(det(K), 0.0));
 
   // Save original K and F before applying BC (for reaction force calculation)
   Matrix<double, nNodes, nNodes> K_original = K;

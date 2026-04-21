@@ -130,6 +130,7 @@ T interpolateLinear(const StaticVector<double, n> &data_x,
 
 // Cubic spline interpolation: ai(x-x_i)^3 + b_i(x-x_i)^2 + c_i(x-x_i) + d_i
 // Continuous in both 1st and 2nd derivative
+// Used for fitting curve
 template <Index nPoints, typename T>
 T interpolateCubicSpline(const StaticVector<double, nPoints> &data_x,
                          const StaticVector<double, nPoints> &data_y, T x) {
@@ -183,6 +184,32 @@ T interpolateCubicSpline(const StaticVector<double, nPoints> &data_x,
   }
   throw std::out_of_range("interpolateCubicSpline: x is out of data_x domain");
 }
+
+// To be fixed
+inline auto cubicBSpline = [](auto x, auto h) {
+  if (-2.0 * h <= x && x <= -h)
+    return (x * x * x) / (6.0 * h * h * h) + x * x / (h * h) + 2.0 * x / h +
+           4.0 / 3.0;
+  if (-h <= x && x <= 0.0)
+    return (-x * x * x) / (2.0 * h * h * h) - x * x / (h * h) + 4.0 / 3.0;
+  if (-2.0 * h <= x && x <= -h)
+    return (x * x * x) / (2.0 * h * h * h) - x * x / (h * h) + 4.0 / 3.0;
+  if (-2.0 * h <= x && x <= -h)
+    return (-x * x * x) / (6.0 * h * h * h) + x * x / (h * h) - 2.0 * x / h +
+           4.0 / 3.0;
+  else
+    return 0;
+};
+
+inline auto cubicBSpline1D = [](auto x, auto h) {
+  auto r = std::abs(x) / h;
+  if (r < 1.0)
+    return (2.0 / 3.0) - r * r + 0.5 * r * r * r;
+  else if (r < 2.0)
+    return (1.0 / 6.0) * (2.0 - r) * (2.0 - r) * (2.0 - r);
+  else
+    return decltype(x){0}; // = T{0}
+};
 
 #endif
 

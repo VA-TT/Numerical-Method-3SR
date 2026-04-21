@@ -7,7 +7,7 @@
 #include <functional>
 #include <iostream>
 
-// Define an epsilon that epsilon^3 = 0
+// Define an epsilon that epsilon^3 = 0: x = val + der * epsilon
 // Dual expansion: f(x+epsilon) = f(x) + epsilon.f'(x) + epsilon^2.f''(x)
 //                              = a    + epsilon.b     + epsilon.c
 //  => a = f(x); b = f'(x); c = f''(x)
@@ -413,6 +413,15 @@ StaticVector<double, 3> laplacian3D(const VectorFunction3D &u,
     uLap[i] = laplacian3D(ui, {x0, y0, z0}); // laplacian scalar
   }
   return uLap;
+}
+
+template <typename T, typename Func>
+StaticVector<T, 2> centralDifference(Func f, T x, T h = T{1e-6}) {
+  StaticVector<T, 2> derivative{};
+  derivative[0] = (f(x + h) - f(x - h)) / (T{2} * h); // 1st-order der
+  derivative[1] =
+      (f(x + h) - T{2} * f(x) + f(x - h)) / (h * h); // 2nd-order der
+  return derivative;
 }
 
 #endif
