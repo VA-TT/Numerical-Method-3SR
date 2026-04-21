@@ -302,7 +302,7 @@ private:
     // m_MPs_initial.resize(m_nMPs);
 
     // Element ordering follows natural ordering: i + j*(nx-1)
-    Index mpId{0};
+    Index mpID{0};
     for (Index ey{0}; ey < m_ny - 1; ++ey) {
       for (Index ex{0}; ex < m_nx - 1; ++ex) {
         const Index elemID = ex + ey * (m_nx - 1);
@@ -314,16 +314,16 @@ private:
                 x_left + (static_cast<T>(i) + static_cast<T>(0.5)) * mp_dx;
             const T y =
                 y_bot + (static_cast<T>(j) + static_cast<T>(0.5)) * mp_dy;
-            m_MPs[mpId].pos.x() = x;
-            m_MPs[mpId].pos.y() = y;
-            m_mpElementId[mpId] = elemID;
-            ++mpId;
+            m_MPs[mpID].pos.x() = x;
+            m_MPs[mpID].pos.y() = y;
+            m_MPs[mpID].eleID = elemID;
+            ++mpID;
           }
         }
       }
     }
 
-    m_MPs_initial = m_MPs;
+    // m_MPs_initial = m_MPs;
   }
 
   // MP grid generation methods
