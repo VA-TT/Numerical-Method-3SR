@@ -134,13 +134,14 @@ template <typename T> struct Particle3D {
   // Quaternion q{};
 };
 
-// Boundary contact
+// Boundary-contact helpers for MPs (axis-aligned rectangular domain)
+// Bitmask values: left=1, right=2, bottom=4, top=8
 enum class MPContact : unsigned char {
   None = 0,
-  Left = 1u << 0,
-  Right = 1u << 1,
-  Bottom = 1u << 2,
-  Top = 1u << 3
+  Left = 1u << 0,   // 0001
+  Right = 1u << 1,  // 0010
+  Bottom = 1u << 2, // 0100
+  Top = 1u << 3     // 1000
 };
 
 inline MPContact operator|(MPContact a, MPContact b) {
@@ -161,14 +162,6 @@ inline MPContact &operator|=(MPContact &a, MPContact b) {
 inline bool hasFlag(MPContact mask, MPContact flag) {
   return static_cast<unsigned char>(mask & flag) != 0;
 }
-
-// MPContact mask = MPContact::None;
-// mask |= MPContact::Left;
-// mask |= MPContact::Bottom;
-
-// // if (hasFlag(mask, MPContact::Left)) {
-// //   // chạm biên trái
-// // }
 
 // Intergranular contact
 template <typename T> struct Interaction2D {
