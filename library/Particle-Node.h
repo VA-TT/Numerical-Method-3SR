@@ -1,5 +1,5 @@
-#ifndef MY_PARTICLE_H
-#define MY_PARTICLE_H
+#ifndef MY_PARTICLE_AND_NODE_H
+#define MY_PARTICLE_AND_NODE_H
 
 #include "Vector.h"
 static constexpr Index idError = -1; // default id error
@@ -100,6 +100,7 @@ template <typename T> struct Particle2D {
   T moment{};                 // torque
 
   Index eleID{idError}; // default: error
+  MPContact mask{};
 };
 
 template <typename T> struct Particle3D {
@@ -128,10 +129,48 @@ template <typename T> struct Particle3D {
   StaticVector<T, 3> moment{}; // frot
 
   Index eleID{idError}; // default: error
+  MPContact mask{};
 
   // Quaternion q{};
 };
 
+// Boundary contact
+enum class MPContact : unsigned char {
+  None = 0,
+  Left = 1u << 0,
+  Right = 1u << 1,
+  Bottom = 1u << 2,
+  Top = 1u << 3
+};
+
+inline MPContact operator|(MPContact a, MPContact b) {
+  return static_cast<MPContact>(static_cast<unsigned char>(a) |
+                                static_cast<unsigned char>(b));
+}
+
+inline MPContact operator&(MPContact a, MPContact b) {
+  return static_cast<MPContact>(static_cast<unsigned char>(a) &
+                                static_cast<unsigned char>(b));
+}
+
+inline MPContact &operator|=(MPContact &a, MPContact b) {
+  a = a | b;
+  return a;
+}
+
+inline bool hasFlag(MPContact mask, MPContact flag) {
+  return static_cast<unsigned char>(mask & flag) != 0;
+}
+
+// MPContact mask = MPContact::None;
+// mask |= MPContact::Left;
+// mask |= MPContact::Bottom;
+
+// // if (hasFlag(mask, MPContact::Left)) {
+// //   // chạm biên trái
+// // }
+
+// Intergranular contact
 template <typename T> struct Interaction2D {
   Index i{};
   Index j{};
