@@ -2,6 +2,36 @@
 #define MY_PARTICLE_AND_NODE_H
 
 #include "Vector.h"
+
+// Boundary-contact helpers for MPs (axis-aligned rectangular domain)
+// Bitmask values: left=1, right=2, bottom=4, top=8
+enum class MPContact : unsigned char {
+  None = 0,
+  Left = 1u << 0,   // 0001
+  Right = 1u << 1,  // 0010
+  Bottom = 1u << 2, // 0100
+  Top = 1u << 3     // 1000
+};
+
+inline MPContact operator|(MPContact a, MPContact b) {
+  return static_cast<MPContact>(static_cast<unsigned char>(a) |
+                                static_cast<unsigned char>(b));
+}
+
+inline MPContact operator&(MPContact a, MPContact b) {
+  return static_cast<MPContact>(static_cast<unsigned char>(a) &
+                                static_cast<unsigned char>(b));
+}
+
+inline MPContact &operator|=(MPContact &a, MPContact b) {
+  a = a | b;
+  return a;
+}
+
+inline bool hasFlag(MPContact mask, MPContact flag) {
+  return static_cast<unsigned char>(mask & flag) != 0;
+}
+
 static constexpr Index idError = -1; // default id error
 
 template <typename T> struct Node1D {
@@ -132,47 +162,6 @@ template <typename T> struct Particle3D {
   MPContact mask{};
 
   // Quaternion q{};
-};
-
-// Boundary-contact helpers for MPs (axis-aligned rectangular domain)
-// Bitmask values: left=1, right=2, bottom=4, top=8
-enum class MPContact : unsigned char {
-  None = 0,
-  Left = 1u << 0,   // 0001
-  Right = 1u << 1,  // 0010
-  Bottom = 1u << 2, // 0100
-  Top = 1u << 3     // 1000
-};
-
-inline MPContact operator|(MPContact a, MPContact b) {
-  return static_cast<MPContact>(static_cast<unsigned char>(a) |
-                                static_cast<unsigned char>(b));
-}
-
-inline MPContact operator&(MPContact a, MPContact b) {
-  return static_cast<MPContact>(static_cast<unsigned char>(a) &
-                                static_cast<unsigned char>(b));
-}
-
-inline MPContact &operator|=(MPContact &a, MPContact b) {
-  a = a | b;
-  return a;
-}
-
-inline bool hasFlag(MPContact mask, MPContact flag) {
-  return static_cast<unsigned char>(mask & flag) != 0;
-}
-
-// Intergranular contact
-template <typename T> struct Interaction2D {
-  Index i{};
-  Index j{};
-  T dn{}; //  Overlaps
-  bool touch{false};
-
-  T fn{};
-  T ft{};
-  Interaction2D(Index i_, Index j_) : i(i_), j(j_) {}
 };
 
 template <typename T> struct Interaction3D {

@@ -1,10 +1,10 @@
 #ifndef DISCRETIZING_RECTANGULAR_MESH_H
 #define DISCRETIZING_RECTANGULAR_MESH_H
 
-#include "Particle.h"
-#include "Vector.h"
-#include "comparison.h"
-#include "parentElement.h"
+#include "../library/ParentElement.h"
+#include "../library/Particle-Node.h"
+#include "../library/Vector.h"
+#include "../library/comparison.h"
 #include <algorithm>
 #include <array>
 #include <cassert>

@@ -3,7 +3,7 @@
 
 #include "DualDifferentiation.h"
 #include "Matrix.h"
-#include "Particle.h"
+#include "Particle-Node.h"
 #include "Vector.h"
 #include "gaussQuadrature.h"
 #include "interpolate.h"
