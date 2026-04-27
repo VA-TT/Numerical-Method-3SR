@@ -98,29 +98,28 @@ public:
     return m_elements[e];
   } // No need to open element non-const ref
 
-  const ElementL2<T> &getAllElements() const {
-    assert(e >= 0 && e < m_nElements && "Invalid element ID");
+  const DynamicVector<ElementL2<T>> &getAllElements() const {
     return m_elements;
   } // No need to open element non-const ref
 
-  const DynamicVector<Node2D<T>> &getAllNodes() const { return m_nodes; }
-  DynamicVector<Node2D<T>> &getAllNodes() const { return m_nodes; }
+  const DynamicVector<Node1D<T>> &getAllNodes() const { return m_nodes; }
+  DynamicVector<Node1D<T>> &getAllNodes() { return m_nodes; }
 
   const Node1D<T> &getNode(Index i) const {
     assert(i >= 0 && i < m_nNodes && "Invalid nodal index");
     return m_nodes[i];
   }
-  Node1D<T> &getNode(Index i) const {
+  Node1D<T> &getNode(Index i) {
     assert(i >= 0 && i < m_nNodes && "Invalid nodal index");
     return m_nodes[i];
   }
-  DynamicVector<Particle2D<T>> &getMPs() { return m_MPs; }
-  const DynamicVector<Particle2D<T>> &getMPs() const { return m_MPs; }
+  DynamicVector<Particle1D<T>> &getMPs() { return m_MPs; }
+  const DynamicVector<Particle1D<T>> &getMPs() const { return m_MPs; }
   const Particle1D<T> &getMP(Index p) const {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
   }
-  Particle1D<T> &getMP(Index p) const {
+  Particle1D<T> &getMP(Index p) {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
   }
@@ -215,20 +214,6 @@ public:
     activateNodesAndElements();
   }
 
-  void setMPCoord(Index p, T x) {
-    assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    m_MPs[p].pos = x;
-    activateNodesAndElements();
-  }
-  void setAllMpCoords(const DynamicVector<T> &mp_positions) {
-    assert(mp_positions.size() == m_nMPs &&
-           "Size mismatch: mp_positions must match mesh MP count");
-    for (Index p{0}; p < m_nMPs; ++p) {
-      m_MPs[p].pos = mp_positions[p];
-    }
-    activateNodesAndElements();
-  }
-
   // Reset to initial configuration
   void nodeReset() {
     for (Index i{0}; i < m_nNodes; ++i) {
@@ -244,11 +229,10 @@ public:
     activateNodesAndElements();
   }
 
-  void setAllMPs(const DynamicVector<Particle2D<T>> &particles) {
+  void setAllMPs(const DynamicVector<Particle1D<T>> &particles) {
     assert(particles.size() == m_nMPs &&
            "Size mismatch: particles must match mesh MP count");
     m_MPs = particles;
-    updateAllMPContactMasks();
     activateNodesAndElements();
   }
 
@@ -258,7 +242,6 @@ public:
     for (Index p{0}; p < m_nMPs; ++p) {
       m_MPs[p].pos = mp_pos[p];
     }
-    updateAllMPContactMasks();
     activateNodesAndElements();
   }
 
@@ -344,8 +327,8 @@ private:
     // Force dx = dy = radius for all MPs
     const T radius = m_length / static_cast<T>((m_nx - 1) * nMPperEleSide);
     const T radius2 = m_height / static_cast<T>((m_ny - 1) * nMPperEleSide);
-    static_assert(approximatelyEqualAbsRel(radius, radius2) &&
-                  "Only implemented for square/disk meterial point!");
+    assert(approximatelyEqualAbsRel(radius, radius2) &&
+           "Only implemented for square/disk material point!");
     m_MPs.resize(m_nMPs);
 
     // Element ordering follows natural ordering: i + j*(nx-1)
@@ -512,9 +495,9 @@ public:
          const StaticVector<Index, 2> &gridnPoints,
          const StaticVector<T, 2> &minCorner,
          const StaticVector<T, 2> &maxCorner, T MP_size)
-      : Mesh2D(gridDimension.first, gridDimension.second, gridnPoints.first,
-               gridnPoints.second, minCorner.first, minCorner.second,
-               maxCorner.first, maxCorner.second, MP_size) {}
+      : Mesh2D(gridDimension.x(), gridDimension.y(), gridnPoints.x(),
+               gridnPoints.y(), minCorner.x(), minCorner.y(), maxCorner.x(),
+               maxCorner.y(), MP_size) {}
 
   // 3) MPs-per-element constructor
   Mesh2D(T length, T height, Index nx, Index ny, Index nMPperEle)
@@ -531,10 +514,11 @@ public:
          T radius, T MP_size)
       : Mesh2D(length, height, nx, ny) {
     if ((MP_size > T{0}) && (radius > T{0})) {
-      generateCircleMPgrid(center, radius, MP_size);
+      generateCircleMPgrid(StaticVector<T, 2>{center.first, center.second},
+                           radius, MP_size);
 
       activateNodesAndElements();
-      // updateAllMasks();
+      updateAllMasks();
     }
   }
 
@@ -557,17 +541,16 @@ public:
   Index nx() const { return m_nx; }
   Index ny() const { return m_ny; }
 
-  const ElementQ4 &<T> getElement(Index elemID) const {
+  const ElementQ4<T> &getElement(Index elemID) const {
     assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
     return m_elements[elemID];
   }
-  const ElementQ4 &<T> getAllElements() const {
-    assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
+  const DynamicVector<ElementQ4<T>> &getAllElements() const {
     return m_elements;
   }
 
   const DynamicVector<Node2D<T>> &getAllNodes() const { return m_nodes; }
-  DynamicVector<Node2D<T>> &getAllNodes() const { return m_nodes; }
+  DynamicVector<Node2D<T>> &getAllNodes() { return m_nodes; }
 
   const Node2D<T> &getNode(Index nodeID) const {
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
@@ -674,25 +657,28 @@ public:
   bool isBottomActiveNode(Index i) const {
     if (!m_nodes[i].isActive)
       return false;
-    const double y = static_cast<double>(m_nodes[i].pos.y());
+    const auto y = m_nodes[i].pos.y();
     return approximatelyEqualAbsRel(y, T{0});
   }
 
   bool isTopActiveNode(Index i) const {
     if (!m_nodes[i].isActive)
       return false;
+    const auto y = m_nodes[i].pos.y();
     return approximatelyEqualAbsRel(y, m_height);
   }
 
   bool isLeftActiveNode(Index i) const {
     if (!m_nodes[i].isActive)
       return false;
+    const auto x = m_nodes[i].pos.x();
     return approximatelyEqualAbsRel(x, T{0});
   }
 
   bool isRightActiveNode(Index i) const {
     if (!m_nodes[i].isActive)
       return false;
+    const auto x = m_nodes[i].pos.x();
     return approximatelyEqualAbsRel(x, m_length);
   }
 
@@ -789,7 +775,7 @@ public:
     assert(particles.size() == m_nMPs &&
            "Size mismatch: particles must match mesh MP count");
     m_MPs = particles;
-    updateAllMPContactMasks();
+    updateAllMasks();
     activateNodesAndElements();
   }
 
@@ -801,7 +787,7 @@ public:
       m_MPs[p].pos.x() = mp_x[p];
       m_MPs[p].pos.y() = mp_y[p];
     }
-    updateAllMPContactMasks();
+    updateAllMasks();
     activateNodesAndElements();
   }
 

@@ -146,16 +146,6 @@ public:
     return (*this)(1, 0);
   }
 
-  // Backward-compatible alias (typo kept): prefer yx().
-  T &Yx() {
-    static_assert(nRows >= 2 && nCols >= 1, "Yx() requires size >= 2x1");
-    return yx();
-  }
-  const T &Yx() const {
-    static_assert(nRows >= 2 && nCols >= 1, "Yx() requires size >= 2x1");
-    return yx();
-  }
-
   T &yy() {
     static_assert(nRows >= 2 && nCols >= 2, "yy() requires size >= 2x2");
     return (*this)(1, 1);

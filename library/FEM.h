@@ -3,7 +3,7 @@
 #define FINITE_ELEMENT_METHOD_H
 
 #include "Matrix.h"
-#include "Mesh2.h"
+#include "Mesh.h"
 #include "ParentElement.h"
 #include "Vector.h"
 #include "gaussQuadrature.h"
@@ -224,7 +224,6 @@ public:
 
   void exportResult(const std::string &filename = "fem1D_results.txt") {
     std::cout << "\n=== Exporting Results ===\n";
-    calculateAxialForce();
 
     // Export to file
     std::ofstream file(filename);
