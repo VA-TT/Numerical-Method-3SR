@@ -113,8 +113,8 @@ public:
     assert(i >= 0 && i < m_nNodes && "Invalid nodal index");
     return m_nodes[i];
   }
-  DynamicVector<Particle1D<T>> &getMPs() { return m_MPs; }
-  const DynamicVector<Particle1D<T>> &getMPs() const { return m_MPs; }
+  DynamicVector<Particle1D<T>> &getAllMPs() { return m_MPs; }
+  const DynamicVector<Particle1D<T>> &getAllMPs() const { return m_MPs; }
   const Particle1D<T> &getMP(Index p) const {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
@@ -130,7 +130,7 @@ public:
     return {m_elements[e].n1, m_elements[e].n2};
   }
 
-  StaticVector<T, 2> getElementNodes(Index e) const {
+  StaticVector<T, 2> getEleCoords(Index e) const {
     assert(e >= 0 && e < m_nElements && "Invalid element ID");
     return {m_elements[e].x1(), m_elements[e].x2()};
   }
@@ -560,9 +560,9 @@ public:
     assert(nodeID >= 0 && nodeID < m_nNodes && "Invalid node ID");
     return m_nodes[nodeID];
   }
-  DynamicVector<Particle2D<T>> &getMPs() { return m_MPs; }
-  const DynamicVector<Particle2D<T>> &getMPs() const { return m_MPs; }
-
+  DynamicVector<Particle2D<T>> &getAllMPs() { return m_MPs; }
+  const DynamicVector<Particle2D<T>> &getAllMPs() const { return m_MPs; }
+  // Outer layers
   const Particle2D<T> &getMP(Index p) const {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
     return m_MPs[p];
@@ -572,14 +572,14 @@ public:
     return m_MPs[p];
   }
 
-  StaticVector<Index, 4> getConnectivity(Index e) const {
+  StaticVector<Index, 4> getEleConnectivity(Index e) const {
     assert(e >= 0 && e < m_nElements && "Invalid element ID");
     return {m_elements[e].n1, m_elements[e].n2, m_elements[e].n3,
             m_elements[e].n4};
   }
 
   // Backward-compatible element-node accessor
-  StaticVector<StaticVector<T, 4>, 2> getElementNodes(Index elemID) const {
+  StaticVector<StaticVector<T, 4>, 2> getEleCoords(Index elemID) const {
     return {m_elements[elemID].getX_nodes(), m_elements[elemID].getY_nodes()};
   }
 
@@ -602,7 +602,7 @@ public:
     return activeIDs;
   }
 
-  DynamicVector<Index> getMPsInElement(Index elemID) const {
+  DynamicVector<Index> getAllMPsInElement(Index elemID) const {
     assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
     DynamicVector<Index> ids;
     for (Index p{0}; p < m_nMPs; ++p) {

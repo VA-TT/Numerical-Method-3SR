@@ -27,7 +27,7 @@ int main() {
 
   // Set up MPM1D grid with 2 nodes and 1 MP
   using Beam = MPM1D<double, 2, 1>;
-  Beam beam(E, rho, L, v0, dt, duration, xloc);
+  Beam beam(E, rho, L, v0, dt, duration);
   // (dt, duration, rho, length, xloc, v0, a0) // v0 = a0 = 0 by default
   beam.setG(0.0); // G = -constants::gravity if gravity is considered
   beam.setE(E);   // Module Young
