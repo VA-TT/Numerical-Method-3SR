@@ -10,7 +10,11 @@ int main() {
   // Create FEM problem: EA=10, L=1, 6 nodes
   // f = 5 kN, F = 10 kN at x=1
   // Expected: R=-15 kN, u(x)=1.5x-0.25x^2, N(x)=15-5x
-  FEM1D<double, 6> beam(10.0, 1.0); // syntax: FEM1D<type, nNodes> object(EA, L)
+  constexpr Index nNodes = 6;
+  double EA = 10.0;
+  double L = 1.0;
+  // syntax: FEM1D<type, nNodes> object(EA, L)
+  FEM1D<double, nNodes> beam(EA, L);
 
   // Set distributed load: f(x) = 5 (constant)
   beam.setDistributedLoad(5.0);
