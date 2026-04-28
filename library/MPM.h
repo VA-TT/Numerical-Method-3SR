@@ -4,10 +4,10 @@
 #include "ContinuumMechanic.h"
 #include "Matrix.h"
 #include "Mesh.h"
+#include "ParentElement.h"
 #include "Vector.h"
 #include "elasticity.h"
 #include "gaussQuadrature.h"
-#include "parentElement.h"
 #include "physicConstants.h"
 #include "signFunction.h"
 #include <cassert>
@@ -64,7 +64,7 @@ private:
 
 public:
   // Constructor
-  MPM1D(T E, T rho, T length, T v0, T dt, T duration, T v0 = T{})
+  MPM1D(T E, T rho, T length, T dt, T duration, T v0 = {})
       : m_E{E}, m_rho{rho}, m_dt{dt}, m_duration{duration},
         m_volume{length * 1.0}, m_mass{rho * m_volume}, // 1D
         m_mesh{Mesh1D<T>{length, nNodes, nMPperEle}},
@@ -73,20 +73,20 @@ public:
     // Check critical time
     T c = std::sqrt(m_E / rho);
     T dt_crit = length / c;
-    assert((static_cast<double>{dt_crit} / 10.0) >= static_cast<double>{dt} &&
+    assert((static_cast<double>(dt_crit) / 10.0) >= static_cast<double>(dt) &&
            "Time step isn't satisfied CFL condition (too big)");
-    m_nSteps = static_cast<Index>(duration / dt);
+    m_nStep = static_cast<Index>(duration / dt);
 
     // Distribute equally mass and volume to MPs
     Index nMPs = m_mesh.getNumMPs();
     for (Index p{0}; p < nMPs; ++p) {
-      m_MPs[p].volume = m_volume / nMPs;
-      m_MPs[p].mass = m_mass / nMPs; // MP's mass is constant
-      m_MPs[p].vel = v0;
+      m_MPs[p].V = m_volume / nMPs;
+      m_MPs[p].m = m_mass / nMPs; // MP's mass is constant
+      m_MPs[p].v = v0;
     }
 
     m_mesh.print();
-  };
+  }
 
   // Other defaults
   MPM1D() = default;
@@ -105,12 +105,12 @@ public:
   T getCurrentTime() const { return m_currentTime; }
   T getTimeStep() const { return m_dt; }
   T getDuration() const { return m_duration; }
-  T getNumSteps() const { return m_nSteps; }
+  T getNumSteps() const { return m_nStep; }
 
   const Mesh1D<T> &getMesh() const { return m_mesh; }
   Index getNumNodes() const { return m_mesh.getNumNodes(); }
   Index getNumElements() const { return m_mesh.getNumElements(); }
-  Index getNumMps() const { return m_mesh.getNumMPs(); }
+  Index getNumMPs() const { return m_mesh.getNumMPs(); }
 
   T getNodalMass(Index i) const { return m_mesh.getNode(i).m; }
   T getNodalVelocity(Index i) const { return m_mesh.getNode(i).v; }
@@ -152,8 +152,8 @@ public:
     m_mesh.getNode(i).pCon = 1;
   }
   void setNodalForceConstraint(Index i, T value) {
-    m_mesh.getNode(i).FConVal = value;
-    m_mesh.getNode(i).FCon = 1;
+    m_mesh.getNode(i).fConVal = value;
+    m_mesh.getNode(i).fCon = 1;
   }
 
   // Apply stored constraints to current nodal state
@@ -174,14 +174,14 @@ public:
   void applyNodalMomentumConstraint() {
     for (Index i{0}; i < getNumNodes(); ++i) {
       if (m_nodes[i].pCon) {
-        m_nodes[i].p = m_nodes[i].pConVal;
+        m_nodes[i].P = m_nodes[i].pConVal;
       }
     }
   }
   void applyNodalForceConstraint() {
     for (Index i{0}; i < getNumNodes(); ++i) {
-      if (m_nodes[i].FCon) {
-        m_nodes[i].F = m_nodes[i].FConVal;
+      if (m_nodes[i].fCon) {
+        m_nodes[i].totF = m_nodes[i].fConVal;
       }
     }
   }
@@ -194,12 +194,13 @@ public:
     Index nMPs = m_mesh.getNumMPs();
     // Map nodal mass + momentum
     for (Index p{0}; p < nMPs; ++p) {
-      m_MPs[p].momentum = m_MPs[p].mass * m_MPs[p].vel;
+      m_MPs[p].P = m_MPs[p].m * m_MPs[p].v;
       Index e = m_mesh.getMP(p).eleID;
       if (e != idError) {
         T x_p = m_MPs[p].pos;
-        auto [n1, n2] = m_mesh.getEleConnectivity(e);
-        ElementL2 ele = m_mesh.getElement(e);
+        auto conn = m_mesh.getEleConnectivity(e);
+        Index n1 = conn[0], n2 = conn[1];
+        auto ele = m_mesh.getElement(e);
         T xi = ele.parentCoord(x_p);
         m_nodes[n1].m += ele.N1_ref(xi) * m_MPs[p].m;
         m_nodes[n2].m += ele.N2_ref(xi) * m_MPs[p].m;
@@ -207,7 +208,6 @@ public:
         m_nodes[n2].P += ele.N2_ref(xi) * m_MPs[p].P;
       }
     }
-
     applyNodalMomentumConstraint();
   }
 
@@ -215,20 +215,21 @@ public:
     // f^ext = b + t
     for (Index p{0}; p < getNumMPs(); ++p) {
       Index e = m_mesh.getMP(p).eleID;
-      if (e != idError)) {
-          T x_p = m_MPs[p].pos;
-          auto [n1, n2] = m_mesh.getEleConnectivity(e);
-          ElementL2 ele = m_mesh.getElement(e);
-          T xi = ele.parentCoord(x_p);
-          m_nodes[n1].bodyF += m_G * ele.N1_ref(xi) * m_MPs[p].m;
-          m_nodes[n2].bodyF += m_G * ele.N2_ref(xi) * m_MPs[p].m;
-          // Traction force t_i (to be implemented)
-          m_nodes[n1].intF -= m_MPs[p].V * ele.dN1_dx() * m_MPs[p].sig;
-          m_nodes[n2].intF -= m_MPs[p].V * ele.dN2_dx() * m_MPs[p].sig;
-        }
+      if (e != idError) {
+        T x_p = m_MPs[p].pos;
+        auto conn = m_mesh.getEleConnectivity(e);
+        Index n1 = conn[0], n2 = conn[1];
+        auto ele = m_mesh.getElement(e);
+        T xi = ele.parentCoord(x_p);
+        m_nodes[n1].bodyF += m_G * ele.N1_ref(xi) * m_MPs[p].m;
+        m_nodes[n2].bodyF += m_G * ele.N2_ref(xi) * m_MPs[p].m;
+        // Traction force t_i (to be implemented)
+        m_nodes[n1].intF -= m_MPs[p].V * ele.dN1_dx() * m_MPs[p].sig;
+        m_nodes[n2].intF -= m_MPs[p].V * ele.dN2_dx() * m_MPs[p].sig;
+      }
     }
     for (Index i{0}; i < getNumNodes(); ++i) {
-      m_nodes[i].extF = m_nodes[i].bForce + m_nodes[i].tracF;
+      m_nodes[i].extF = m_nodes[i].bodyF + m_nodes[i].tracF;
       m_nodes[i].totF = m_nodes[i].extF + m_nodes[i].intF;
     }
     // Enforce any stored nodal force constraints after assembly
@@ -502,7 +503,6 @@ public:
     exportResult((outputDir / name.str()).string());
   }
 
-  void applyBC() {}
   void timeIntegration() {}
 };
 
@@ -538,16 +538,14 @@ private:
   T m_dt{};          // Time step
   T m_duration{};    // Duration of simulation
   Index m_nSteps{};  // Number of steps
-  // Index m_interval{10}; // Output interval
 
   // Behavior law (stress increment from strain increment)
   std::function<Matrix<T, 2, 2>(const Matrix<T, 2, 2> &)> m_law;
 
-  //  Mesh
+  // Mesh
   Mesh2D<T> m_mesh{};
-  // Inner solvers:
-  std::span<Node2D<T>> m_nodes;   // Use in main loops for performance & when
-  std::span<Particle2D<T>> m_MPs; // index is already controlled by the group
+  std::span<Node2D<T>> m_nodes;
+  std::span<Particle2D<T>> m_MPs;
 
   static constexpr Index dir_x = 0;
   static constexpr Index dir_y = 1;
@@ -579,11 +577,11 @@ public:
         m_pLength{maxCorner.first - minCorner.first},
         m_pHeight{maxCorner.second - minCorner.second},
         m_volume{constexpr_fabs(m_pLength * m_pHeight)}, m_mass{rho * m_volume},
-        m_volume0{m_volume}, m_mesh{Mesh2D<T>{{gridLength, gridHeight},
-                                              {nx, ny},
-                                              minCorner,
-                                              maxCorner,
-                                              MP_size}} {
+        m_volume0{m_volume},
+        m_mesh{Mesh2D<T>{
+            {gridLength, gridHeight}, {nx, ny}, minCorner, maxCorner, MP_size}},
+        m_nodes{std::span(m_mesh.getAllNodes())},
+        m_MPs{std::span(m_mesh.getAllMPs())} {
 
     // Check critical time
     T c_wave = std::sqrt(m_E / rho);
@@ -594,58 +592,20 @@ public:
     const Index nNodes = m_mesh.getNumNodes();
     const Index nMPs = m_mesh.getNumMPs();
 
-    // Initialize nodal vectors
-    n_mass.resize(nNodes, T{});
-    // position_n.resize(nNodes, DynamicVector<T>{});
-    n_velocity.resize(nNodes, DynamicVector<T>{0, 0});
-    n_acceleration.resize(nNodes, DynamicVector<T>{0, 0});
-    n_momentum.resize(nNodes, DynamicVector<T>{0, 0});
-    n_displacement.resize(nNodes, DynamicVector<T>{0, 0});
-    n_stress.resize(nNodes, Matrix<T, 2, 2>::zero());
-
-    n_velocityConstrained.resize(nNodes, DynamicVector<char>{0, 0});
-    n_accelerationConstrained.resize(nNodes, DynamicVector<char>{0, 0});
-    n_momentumConstrained.resize(nNodes, DynamicVector<char>{0, 0});
-    n_forceConstrained.resize(nNodes, DynamicVector<char>{0, 0});
-    n_velocityConstraintValue.resize(nNodes, DynamicVector<T>{0, 0});
-    n_accelerationConstraintValue.resize(nNodes, DynamicVector<T>{0, 0});
-    n_momentumConstraintValue.resize(nNodes, DynamicVector<T>{0, 0});
-    n_forceConstraintValue.resize(nNodes, DynamicVector<T>{0, 0});
-
-    n_bodyForce.resize(nNodes, DynamicVector<T>{0, 0});
-    n_tractionForce.resize(nNodes, DynamicVector<T>{0, 0});
-    n_forceExternal.resize(nNodes, DynamicVector<T>{0, 0});
-    n_forceInternal.resize(nNodes, DynamicVector<T>{0, 0});
-    n_forceTotal.resize(nNodes, DynamicVector<T>{0, 0});
-
-    // Initialize MP vectors
-    m_MPs = m_mesh.getMPs();
-    const T mpVolume = m_volume / nMPs;
-    const T mpMass = m_mass / nMPs;
+    // Distribute equally mass and volume to MPs
     for (Index p{0}; p < nMPs; ++p) {
-      m_MPs[p].volume = mpVolume;
-      m_MPs[p].mass = mpMass;
+      m_MPs[p].volume = m_volume / nMPs;
+      m_MPs[p].mass = m_mass / nMPs;
       m_MPs[p].vel = m_v0;
       m_MPs[p].acc.resetZero();
       m_MPs[p].force.resetZero();
     }
-    m_mesh.setMPs(m_MPs);
-
-    p_volume0.resize(nMPs, m_volume / nMPs);
-    p_momentum.resize(nMPs, DynamicVector<T>{0, 0}); // Compute later
-
-    p_stress.resize(nMPs, Matrix<T, 2, 2>::zero());
-    p_strain.resize(nMPs, Matrix<T, 2, 2>::zero());
-    p_strainRate.resize(nMPs, Matrix<T, 2, 2>::zero());
-    p_deformGradient.resize(nMPs, Matrix<T, 2, 2>::identity());
-    p_dStrain.resize(nMPs, Matrix<T, 2, 2>::zero());
 
     for (Index p{0}; p < nMPs; ++p) {
       m_totalEnergy0 += m_G * m_MPs[p].pos.y() * m_MPs[p].mass;
     }
-
     // m_mesh.print();
-  };
+  }
 
   // Other defaults
   MPM2D() = default;
@@ -670,7 +630,7 @@ public:
   const Mesh2D<T> &getMesh() const { return m_mesh; }
   Index getNumNodes() const { return m_mesh.getNumNodes(); }
   Index getNumElements() const { return m_mesh.getNumElements(); }
-  Index getNumMps() const { return m_mesh.getNumMPs(); }
+  Index getNumMPs() const { return m_mesh.getNumMPs(); }
 
   T getNodalMass(Index i) const { return n_mass[i]; }
   T getNodalVelocity(Index i) const { return n_velocity[i].x(); }
@@ -866,7 +826,7 @@ public:
 
   void initializeStress() {
     T ymax = m_pHeight - MP_size / 2;
-    for (Index p{0}; p < this->getNumMps(); ++p) {
+    for (Index p{0}; p < this->getNumMPs(); ++p) {
       p_stress[p].yy() = -m_G * m_rho * (ymax - m_MPs[p].pos.y());
       p_stress[p].xx() = m_K0 * p_stress[p].yy();
     }
