@@ -574,8 +574,7 @@ public:
 
   StaticVector<Index, 4> getEleConnectivity(Index e) const {
     assert(e >= 0 && e < m_nElements && "Invalid element ID");
-    return {m_elements[e].n1, m_elements[e].n2, m_elements[e].n3,
-            m_elements[e].n4};
+    return {m_elements[e].getConnectivity()};
   }
 
   // Backward-compatible element-node accessor
@@ -829,7 +828,7 @@ public:
       if (activeEleID != idError) {
         m_MPs[p].eleID = activeEleID;
         m_elements[activeEleID].isActive = true;
-        auto [n1, n2, n3, n4] = getConnectivity(activeEleID);
+        auto [n1, n2, n3, n4] = getEleConnectivity(activeEleID);
         m_nodes[n1].isActive = m_nodes[n2].isActive = m_nodes[n3].isActive =
             m_nodes[n4].isActive = true;
         m_nodes[n1].eleID = m_nodes[n2].eleID = m_nodes[n3].eleID =

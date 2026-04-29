@@ -24,7 +24,7 @@ template <typename T, Index n> struct MediumCon {
   // Euler's description of velocity:
   StaticVector<T, n> velocityE{}, accelerationE;
 
-  MapMatrix deformMap{};
+  MapMatrix deformMapMatrix{};
 
   bool hasRef{false};
   bool hasCurrent{false};
@@ -60,7 +60,7 @@ public:
   // Material-description constructor
   MediumCon(const MapMatrix &motionEquation,
             const StaticVector<T, n> &refConfig)
-      : ref(refConfig), deformMap(motionEquation), hasRef(true) {}
+      : ref(refConfig), deformMapMatrix(motionEquation), hasRef(true) {}
 
   // Spatial-description constructor
   MediumCon(const MapMatrix &inverseMotionEquation,
@@ -70,7 +70,7 @@ public:
       throw std::invalid_argument(
           "Set isInverseMap=true when passing inverse motion equation.");
 
-    deformMap = [inverseMotionEquation](Dual t) -> Matrix<Dual, n, n> {
+    deformMapMatrix = [inverseMotionEquation](Dual t) -> Matrix<Dual, n, n> {
       const Matrix<Dual, n, n> invDual = inverseMotionEquation(t);
 
       Matrix<T, n, n> invVal{};
@@ -90,26 +90,26 @@ public:
   }
 
   Matrix<T, n, n> deformMap(T t) const {
-    if (!deformMap)
+    if (!deformMapMatrix)
       throw std::logic_error("deformMap is not set.");
-    return valuePart(deformMap(Dual{static_cast<double>(t), 0.0}));
+    return valuePart(deformMapMatrix(Dual{static_cast<double>(t), 0.0}));
   }
 
   Matrix<T, n, n> inverseMap(T t) const { return deformMap(t).inverse(); }
 
   // dK/dt from Dual derivative part.
   Matrix<T, n, n> dKdt(T t) const {
-    if (!deformMap)
+    if (!deformMapMatrix)
       throw std::logic_error("deformMap is not set.");
-    return derivativePart(deformMap(Dual{static_cast<double>(t), 1.0}));
+    return derivativePart(deformMapMatrix(Dual{static_cast<double>(t), 1.0}));
   }
 
   // d2K/dt2 from Dual second derivative part.
   Matrix<T, n, n> d2Kdt2(T t) const {
-    if (!deformMap)
+    if (!deformMapMatrix)
       throw std::logic_error("deformMap is not set.");
     return secondDerivativePart(
-        deformMap(Dual{static_cast<double>(t), 1.0, 0.0}));
+        deformMapMatrix(Dual{static_cast<double>(t), 1.0, 0.0}));
   }
 
   // x_P(t) = K(t) * X

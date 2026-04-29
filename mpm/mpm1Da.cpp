@@ -49,7 +49,7 @@ int main() {
   // Find MP closest to xloc for tracking
   Index tracked_mp = 0;
   double min_dist = std::abs(beam.getMPposition(0) - xloc);
-  for (Index p = 1; p < beam.getNumMps(); ++p) {
+  for (Index p = 1; p < beam.getNumMPs(); ++p) {
     double dist = std::abs(beam.getMPposition(p) - xloc);
     if (dist < min_dist) {
       min_dist = dist;

@@ -40,6 +40,7 @@ template <typename T> struct ElementL2 {
 
   T x1() const { return nodes[n1].pos; }
   T x2() const { return nodes[n2].pos; }
+  StaticVector<Index, 2> getConnectivity() const { return {n1, n2}; }
   // Jacobian: J = dx/d(xi) = (x2-x1)/2 = const
   T jacobian() const { return (x2() - x1()) / T{2}; }
 
@@ -100,6 +101,7 @@ template <typename T> struct ElementQ4 {
   ElementQ4 &operator=(ElementQ4 &&) = default;
   ~ElementQ4() = default;
 
+  StaticVector<Index, 4> getConnectivity() const { return {n1, n2, n3, n4}; }
   // Get x and y coordinate vectors from particle positions
   StaticVector<T, 4> getX_nodes() const {
     return {nodes[n1].pos.x(), nodes[n2].pos.x(), nodes[n3].pos.x(),
