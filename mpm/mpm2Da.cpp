@@ -56,8 +56,8 @@ int main() {
   std::ofstream hist("mpm2Da_history.txt");
   hist << "# time\tx\ty\tstress_xx\tstrain_xx\n";
 
-  // Simple boundary condition: clamp bottom nodes
-  for (const Index nodeID : collumn.getMesh().bottomNodes()) {
+  // Simple boundary condition: clamp bottom active nodes
+  for (const Index nodeID : collumn.getMesh().bottomActiveNodes()) {
     collumn.setNodalVeloConstraint(nodeID, 0.0);
   }
 
@@ -79,9 +79,9 @@ int main() {
 
   // Initial state (t=0)
   {
-    const auto mp = collumn.getMesh().getMPpos(tracked_mp);
-    hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << mp.first
-         << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
+    const auto mp = collumn.getMesh().getMP(tracked_mp).pos;
+    hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << mp.x()
+         << '\t' << mp.y() << '\t' << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';
 
     collumn.exportVTKFrame(vtkDir, 0);
@@ -103,15 +103,15 @@ int main() {
     }
 
     // Record results
-    const auto mp = collumn.getMesh().getMPpos(tracked_mp);
-    hist << std::fixed << std::setprecision(10) << time << '\t' << mp.first
-         << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
+    const auto mp = collumn.getMesh().getMP(tracked_mp).pos;
+    hist << std::fixed << std::setprecision(10) << time << '\t' << mp.x()
+         << '\t' << mp.y() << '\t' << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';
 
     if (step < 5 || step % 1000 == 0 || step == collumn.getNumSteps() - 1) {
       std::cout << std::fixed << std::setprecision(6);
-      std::cout << "t=" << time << " | MP[" << tracked_mp << "]: x=" << mp.first
-                << " y=" << mp.second
+      std::cout << "t=" << time << " | MP[" << tracked_mp << "]: x=" << mp.x()
+                << " y=" << mp.y()
                 << " | stress_xx=" << collumn.getMPstress(tracked_mp) << '\n';
     }
   }

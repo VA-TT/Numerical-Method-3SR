@@ -67,7 +67,7 @@ public:
   MPM1D(T E, T rho, T length, T dt, T duration, T v0 = {})
       : m_E{E}, m_rho{rho}, m_dt{dt}, m_duration{duration},
         m_volume{length * 1.0}, m_mass{rho * m_volume}, // 1D
-        m_mesh{Mesh1D<T>{length, nNodes, nMPperEle}},
+        m_mesh{length, nNodes, nMPperEle},
         m_nodes{std::span(m_mesh.getAllNodes())},
         m_MPs{std::span(m_mesh.getAllMPs())} {
     // Check critical time
@@ -187,7 +187,7 @@ public:
   }
 
   void setupMP() {
-    // m_mesh.activateNodesAndElements();
+    m_mesh.activateNodesAndElements();
   }
 
   void p2n() {
@@ -320,17 +320,16 @@ public:
       m_MPs[p].V *= (T{1} + m_MPs[p].dEps);
     }
   }
-}
 
   void resetMesh() {
-  for (Index i{0}; i < getNumNodes(); ++i) {
-    auto &node = m_nodes[i];
-    node.m = node.v = node.a = node.P = T{};
-    node.bodyF = node.tracF = node.extF = node.intF = node.totF = T{};
-  }
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      auto &node = m_nodes[i];
+      node.m = node.v = node.a = node.P = T{};
+      node.bodyF = node.tracF = node.extF = node.intF = node.totF = T{};
+    }
 
-  m_mesh.nodeReset();
-}
+    m_mesh.nodeReset();
+  }
 
 // void compareAnalytic(T xloc) {
 //   if (!m_analyticSolution) {
@@ -365,7 +364,7 @@ public:
 //             << std::scientific << error << '\n';
 // }
 
-void exportResult(const std::string &filename = "mpm1D_results.vtk") {
+  void exportResult(const std::string &filename = "mpm1D_results.vtk") {
   const std::string vtkFile =
       endsWith(filename, ".vtk")
           ? filename
@@ -496,8 +495,8 @@ void exportResult(const std::string &filename = "mpm1D_results.vtk") {
   }
 }
 
-void exportVTKFrame(const std::filesystem::path &outputDir, Index frame,
-                    int padWidth = 6) {
+  void exportVTKFrame(const std::filesystem::path &outputDir, Index frame,
+                      int padWidth = 6) {
   std::error_code ec;
   std::filesystem::create_directories(outputDir, ec);
 
@@ -507,15 +506,14 @@ void exportVTKFrame(const std::filesystem::path &outputDir, Index frame,
   exportResult((outputDir / name.str()).string());
 }
 
-void timeIntegration() {}
-}
-;
+  void timeIntegration() {}
+};
 
 ////////////////////////////////////////////
 ////////////////::: 2D ::://////////////////
 ////////////////////////////////////////////
 
-template <typename T, T gridLength, T gridHeight, Index nx, Index ny, T MP_size>
+// template <typename T, T gridLength, T gridHeight, Index nx, Index ny, T MP_size>
 // class MPM2D {
 // private:
 //   // Kinetic, Potential, Initial Total and Dissipation energies
@@ -1327,5 +1325,604 @@ template <typename T, T gridLength, T gridHeight, Index nx, Index ny, T MP_size>
 //   }
 //   void timeIntegration() {}
 // };
+
+template <typename T, T gridLength, T gridHeight, Index nx, Index ny, T MP_size>
+class MPM2D {
+private:
+  // Kinetic, Potential, Initial Total and Dissipation energies
+  T m_kinEnergy{}, m_potentEnergy{}, m_totalEnergy0{}, m_dissiEnergy{};
+
+  T m_E{}, m_nu{}, m_rho{}, m_mu{}, m_phi{}, m_c{}, m_K0{}, m_G{};
+  T m_pLength{}, m_pHeight{};
+  T m_volume{}, m_mass{}, m_dt{}, m_duration{};
+  Index m_nSteps{};
+  Mesh2D<T> m_mesh{};
+  std::span<Node2D<T>> m_nodes;
+  std::span<Particle2D<T>> m_MPs;
+  std::function<Matrix<T, 2, 2>(const Matrix<T, 2, 2> &)> m_law{};
+  static constexpr Index dimensions = 2;
+  static constexpr Index dir_x = 0;
+  static constexpr Index dir_y = 1;
+  static constexpr Index directionPositive = 1;
+  static constexpr Index directionNegative = -1;
+
+  static bool endsWith(const std::string &s, const std::string &suffix) {
+    return s.size() >= suffix.size() &&
+           s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+  }
+
+  static std::string withExtensionReplaced(const std::string &filename,
+                                           const std::string &fromExt,
+                                           const std::string &toExt) {
+    if (endsWith(filename, fromExt))
+      return filename.substr(0, filename.size() - fromExt.size()) + toExt;
+    return filename + toExt;
+  }
+
+  void applyNodalVeloConstraint() {
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      for (Index d{0}; d < dimensions; ++d) {
+        if (m_nodes[i].vCon[d]) {
+          m_nodes[i].v[d] = m_nodes[i].vConVal[d];
+          m_nodes[i].P[d] = m_nodes[i].v[d] * m_nodes[i].mass;
+        }
+      }
+    }
+  }
+
+  void applyNodalAccConstraint() {
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      for (Index d{0}; d < dimensions; ++d) {
+        if (m_nodes[i].aCon[d]) {
+          m_nodes[i].a[d] = m_nodes[i].aConVal[d];
+          m_nodes[i].totF[d] = m_nodes[i].a[d] * m_nodes[i].mass;
+        }
+      }
+    }
+  }
+
+  void applyNodalMomentumConstraint() {
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      for (Index d{0}; d < dimensions; ++d) {
+        if (m_nodes[i].pCon[d]) {
+          m_nodes[i].P[d] = m_nodes[i].pConVal[d];
+        }
+      }
+    }
+  }
+
+  void applyNodalForceConstraint() {
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      for (Index d{0}; d < dimensions; ++d) {
+        if (m_nodes[i].FCon[d]) {
+          m_nodes[i].totF[d] = m_nodes[i].FConVal[d];
+        }
+      }
+    }
+  }
+
+  // Source: https://www.geoelements.org/LearnMPM/mpm2d-column-collapse.html
+  void frictionalBC(const DynamicVector<Index> &nodeIDs, Index dir_n,
+                    Index signDir_n) {
+    const Index dir_t = 1 - dir_n; // tangential direction
+
+    for (const Index nodeID : nodeIDs) {
+      auto &node = m_nodes[nodeID];
+      if (approximatelyEqualAbsRel(node.mass, T{})) {
+        continue;
+      }
+
+      T acc_n = node.a[dir_n];
+      T acc_t = node.a[dir_t];
+      const T vel_t = node.P[dir_t] / node.mass;
+      const bool moveTowardBoundary =
+          (acc_n * static_cast<T>(signDir_n)) > T{};
+
+      if (moveTowardBoundary) {
+        if (!approximatelyEqualAbsRel(vel_t, T{})) {
+          const T vel_net = m_dt * acc_t + vel_t;
+          const T vel_frictional = m_dt * m_mu * std::abs(acc_n);
+          if (std::abs(vel_net) <= vel_frictional) {
+            acc_t = -vel_t / m_dt;
+          } else {
+            acc_t -= sgn(vel_net) * m_mu * std::abs(acc_n);
+          }
+        } else {
+          if (std::abs(acc_t) <= m_mu * std::abs(acc_n)) {
+            acc_t = T{};
+          } else {
+            acc_t -= sgn(acc_t) * m_mu * std::abs(acc_n);
+          }
+        }
+      }
+
+      node.a[dir_t] = acc_t;
+      node.totF = node.a * node.mass;
+    }
+  }
+
+  void applyFrictionalBC() {
+    frictionalBC(m_mesh.leftActiveNodes(), dir_x, directionNegative);
+    frictionalBC(m_mesh.rightActiveNodes(), dir_x, directionPositive);
+    frictionalBC(m_mesh.bottomActiveNodes(), dir_y, directionNegative);
+    frictionalBC(m_mesh.topActiveNodes(), dir_y, directionPositive);
+
+    for (Index i : m_mesh.leftActiveNodes()) {
+      m_nodes[i].P.x() = T{};
+      m_nodes[i].totF.x() = T{};
+    }
+    for (Index i : m_mesh.rightActiveNodes()) {
+      m_nodes[i].P.x() = T{};
+      m_nodes[i].totF.x() = T{};
+    }
+    for (Index i : m_mesh.bottomActiveNodes()) {
+      m_nodes[i].P.y() = T{};
+      m_nodes[i].totF.y() = T{};
+    }
+    for (Index i : m_mesh.topActiveNodes()) {
+      m_nodes[i].P.y() = T{};
+      m_nodes[i].totF.y() = T{};
+    }
+  }
+
+  void initializeStress() {
+    const T ymax = m_pHeight - MP_size / T{2};
+    for (Index p{0}; p < getNumMPs(); ++p) {
+      m_MPs[p].sig.yy() = -m_G * m_rho * (ymax - m_MPs[p].pos.y());
+      m_MPs[p].sig.xx() = m_K0 * m_MPs[p].sig.yy();
+    }
+  }
+
+  void computeEnergy() {
+    m_potentEnergy = T{};
+    m_kinEnergy = T{};
+    for (Index p{0}; p < getNumMPs(); ++p) {
+      m_potentEnergy += m_G * m_MPs[p].m * m_MPs[p].pos.y();
+      m_kinEnergy += T{0.5} * m_MPs[p].m *
+                     dotProduct(m_MPs[p].v, m_MPs[p].v);
+    }
+    m_dissiEnergy = m_totalEnergy0 - m_potentEnergy - m_kinEnergy;
+  }
+
+public:
+  MPM2D(T E, T nu, T rho, T mu, T phi, T c, T K0,
+        const std::pair<T, T> &minCorner,
+        const std::pair<T, T> &maxCorner, T dt, T duration, T v0 = T{})
+      : m_E{E}, m_nu{nu}, m_rho{rho}, m_mu{mu}, m_phi{phi}, m_c{c},
+        m_K0{K0}, m_pLength{maxCorner.first - minCorner.first},
+        m_pHeight{maxCorner.second - minCorner.second},
+        m_volume{m_pLength *
+                           (maxCorner.second - minCorner.second)},
+        m_mass{rho * m_volume}, m_dt{dt}, m_duration{duration},
+        m_nSteps{static_cast<Index>(duration / dt)},
+        m_mesh{gridLength, gridHeight, nx + 1, ny + 1, minCorner.first,
+               minCorner.second, maxCorner.first, maxCorner.second, MP_size},
+        m_nodes{std::span(m_mesh.getAllNodes())},
+        m_MPs{std::span(m_mesh.getAllMPs())} {
+    const T cWave = std::sqrt(m_E / m_rho);
+    const T dtCrit =
+        std::min(gridLength / static_cast<T>(nx), gridHeight / static_cast<T>(ny)) /
+        cWave;
+    assert((dtCrit / T{10}) * T{1.0000001} >= dt &&
+           "dt doesn't satisfy CFL condition (too big)");
+
+    const Index nMPs = m_mesh.getNumMPs();
+    for (Index p{0}; p < nMPs; ++p) {
+      m_MPs[p].V = m_volume / static_cast<T>(nMPs);
+      m_MPs[p].V0 = m_MPs[p].V;
+      m_MPs[p].m = m_mass / static_cast<T>(nMPs);
+      m_MPs[p].v.x() = v0;
+      m_MPs[p].v.y() = T{};
+      m_MPs[p].F = Matrix<T, 2, 2>::identity();
+    }
+
+    for (Index p{0}; p < nMPs; ++p) {
+      m_totalEnergy0 += m_G * m_MPs[p].m * m_MPs[p].pos.y();
+    }
+  }
+
+  MPM2D() = default;
+  MPM2D(const MPM2D &) = default;
+  MPM2D(MPM2D &&) = default;
+  MPM2D &operator=(const MPM2D &) = default;
+  MPM2D &operator=(MPM2D &&) = default;
+  ~MPM2D() = default;
+
+  T getE() const { return m_E; }
+  T getG() const { return m_G; }
+  T getRho() const { return m_rho; }
+  T getMass() const { return m_mass; }
+  T getVolume() const { return m_volume; }
+  T getTimeStep() const { return m_dt; }
+  T getDuration() const { return m_duration; }
+  Index getNumSteps() const { return m_nSteps; }
+
+  const Mesh2D<T> &getMesh() const { return m_mesh; }
+  Mesh2D<T> &getMesh() { return m_mesh; }
+  Index getNumNodes() const { return m_mesh.getNumNodes(); }
+  Index getNumElements() const { return m_mesh.getNumElements(); }
+  Index getNumMPs() const { return m_mesh.getNumMPs(); }
+  Index getNumMps() const { return getNumMPs(); }
+
+  T getMPvolume(Index p) const { return m_mesh.getMP(p).V; }
+  T getMPmass(Index p) const { return m_mesh.getMP(p).m; }
+  StaticVector<T, 2> getMPvelocity(Index p) const { return m_mesh.getMP(p).v; }
+  StaticVector<T, 2> getMPposition(Index p) const {
+    return m_mesh.getMP(p).pos;
+  }
+  T getMPstrain(Index p) const { return m_mesh.getMP(p).eps.xx(); }
+  T getMPstress(Index p) const { return m_mesh.getMP(p).sig.xx(); }
+
+  void setE(T E) { m_E = E; }
+  void setG(T G) { m_G = G; }
+
+  void setComportmentLaw(
+      const std::function<Matrix<T, 2, 2>(const Matrix<T, 2, 2> &)> &law) {
+    m_law = law;
+  }
+
+  void setComportmentLaw(const std::function<T(T)> &law) {
+    if (!law) {
+      m_law = {};
+      return;
+    }
+    m_law = [law](const Matrix<T, 2, 2> &dEps) {
+      Matrix<T, 2, 2> dsig{};
+      dsig.xx() = law(dEps.xx());
+      dsig.yy() = law(dEps.yy());
+      dsig.xy() = law(dEps.xy());
+      dsig.yx() = law(dEps.yx());
+      return dsig;
+    };
+  }
+
+  void setNodalVeloConstraint(Index i, const StaticVector<T, 2> &value) {
+    m_nodes[i].vCon = StaticVector<char, 2>{1, 1};
+    m_nodes[i].vConVal = value;
+  }
+  void setNodalVeloConstraint(Index i, T value) {
+    setNodalVeloConstraint(i, StaticVector<T, 2>{value, value});
+  }
+  void setNodalAccConstraint(Index i, const StaticVector<T, 2> &value) {
+    m_nodes[i].aCon = StaticVector<char, 2>{1, 1};
+    m_nodes[i].aConVal = value;
+  }
+  void setNodalAccConstraint(Index i, T value) {
+    setNodalAccConstraint(i, StaticVector<T, 2>{value, value});
+  }
+  void setNodalMomentumConstraint(Index i, const StaticVector<T, 2> &value) {
+    m_nodes[i].pCon = StaticVector<char, 2>{1, 1};
+    m_nodes[i].pConVal = value;
+  }
+  void setNodalMomentumConstraint(Index i, T value) {
+    setNodalMomentumConstraint(i, StaticVector<T, 2>{value, value});
+  }
+  void setNodalForceConstraint(Index i, const StaticVector<T, 2> &value) {
+    m_nodes[i].FCon = StaticVector<char, 2>{1, 1};
+    m_nodes[i].FConVal = value;
+  }
+  void setNodalForceConstraint(Index i, T value) {
+    setNodalForceConstraint(i, StaticVector<T, 2>{value, value});
+  }
+
+  void setupMP() {
+    m_mesh.activateNodesAndElements();
+    initializeStress();
+    computeEnergy();
+  }
+
+  void p2n() {
+    for (Index p{0}; p < getNumMPs(); ++p) {
+      auto &mp = m_MPs[p];
+      mp.P = mp.m * mp.v;
+      const Index e = mp.eleID;
+      if (e == idError)
+        continue;
+
+      const auto &ele = m_mesh.getElement(e);
+      const auto conn = ele.getConnectivity();
+      const auto parent = ele.parentCoord(mp.pos.x(), mp.pos.y());
+      const auto N = ele.N_Q4(parent.x(), parent.y());
+      for (Index a{0}; a < 4; ++a) {
+        const Index nodeID = conn[a];
+        m_nodes[nodeID].mass += N[a] * mp.m;
+        m_nodes[nodeID].P += N[a] * mp.P;
+      }
+    }
+    applyNodalMomentumConstraint();
+  }
+
+  void nodalEquilibrium() {
+    for (Index p{0}; p < getNumMPs(); ++p) {
+      auto &mp = m_MPs[p];
+      const Index e = mp.eleID;
+      if (e == idError)
+        continue;
+
+      const auto &ele = m_mesh.getElement(e);
+      const auto conn = ele.getConnectivity();
+      const auto parent = ele.parentCoord(mp.pos.x(), mp.pos.y());
+      const auto N = ele.N_Q4(parent.x(), parent.y());
+      const auto grad = ele.gradientN(parent.x(), parent.y());
+      const auto &dNdx = grad[0];
+      const auto &dNdy = grad[1];
+
+      for (Index a{0}; a < 4; ++a) {
+        const Index nodeID = conn[a];
+        m_nodes[nodeID].bodyF.y() += N[a] * m_G * mp.m;
+        const StaticVector<T, 2> gradNa{dNdx[a], dNdy[a]};
+        m_nodes[nodeID].intF -= mp.V * (mp.sig * gradNa);
+      }
+    }
+
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (!m_nodes[i].isActive)
+        continue;
+      m_nodes[i].extF = m_nodes[i].bodyF + m_nodes[i].tracF;
+      m_nodes[i].totF = m_nodes[i].extF + m_nodes[i].intF;
+    }
+
+    applyNodalForceConstraint();
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (m_nodes[i].isActive &&
+          !approximatelyEqualAbsRel(m_nodes[i].mass, T{})) {
+        m_nodes[i].a = m_nodes[i].totF / m_nodes[i].mass;
+      }
+    }
+    applyNodalAccConstraint();
+    applyFrictionalBC();
+
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (!m_nodes[i].isActive)
+        continue;
+      m_nodes[i].P += m_nodes[i].totF * m_dt;
+      if (!approximatelyEqualAbsRel(m_nodes[i].mass, T{})) {
+        m_nodes[i].v = m_nodes[i].P / m_nodes[i].mass;
+      }
+    }
+    applyNodalMomentumConstraint();
+    applyNodalVeloConstraint();
+  }
+
+  void n2p() {
+    for (Index p{0}; p < getNumMPs(); ++p) {
+      auto &mp = m_MPs[p];
+      const Index e = mp.eleID;
+      if (e == idError)
+        continue;
+
+      const auto &ele = m_mesh.getElement(e);
+      const auto conn = ele.getConnectivity();
+      const auto parent = ele.parentCoord(mp.pos.x(), mp.pos.y());
+      const auto N = ele.N_Q4(parent.x(), parent.y());
+
+      StaticVector<T, 2> aNext{};
+      StaticVector<T, 2> vNext{};
+      for (Index a{0}; a < 4; ++a) {
+        const Index nodeID = conn[a];
+        aNext += N[a] * m_nodes[nodeID].a;
+        vNext += N[a] * m_nodes[nodeID].v;
+      }
+
+      mp.a = aNext;
+      mp.v += aNext * m_dt;
+      mp.pos += vNext * m_dt;
+
+      const T support = mp.R > T{} ? mp.R : MP_size;
+      if (mp.pos.x() < support) {
+        mp.pos.x() = support;
+        if (mp.v.x() < T{})
+          mp.v.x() = T{};
+      } else if (mp.pos.x() > gridLength - support) {
+        mp.pos.x() = gridLength - support;
+        if (mp.v.x() > T{})
+          mp.v.x() = T{};
+      }
+      if (mp.pos.y() < support) {
+        mp.pos.y() = support;
+        if (mp.v.y() < T{})
+          mp.v.y() = T{};
+      } else if (mp.pos.y() > gridHeight - support) {
+        mp.pos.y() = gridHeight - support;
+        if (mp.v.y() > T{})
+          mp.v.y() = T{};
+      }
+
+      if (!std::isfinite(static_cast<double>(mp.pos.x())) ||
+          !std::isfinite(static_cast<double>(mp.pos.y())) ||
+          !std::isfinite(static_cast<double>(mp.v.x())) ||
+          !std::isfinite(static_cast<double>(mp.v.y()))) {
+        mp.pos.x() = support;
+        mp.pos.y() = support;
+        mp.v.resetZero();
+        mp.a.resetZero();
+      }
+
+      mp.P = mp.m * mp.v;
+
+      const auto grad = ele.gradientN(parent.x(), parent.y());
+      const auto &dNdx = grad[0];
+      const auto &dNdy = grad[1];
+      Matrix<T, 2, 2> L = Matrix<T, 2, 2>::zero();
+      for (Index a{0}; a < 4; ++a) {
+        const Index nodeID = conn[a];
+        const StaticVector<T, 2> gradNa{dNdx[a], dNdy[a]};
+        L += tensorProduct<T, 2, 2>(m_nodes[nodeID].v, gradNa);
+      }
+
+      mp.F = mp.F * (Matrix<T, 2, 2>::identity() + L * m_dt);
+      mp.V = det(mp.F) * mp.V0;
+
+      mp.epsDot = Matrix<T, 2, 2>::zero();
+      mp.epsDot.xx() = L.xx();
+      mp.epsDot.yy() = L.yy();
+      const T shear = T{0.5} * (L.xy() + L.yx());
+      mp.epsDot.xy() = shear;
+      mp.epsDot.yx() = shear;
+      mp.dEps = mp.epsDot * m_dt;
+
+      if (m_law) {
+        mp.eps += mp.dEps;
+        mp.sig += m_law(mp.dEps);
+      } else {
+        const Matrix<T, 3, 3> D = elasticityMatrix(m_E, m_nu, "planeStrain");
+        const auto [alpha, k] = druckerPrager(m_phi, m_c);
+        const DynamicVector<T> stressN{mp.sig.xx(), mp.sig.yy(), mp.sig.xy()};
+        const DynamicVector<T> strainN{mp.eps.xx(), mp.eps.yy(), mp.eps.xy()};
+        const DynamicVector<T> strainInc{mp.dEps.xx(), mp.dEps.yy(),
+                                         mp.dEps.xy()};
+        const auto [stressUpdated, strainUpdated, deltaLambda] =
+            updateStressStrainDruckerPrager(stressN, strainN, strainInc, D,
+                                            alpha, k, "planeStrain", m_nu);
+        (void)deltaLambda;
+        mp.sig.xx() = stressUpdated[0];
+        mp.sig.yy() = stressUpdated[1];
+        mp.sig.xy() = stressUpdated[2];
+        mp.sig.yx() = stressUpdated[2];
+        mp.eps.xx() = strainUpdated[0];
+        mp.eps.yy() = strainUpdated[1];
+        mp.eps.xy() = strainUpdated[2];
+        mp.eps.yx() = strainUpdated[2];
+      }
+
+      if (!std::isfinite(static_cast<double>(mp.sig.xx())) ||
+          !std::isfinite(static_cast<double>(mp.sig.yy())) ||
+          !std::isfinite(static_cast<double>(mp.sig.xy())) ||
+          !std::isfinite(static_cast<double>(mp.V))) {
+        mp.sig = Matrix<T, 2, 2>::zero();
+        mp.eps = Matrix<T, 2, 2>::zero();
+        mp.epsDot = Matrix<T, 2, 2>::zero();
+        mp.dEps = Matrix<T, 2, 2>::zero();
+        mp.F = Matrix<T, 2, 2>::identity();
+        mp.V = mp.V0;
+      }
+    }
+  }
+
+  void resetMesh() {
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      auto &node = m_nodes[i];
+      node.mass = T{};
+      node.v.resetZero();
+      node.a.resetZero();
+      node.P.resetZero();
+      node.bodyF.resetZero();
+      node.tracF.resetZero();
+      node.extF.resetZero();
+      node.intF.resetZero();
+      node.totF.resetZero();
+    }
+    m_mesh.nodeReset();
+    m_mesh.updateAllMasks();
+  }
+
+  void exportResult(const std::string &filename = "mpm2D_results.vtk") {
+    const std::string vtkFile =
+        endsWith(filename, ".vtk")
+            ? filename
+            : withExtensionReplaced(filename, ".txt", ".vtk");
+
+    std::string meshFile = vtkFile;
+    if (const std::size_t pos = meshFile.rfind("particles_");
+        pos != std::string::npos) {
+      meshFile.replace(pos, std::string("particles_").size(), "mesh_");
+    } else if (endsWith(meshFile, ".vtk")) {
+      meshFile = meshFile.substr(0, meshFile.size() - 4) + "_mesh.vtk";
+    } else {
+      meshFile += "_mesh.vtk";
+    }
+
+    std::ofstream vtk(vtkFile);
+    if (!vtk)
+      throw std::runtime_error("MPM2D::exportResult: cannot open file: " +
+                               vtkFile);
+
+    const Index nMPs = getNumMPs();
+    vtk << "# vtk DataFile Version 3.0\n";
+    vtk << "MPM2D particles\n";
+    vtk << "ASCII\n";
+    vtk << "DATASET POLYDATA\n";
+    vtk << "POINTS " << nMPs << " double\n";
+    for (Index p{0}; p < nMPs; ++p)
+      vtk << m_MPs[p].pos.x() << " " << m_MPs[p].pos.y() << " 0\n";
+
+    vtk << "VERTICES " << nMPs << " " << (nMPs * 2) << "\n";
+    for (Index p{0}; p < nMPs; ++p)
+      vtk << "1 " << p << "\n";
+
+    vtk << "POINT_DATA " << nMPs << "\n";
+    vtk << "VECTORS velocity double\n";
+    for (Index p{0}; p < nMPs; ++p)
+      vtk << m_MPs[p].v.x() << " " << m_MPs[p].v.y() << " 0\n";
+
+    vtk << "SCALARS mass double 1\nLOOKUP_TABLE default\n";
+    for (Index p{0}; p < nMPs; ++p)
+      vtk << m_MPs[p].m << "\n";
+
+    vtk << "SCALARS volume double 1\nLOOKUP_TABLE default\n";
+    for (Index p{0}; p < nMPs; ++p)
+      vtk << m_MPs[p].V << "\n";
+
+    vtk << "TENSORS stress double\n";
+    for (Index p{0}; p < nMPs; ++p) {
+      const auto &s = m_MPs[p].sig;
+      vtk << s.xx() << " " << s.xy() << " 0\n";
+      vtk << s.yx() << " " << s.yy() << " 0\n";
+      vtk << "0 0 0\n";
+    }
+
+    std::ofstream mesh(meshFile);
+    if (!mesh)
+      throw std::runtime_error("MPM2D::exportResult: cannot open mesh file: " +
+                               meshFile);
+
+    const Index nNodes = getNumNodes();
+    const Index nElems = getNumElements();
+    mesh << "# vtk DataFile Version 3.0\n";
+    mesh << "MPM2D background grid\n";
+    mesh << "ASCII\n";
+    mesh << "DATASET UNSTRUCTURED_GRID\n";
+    mesh << "POINTS " << nNodes << " double\n";
+    for (Index i{0}; i < nNodes; ++i)
+      mesh << m_nodes[i].pos.x() << " " << m_nodes[i].pos.y() << " 0\n";
+
+    mesh << "CELLS " << nElems << " " << (nElems * 5) << "\n";
+    for (Index e{0}; e < nElems; ++e) {
+      const auto conn = m_mesh.getEleConnectivity(e);
+      mesh << "4 " << conn[0] << " " << conn[1] << " " << conn[2] << " "
+           << conn[3] << "\n";
+    }
+
+    mesh << "CELL_TYPES " << nElems << "\n";
+    for (Index e{0}; e < nElems; ++e)
+      mesh << "9\n";
+
+    mesh << "POINT_DATA " << nNodes << "\n";
+    mesh << "SCALARS active int 1\nLOOKUP_TABLE default\n";
+    for (Index i{0}; i < nNodes; ++i)
+      mesh << (m_nodes[i].isActive ? 1 : 0) << "\n";
+
+    mesh << "SCALARS mass double 1\nLOOKUP_TABLE default\n";
+    for (Index i{0}; i < nNodes; ++i)
+      mesh << m_nodes[i].mass << "\n";
+
+    mesh << "VECTORS velocity double\n";
+    for (Index i{0}; i < nNodes; ++i)
+      mesh << m_nodes[i].v.x() << " " << m_nodes[i].v.y() << " 0\n";
+  }
+
+  void exportVTKFrame(const std::filesystem::path &outputDir, Index frame,
+                      int padWidth = 6) {
+    std::error_code ec;
+    std::filesystem::create_directories(outputDir, ec);
+
+    std::ostringstream name;
+    name << "particles_" << std::setw(padWidth) << std::setfill('0')
+         << static_cast<long long>(frame) << ".vtk";
+    exportResult((outputDir / name.str()).string());
+  }
+
+  void timeIntegration() {}
+};
 
 #endif // MATERIAL_POINT_METHOD_H

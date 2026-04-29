@@ -309,7 +309,7 @@ private:
           T y = y0 + (static_cast<T>(j) + static_cast<T>(0.5)) * MP_size;
           m_MPs[mpId].pos.x() = x;
           m_MPs[mpId].pos.y() = y;
-          m_MPs[mpId].radius = MP_size;
+          m_MPs[mpId].R = MP_size;
           ++mpId;
         }
       }
@@ -346,7 +346,7 @@ private:
                 y_bot + (static_cast<T>(j) + static_cast<T>(0.5)) * radius;
             m_MPs[mpID].pos.x() = x;
             m_MPs[mpID].pos.y() = y;
-            m_MPs[mpID].radius = radius;
+            m_MPs[mpID].R = radius;
             m_MPs[mpID].eleID = elemID;
             ++mpID;
           }
@@ -418,7 +418,7 @@ private:
           Particle2D<T> mp{};
           mp.pos.x() = static_cast<T>(x);
           mp.pos.y() = static_cast<T>(y);
-          mp.radius = MP_size;
+          mp.R = MP_size;
           m_MPs.push_back(mp);
         }
       }
@@ -618,8 +618,8 @@ public:
   // Contact-mask helpers
   void updateMask(Index p) {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
-    // radius is interpreted as support half-size (half side length).
-    const T radius = m_MPs[p].radius;
+    // R is interpreted as support half-size (half side length).
+    const T radius = m_MPs[p].R;
     if (!(radius > T{0})) {
       m_MPs[p].mask = MPContact::None; // reset mask
       return;
@@ -794,11 +794,17 @@ public:
   // MPM helper function
   bool isPointInElement(T x, T y, Index e) const {
     assert(e >= 0 && e < m_nElements && "Invalid element ID");
-    auto [xi, eta] = m_elements[e].parentCoor(x, y);
+    auto parent = m_elements[e].parentCoord(x, y);
+    const T xi = parent.x();
+    const T eta = parent.y();
     return (xi >= -1.0 && xi <= 1.0 && eta >= -1.0 && eta <= 1.0);
   }
 
   Index findCageID(T x, T y, Index lastElement = idError) const {
+    if (!std::isfinite(static_cast<double>(x)) ||
+        !std::isfinite(static_cast<double>(y))) {
+      return idError;
+    }
     // Optimized search: start from last known element
     if (lastElement >= 0 && lastElement < m_nElements) {
       if (isPointInElement(x, y, lastElement)) {
@@ -828,7 +834,11 @@ public:
       if (activeEleID != idError) {
         m_MPs[p].eleID = activeEleID;
         m_elements[activeEleID].isActive = true;
-        auto [n1, n2, n3, n4] = getEleConnectivity(activeEleID);
+        const auto conn = getEleConnectivity(activeEleID);
+        const Index n1 = conn[0];
+        const Index n2 = conn[1];
+        const Index n3 = conn[2];
+        const Index n4 = conn[3];
         m_nodes[n1].isActive = m_nodes[n2].isActive = m_nodes[n3].isActive =
             m_nodes[n4].isActive = true;
         m_nodes[n1].eleID = m_nodes[n2].eleID = m_nodes[n3].eleID =
