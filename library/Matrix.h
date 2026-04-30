@@ -84,8 +84,9 @@ public:
   static Matrix diag(const StaticVector<T, nElements> &diagVector) {
     Matrix result{};
     constexpr Index n = std::min(nRows, nCols);
-    static_assert(n == nElements,
-                  "Size of the vector must match the number of diagonal elements");
+    static_assert(
+        n == nElements,
+        "Size of the vector must match the number of diagonal elements");
     for (Index i = 0; i < n; ++i) {
       result(i, i) = diagVector[i];
     }
@@ -619,9 +620,18 @@ public:
     return v;
   }
 
-  StaticVector<Matrix<T, nRows, nCols>, 2> symmetricDecomposition() const {
+  StaticVector<Matrix<T, nRows, nCols>, 2> symDecomp() const {
     return {0.5 * ((*this) + this->transpose()),
             0.5 * ((*this) - this->transpose())};
+  }
+
+  StaticVector<Matrix<T, nRows, nCols>, 2> devDecomp() const {
+    // Spherical part (isotropic)
+    T alpha = T{1} / T{3} * tr(*this);
+    Matrix<T, nRows, nCols> isotropic = alpha * identity();
+    // Deviatoric (isochoric)
+    Matrix<T, nRows, nCols> deviatoric = dev(*this); // or *this - isotropic
+    return {isotropic, deviatoric};
   }
 
   // Real Eigenvalues and their Eigen Vectors for symmetric matrices:: AX = kX
@@ -748,9 +758,9 @@ public:
     return result;
   }
 
-  T firstInvariant() const { return trace(*this); }
+  T firstInvariant() const { return tr(*this); }
   T secondInvariant() const {
-    return T{0.5} * (trace(*this) * trace(*this) - trace((*this) * (*this)));
+    return T{0.5} * (tr(*this) * tr(*this) - tr((*this) * (*this)));
   }
   T thirdInvariant() const { return det(*this); }
 
@@ -938,7 +948,7 @@ Index mostZeroRow(const Matrix<T, nRows, nCols> &m) {
 
 // Calculate trace(A)
 template <typename T, Index nRows, Index nCols>
-T trace(const Matrix<T, nRows, nCols> &m) {
+T tr(const Matrix<T, nRows, nCols> &m) {
   static_assert(nRows == nCols, "Trace applies only to squared matrix");
   T result{};
   for (Index i = 0; i < nRows; ++i)
@@ -946,9 +956,17 @@ T trace(const Matrix<T, nRows, nCols> &m) {
   return result;
 }
 
+// Deviatoric operator
+template <typename T, Index nRows, Index nCols>
+T dev(const Matrix<T, nRows, nCols> &m) {
+  static_assert(nRows == nCols,
+                "Deviatoric operator applies only to squared matrix");
+  return m - T{1} / T{3} * tr(m) * Matrix<T, nRows, nCols>::identity();
+}
+
 // Calculate det(A) using Laplace expansion
-// Though this algorithm is not efficient with huge matrices. Considering
-// implementing LU decomposition instead...
+// Though this algorithm is not efficient with huge matrices.
+// Considering implementing LU decomposition instead...
 
 template <typename T, Index nRows, Index nCols>
 T det(const Matrix<T, nRows, nCols> &m) {
@@ -981,7 +999,8 @@ T det(const Matrix<T, nRows, nCols> &m) {
 
 // Tensor Product function.
 // - StaticVector overload deduces T, R, C.
-// - DynamicVector overload requires explicit T, R, C because sizes are runtime.
+// - DynamicVector overload requires explicit T, R, C because sizes are
+// runtime.
 template <typename T, Index R, Index C>
 Matrix<T, R, C> tensorProduct(const DynamicVector<T> &v1,
                               const DynamicVector<T> &v2) {
@@ -1027,7 +1046,7 @@ Matrix<T, R1 * R2, C1 * C2> tensorProduct(const Matrix<T, R1, C1> &A,
 
 template <typename T, Index R1, Index C1, Index R2, Index C2>
 T tensorContraction(const Matrix<T, R1, C1> &A, const Matrix<T, R2, C2> &B) {
-  return trace(A.transpose() * B);
+  return tr(A.transpose() * B);
 }
 
 template <typename T, Index R, Index C> T tensorNorm(const Matrix<T, R, C> &A) {

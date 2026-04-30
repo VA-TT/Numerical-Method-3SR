@@ -67,13 +67,13 @@ template <typename T> struct Node2D {
   StaticVector<char, 2> vCon{};
   StaticVector<char, 2> aCon{};
   StaticVector<char, 2> pCon{};
-  StaticVector<char, 2> FCon{};
+  StaticVector<char, 2> fCon{};
 
   // Constraint values (so constraints can be set anytime and enforced later)
   StaticVector<T, 2> vConVal{};
   StaticVector<T, 2> aConVal{};
   StaticVector<T, 2> pConVal{};
-  StaticVector<T, 2> FConVal{};
+  StaticVector<T, 2> fConVal{};
   StaticVector<T, 2> bodyF{}, tracF{};
   // Nodal forces
   StaticVector<T, 2> extF{}, intF{}, totF{};

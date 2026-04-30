@@ -758,7 +758,7 @@ public:
     for (Index i{0}; i < m_nNodes; ++i) {
       m_nodes[i].pos = m_nodes[i].posInit;
     }
-    activateNodesAndElements();
+    // activateNodesAndElements();
   } // Excluding MPs
 
   // MP setters
