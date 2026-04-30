@@ -10,7 +10,7 @@ int main() {
   Timer t;
 
   // Input - matching Python MPM code
-  const double L = 25.0;
+  constexpr double L = 25.0;
   const double E = 100.0;
   const double rho = 1.0;
   const double v0 = 0.1;
@@ -40,8 +40,8 @@ int main() {
   };
 
   // Set up MPM1D grid: 14 nodes, 13 elements, 1 MP per element
-  using Beam = MPM1D<double, 14, 1>;
-  Beam beam(E, rho, L, v0, dt, duration, xloc);
+  using Beam = MPM1D<double, L, 14, 1>;
+  Beam beam(rho, E, dt, duration, v0);
   beam.setG(0.0);
   beam.setE(E);
   beam.setComportmentLaw({});
@@ -54,7 +54,7 @@ int main() {
   stress_strain << "# time\tstress\tstrain\n";
 
   // Set non-uniform initial velocity: v(x) = v0 * sin(beta1 * x)
-  for (Index p = 0; p < beam.getNumMps(); ++p) {
+  for (Index p = 0; p < beam.getNumMPs(); ++p) {
     double x_p = beam.getMPposition(p);
     beam.setMPvelocity(p, v0 * std::sin(beta1 * x_p));
   }
@@ -74,10 +74,11 @@ int main() {
   std::cout << "c=" << c << ", beta1=" << beta1 << ", omega1=" << omega1
             << "\n";
   std::cout << "dt=" << dt << ", nsteps=" << beam.getNumSteps() << "\n";
-  std::cout << "Tracking MP[" << tracked_mp << "] at x=" << x0_tracked
-            << " (domain center=" << xloc << ")\n";
-  std::cout << "Initial velocity: v=" << beam.getMPvelocity(tracked_mp)
-            << " (expected: " << v0 * std::sin(beta1 * x0_tracked) << ")\n\n";
+  // std::cout << "Tracking MP[" << tracked_mp << "] at x=" << x0_tracked
+  //           << " (domain center=" << xloc << ")\n";
+  // std::cout << "Initial velocity: v=" << beam.getMPvelocity(tracked_mp)
+  //           << " (expected: " << v0 * std::sin(beta1 * x0_tracked) <<
+  //           ")\n\n";
 
   // VTK output (ParaView): mpm/data1D/particles_000000.vtk and mesh_000000.vtk
   // (relative to where the executable is).

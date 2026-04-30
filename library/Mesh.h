@@ -217,9 +217,11 @@ public:
   // Reset to initial configuration
   void nodeReset() {
     for (Index i{0}; i < m_nNodes; ++i) {
-      m_nodes[i].pos = m_nodes[i].posInit;
+      auto &node = m_nodes[i];
+      node.pos = node.posInit;
+      node.m = node.v = node.a = node.P = T{};
+      node.bodyF = node.tracF = node.extF = node.intF = node.totF = T{};
     }
-    activateNodesAndElements();
   } // Excluding MPs
 
   // MP setters
@@ -756,9 +758,18 @@ public:
   // Reset to initial nodal configuration
   void nodeReset() {
     for (Index i{0}; i < m_nNodes; ++i) {
-      m_nodes[i].pos = m_nodes[i].posInit;
+      auto &node = m_nodes[i];
+      node.pos = node.posInit;
+      node.mass = T{};
+      node.v.resetZero();
+      node.a.resetZero();
+      node.P.resetZero();
+      node.bodyF.resetZero();
+      node.tracF.resetZero();
+      node.extF.resetZero();
+      node.intF.resetZero();
+      node.totF.resetZero();
     }
-    // activateNodesAndElements();
   } // Excluding MPs
 
   // MP setters

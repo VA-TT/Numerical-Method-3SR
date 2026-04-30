@@ -10,7 +10,7 @@ int main() {
   Timer t;
 
   // Input
-  const double L = 1.0;
+  constexpr double L = 1.0;
   const double v0 = 0.1;
   const double E = 4.0 * constants::pi * constants::pi;
   const double rho = 1.0;
@@ -26,8 +26,8 @@ int main() {
   };
 
   // Set up MPM1D grid with 2 nodes and 1 MP
-  using Beam = MPM1D<double, 2, 1>;
-  Beam beam(E, rho, L, dt, duration, v0);
+  using Beam = MPM1D<double, L, 2, 1>;
+  Beam beam(rho, E, dt, duration, v0);
   // (dt, duration, rho, length, xloc, v0, a0) // v0 = a0 = 0 by default
   beam.setG(0.0); // G = -constants::gravity if gravity is considered
   beam.setE(E);   // Module Young

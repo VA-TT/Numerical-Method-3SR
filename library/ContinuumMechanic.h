@@ -9,8 +9,10 @@
 #include <functional>
 #include <stdexcept>
 
-// Continuum kinematics with linear motion map: x(X,t) = K(t) * X.
-// K(t) is provided as a matrix-valued function of Dual time.
+//  Homogeneous transformation.
+//  Continuum kinematics with linear motion map: x(X,t) = K(t) * X.
+//  Transformation gradient therefore is independent with X ->  K(t) is provided
+//  as a matrix-valued function of Dual time.
 template <typename T, Index n> struct MediumCon {
   using MapMatrix = std::function<Matrix<Dual, n, n>(Dual)>;
 
@@ -20,9 +22,9 @@ template <typename T, Index n> struct MediumCon {
   // Current configuration: x
   StaticVector<T, n> current{};
   // Lagrange's description:
-  StaticVector<T, n> velocityL{}, accelerationL;
+  StaticVector<T, n> velL{}, accL{};
   // Euler's description of velocity:
-  StaticVector<T, n> velocityE{}, accelerationE;
+  StaticVector<T, n> velE{}, accE{};
 
   MapMatrix deformMap{};
 
@@ -31,6 +33,7 @@ template <typename T, Index n> struct MediumCon {
 
 private:
   // The deformation gradient's value and its derivatives:
+  // K(t) = phi(t)
   static Matrix<T, n, n> valuePart(const Matrix<Dual, n, n> &mDual) {
     Matrix<T, n, n> out{};
     for (Index i = 0; i < mDual.length(); ++i) {
@@ -39,6 +42,7 @@ private:
     return out;
   }
 
+  // dphi(t)/dt
   static Matrix<T, n, n> derivativePart(const Matrix<Dual, n, n> &mDual) {
     Matrix<T, n, n> out{};
     for (Index i = 0; i < mDual.length(); ++i) {
@@ -47,6 +51,7 @@ private:
     return out;
   }
 
+  // d^2(phi) / (dt)^2
   static Matrix<T, n, n> secondDerivativePart(const Matrix<Dual, n, n> &mDual) {
     Matrix<T, n, n> out{};
     for (Index i = 0; i < mDual.length(); ++i) {
@@ -73,10 +78,7 @@ public:
     deformMap = [inverseMotionEquation](Dual t) -> Matrix<Dual, n, n> {
       const Matrix<Dual, n, n> invDual = inverseMotionEquation(t);
 
-      Matrix<T, n, n> invVal{};
-      for (Index i = 0; i < invDual.length(); ++i) {
-        invVal[i] = static_cast<T>(invDual[i].getVal());
-      }
+      Matrix<T, n, n> invVal{valuePart(invDual)};
 
       const Matrix<T, n, n> kVal = invVal.inverse();
 
@@ -146,23 +148,22 @@ public:
 
   // Euler velocity at any spatial point x:
   // v(x,t) = (dK/dt * K^{-1}) * x.
-  StaticVector<T, n> velocityEulerAt(T t,
-                                     const StaticVector<T, n> &xSpatial) const {
+  StaticVector<T, n> velEulerAt(T t, const StaticVector<T, n> &xSpatial) const {
     const Matrix<T, n, n> L = dKdt(t) * inverseMap(t);
     return L * xSpatial;
   }
 
   // Euler velocity at stored current position.
-  StaticVector<T, n> velocityEuler(T t) const {
+  StaticVector<T, n> velEuler(T t) const {
     if (!hasCurrent)
       throw std::logic_error("Current configuration not set.");
-    return velocityEulerAt(t, current);
+    return velEulerAt(t, current);
   }
 
   // Euler acceleration at any spatial point x:
   // a = (dL/dt + L^2) x, where L = dK/dt * K^{-1}.
-  StaticVector<T, n>
-  accelerationEulerAt(T t, const StaticVector<T, n> &xSpatial) const {
+  StaticVector<T, n> accE {}
+  ulerAt(T t, const StaticVector<T, n> &xSpatial) const {
     const Matrix<T, n, n> L = dKdt(t) * inverseMap(t);
     const Matrix<T, n, n> dLdt = d2Kdt2(t) * inverseMap(t) - L * L;
 
@@ -170,10 +171,12 @@ public:
   }
 
   // Euler acceleration at stored current position.
-  StaticVector<T, n> accelerationEuler(T t) const {
+  StaticVector<T, n> accE {}
+  uler(T t) const {
     if (!hasCurrent)
       throw std::logic_error("Current configuration not set.");
-    return accelerationEulerAt(t, current);
+    return accE {}
+    ulerAt(t, current);
   }
 
   // Deformation gradient F for this linear map is exactly K(t).

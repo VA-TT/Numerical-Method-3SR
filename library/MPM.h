@@ -22,7 +22,7 @@
 #include <system_error>
 #include <vector>
 
-template <typename T, Index nNodes, Index nMPperEle> class MPM1D {
+template <typename T, T length, Index nNodes, Index nMPperEle> class MPM1D {
 private:
   // Physical properties
   T m_E{};      // Module Young
@@ -64,8 +64,8 @@ private:
 
 public:
   // Constructor
-  MPM1D(T E, T rho, T length, T dt, T duration, T v0 = {})
-      : m_E{E}, m_rho{rho}, m_dt{dt}, m_duration{duration},
+  MPM1D(T rho, T E, T dt, T duration, T v0 = {})
+      : m_rho{rho}, m_E{E}, m_dt{dt}, m_duration{duration},
         m_volume{length * 1.0}, m_mass{rho * m_volume}, // 1D
         m_mesh{length, nNodes, nMPperEle},
         m_nodes{std::span(m_mesh.getAllNodes())},
@@ -319,15 +319,7 @@ public:
     }
   }
 
-  void resetMesh() {
-    for (Index i{0}; i < getNumNodes(); ++i) {
-      auto &node = m_nodes[i];
-      node.m = node.v = node.a = node.P = T{};
-      node.bodyF = node.tracF = node.extF = node.intF = node.totF = T{};
-    }
-
-    m_mesh.nodeReset();
-  }
+  void resetMesh() { m_mesh.nodeReset(); }
 
   // void compareAnalytic(T xloc) {
   //   if (!m_analyticSolution) {
@@ -708,10 +700,10 @@ public:
                MP_size},
         m_nodes{std::span(m_mesh.getAllNodes())},
         m_MPs{std::span(m_mesh.getAllMPs())} {
-    const T c_Wave = std::sqrt(m_E / m_rho);
+    const T cWave = std::sqrt(m_E / m_rho);
     // const T dx = gridLength / static_cast<T>(nx - 1);
     // const T dy = gridHeight / static_cast<T>(ny - 1);
-    const T dt_crit = (m_pLength < m_pHeight ? m_pLength : m_pHeight) / c_wave;
+    const T dt_crit = (m_pLength < m_pHeight ? m_pLength : m_pHeight) / cWave;
     assert((dt_crit / T{10}) >= dt &&
            "dt doesn't satisfied CFL condition (too big)");
 
@@ -961,7 +953,7 @@ public:
       const auto &dNdy = grad[1];
       Matrix<T, 2, 2> L = Matrix<T, 2, 2>::zero();
       for (Index q{0}; q < 4; ++q) {
-        const Index nodeID = conn[a];
+        const Index nodeID = conn[q];
         const StaticVector<T, 2> gradNq{dNdx[q], dNdy[q]};
         L += tensorProduct<T, 2, 2>(m_nodes[nodeID].v, gradNq);
       }
@@ -1015,21 +1007,7 @@ public:
     }
   }
 
-  void resetMesh() {
-    for (Index i{0}; i < getNumNodes(); ++i) {
-      auto &node = m_nodes[i];
-      node.mass = T{};
-      node.v.resetZero();
-      node.a.resetZero();
-      node.P.resetZero();
-      node.bodyF.resetZero();
-      node.tracF.resetZero();
-      node.extF.resetZero();
-      node.intF.resetZero();
-      node.totF.resetZero();
-    }
-    m_mesh.nodeReset();
-  }
+  void resetMesh() { m_mesh.nodeReset(); }
 
   void exportResult(const std::string &filename = "mpm2D_results.vtk") {
     const std::string vtkFile =
