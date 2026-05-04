@@ -146,6 +146,51 @@ findAllRoots(const std::vector<double> &coef,
   return roots;
 }
 
+// Generic Newton-Raphson for 2D nonlinear systems:
+template <typename T, typename ResidualFunc, typename JacobianFunc>
+inline StaticVector<T, 2>
+newtonRaphsonSystemEquations(ResidualFunc residual, JacobianFunc jacobian,
+                             const StaticVector<T, 2> &initValue,
+                             int maxIter = 20, T tol = static_cast<T>(1e-10)) {
+  auto absValue = [](const T &v) {
+    if constexpr (requires(const T &a) { a.getVal(); }) {
+      return std::abs(v.getVal());
+    } else {
+      return std::abs(v);
+    }
+  };
+
+  StaticVector<T, 2> X{initValue};
+  const T tiny = static_cast<T>(1e-16);
+
+  for (int iter = 0; iter < maxIter; ++iter) {
+    const StaticVector<T, 2> R = residual(X);
+
+    // Converged in residual norm
+    if (absValue(R.x()) < absValue(tol) && absValue(R.y()) < absValue(tol)) {
+      return X;
+    }
+
+    const Matrix<T, 2, 2> J = jacobian(X);
+    const T detJ = det(J);
+    if (absValue(detJ) <= absValue(tiny)) {
+      break;
+    }
+
+    // Newton step: J * dX = -R
+    const StaticVector<T, 2> rhs{-R.x(), -R.y()};
+    const StaticVector<T, 2> dX = solveLinearSystem(J, rhs);
+    X += dX;
+
+    // Converged in increment norm
+    if (absValue(dX.x()) < absValue(tol) && absValue(dX.y()) < absValue(tol)) {
+      return X;
+    }
+  }
+
+  return X;
+}
+
 StaticVector<double, 2>
 newtonRaphsonSystemEquations(const VectorFunction2D &u,
                              const StaticVector<double, 2> &initValue) {

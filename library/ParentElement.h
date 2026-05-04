@@ -7,6 +7,7 @@
 #include "Vector.h"
 #include "gaussQuadrature.h"
 #include "interpolate.h"
+#include "newtonRaphson.h"
 #include <cassert>
 #include <functional>
 #include <iostream>
@@ -189,37 +190,24 @@ template <typename T> struct ElementQ4 {
       }
     };
 
-    // General case: Newton-Raphson iteration for non-rectangular elements
-    T xi = 0.0, eta = 0.0; // Initial guess: center
-    for (int iter = 0; iter < maxIter; ++iter) {
-      // Compute residual: R = [x - x(xi,eta), y - y(xi,eta)]
-      auto curr = physicCoord(xi, eta);
-      T x_curr = curr.x();
-      T y_curr = curr.y();
-      T Rx = x - x_curr;
-      T Ry = y - y_curr;
+    auto residual = [&](const StaticVector<T, 2> &X) {
+      const auto curr = physicCoord(X.x(), X.y());
+      return StaticVector<T, 2>{curr.x() - x, curr.y() - y};
+    };
 
-      // Check convergence
-      if (absValue(Rx) < absValue(tol) && absValue(Ry) < absValue(tol)) {
-        return {xi, eta};
-      }
+    auto jacobianAt = [&](const StaticVector<T, 2> &X) {
+      return jacobian(X.x(), X.y());
+    };
 
-      // Compute Jacobian
-      Matrix<T, 2, 2> J = jacobian(xi, eta);
+    const StaticVector<T, 2> init{T{0.0}, T{0.0}};
+    const StaticVector<T, 2> parent = newtonRaphsonSystemEquations<T>(
+        residual, jacobianAt, init, maxIter, tol);
 
-      // Solve J * delta = R for delta = [dxi, deta]
-      T detJ = det(J);
-      T dxi = (J(1, 1) * Rx - J(0, 1) * Ry) / detJ;
-      T deta = (-J(1, 0) * Rx + J(0, 0) * Ry) / detJ;
-
-      // Update
-      xi += dxi;
-      eta += deta;
+    const StaticVector<T, 2> R = residual(parent);
+    if (absValue(R.x()) >= absValue(tol) || absValue(R.y()) >= absValue(tol)) {
+      std::cerr << "Warning: parentCoord2D did not converge!" << '\n';
     }
-
-    // If not converged, throw warning or return current estimate
-    std::cerr << "Warning: parentCoord2D did not converge!" << '\n';
-    return {xi, eta};
+    return parent;
   }
 
   // 2D Gauss quadrature integration on reference element [-1,1]x[-1,1]

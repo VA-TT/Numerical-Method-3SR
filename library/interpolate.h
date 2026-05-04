@@ -211,6 +211,66 @@ inline auto cubicBSpline1D = [](auto x, auto h) {
     return decltype(x){0}; // = T{0}
 };
 
+// Modified B-Splines 3rd order polynomial (k=3 and C^2 continuous)
+//  => 4 types of shape functions
+// Supports of node I spans 4 elements round it: -2 <= r <= 2 so that S_I != 0
+// r = (x_p _ x_I) / h
+
+// Type 1: xI = xB (node I located at the boundary)
+template <typename T> inline T MBSpline1(T r) {
+  if (T{-2} <= r && r <= T{-1})
+    return T{1} / T{6} * r * r * r + r * r + T{2} * r + T{4} / T{3};
+  else if (T{-1} <= r && r <= T{0})
+    return T{-1} / T{6} * r * r * r + r + T{1};
+  else if (T{0} <= r && r <= T{1})
+    return T{1} / T{6} * r * r * r - r + T{1};
+  else if (T{1} <= r && r <= T{2})
+    return T{-1} / T{6} * r * r * r + r * r - T{2} * r + T{4} / T{3};
+  else
+    return T{0};
+}
+
+// Type 2: xI = xB + h (node I located on the right side of the closest boundary
+// + 1 cell away)
+template <typename T> inline T MBSpline2(T r) {
+  if (T{-1} <= r && r <= T{0})
+    return (T{-1} / T{3}) * r * r * r - r * r + (T{2} / T{3});
+  else if (T{0} <= r && r <= T{1})
+    return (T{1} / T{2}) * r * r * r - r * r + (T{2} / T{3});
+  else if (T{1} <= r && r <= T{2})
+    return (T{-1} / T{6}) * r * r * r + r * r - T{2} * r + (T{4} / T{3});
+  else
+    return T{0};
+}
+
+// Type 3: xI >= xB + 2h (node I located at atleast 2 cells away from any
+// boundary)
+template <typename T> inline T MBSpline3(T r) {
+  if (T{-2} <= r && r <= T{-1})
+    return T{1} / T{6} * r * r * r + r * r + T{2} * r + T{4} / T{3};
+  else if (T{-1} <= r && r <= T{0})
+    return (T{-1} / T{2}) * r * r * r - r * r + (T{2} / T{3});
+  else if (T{0} <= r && r <= T{1})
+    return (T{1} / T{2}) * r * r * r - r * r + (T{2} / T{3});
+  else if (T{1} <= r && r <= T{2})
+    return T{-1} / T{6} * r * r * r + r * r - T{2} * r + T{4} / T{3};
+  else
+    return T{0};
+}
+
+// Type 4: xI = xB - h (node I located on the left side of the closest
+// boundary + 1 cell away)
+template <typename T> inline T MBSpline4(T r) {
+  if (T{-2} <= r && r <= T{-1})
+    return T{1} / T{6} * r * r * r + r * r + T{2} * r + T{4} / T{3};
+  else if (T{-1} <= r && r <= T{0})
+    return T{-1} / T{2} * r * r * r - r * r + T{2} / T{3};
+  else if (T{0} <= r && r <= T{1})
+    return T{-1} / T{3} * r * r * r - r * r + T{2} / T{3};
+  else
+    return T{0};
+}
+
 #endif
 
 #if 0

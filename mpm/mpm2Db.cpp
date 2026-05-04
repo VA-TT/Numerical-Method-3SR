@@ -34,8 +34,8 @@ int main() {
   static constexpr double MP_size = dx / static_cast<double>(ppc);
 
   // MP domain
-  const std::pair<double, double> minCorner{0.0, 0.0};
-  const std::pair<double, double> maxCorner{0.3, 0.3};
+  const StaticVector<double, 2> minCorner{0.0, 0.0};
+  const StaticVector<double, 2> maxCorner{0.3, 0.3};
 
   // Computational parameters (CFL-ish)
   const double c_wave = std::sqrt(E / rho);
@@ -46,30 +46,30 @@ int main() {
 
   // Set up MPM2D grid: 14 nodes, 13 elements, 2 MPs per element
   using collapse2D = MPM2D<double, L, H, nx, ny, MP_size>;
-  collapse2D collumn(E, nu, rho, mu, phi, cohesion, K0, minCorner, maxCorner,
-                     dt, duration, v0);
+  collapse2D collumn(rho, E, nu, phi, cohesion, mu, minCorner, maxCorner, dt,
+                     duration, v0);
   collumn.setG(-9.81); // G=-9.81
   collumn.setE(E);
   collumn.setComportmentLaw(std::function<double(double)>{});
 
   // Output files
-  std::ofstream hist("mpm2Da_history.txt");
+  std::ofstream hist("mpm2Db_history.txt");
   hist << "# time\tx\ty\tstress_xx\tstrain_xx\n";
 
-  // Simple boundary condition: clamp bottom nodes
-  for (const Index nodeID : collumn.getMesh().bottomNodes()) {
+  // Simple boundary condition: clamp bottom active nodes
+  for (const Index nodeID : collumn.getMesh().bottomActiveNodes()) {
     collumn.setNodalVeloConstraint(nodeID, 0.0);
   }
 
   // Track a representative particle
   const Index tracked_mp =
-      collumn.getNumMps() > 0 ? collumn.getNumMps() / 2 : 0;
+      collumn.getNumMPs() > 0 ? collumn.getNumMPs() / 2 : 0;
 
-  std::cout << "=== C++ MPM2D (mpm2Da) ===\n";
+  std::cout << "=== C++ MPM2D (mpm2Db) ===\n";
   std::cout << "L=" << L << ", H=" << H << ", E=" << E << ", rho=" << rho
             << ", mu=" << mu << "\n";
   std::cout << "dt=" << dt << ", nsteps=" << collumn.getNumSteps() << "\n";
-  std::cout << "Total particles: " << collumn.getNumMps() << "\n";
+  std::cout << "Total particles: " << collumn.getNumMPs() << "\n";
   std::cout << "Tracking MP[" << tracked_mp << "]\n\n";
 
   // VTK output (ParaView): mpm/data2D/particles_000000.vtk and mesh_000000.vtk
@@ -79,9 +79,9 @@ int main() {
 
   // Initial state (t=0)
   {
-    const auto mp = collumn.getMesh().getMPpos(tracked_mp);
-    hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << mp.first
-         << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
+    const auto mp = collumn.getMesh().getMP(tracked_mp).pos;
+    hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << mp.x() << '\t'
+         << mp.y() << '\t' << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';
 
     collumn.exportVTKFrame(vtkDir, 0);
@@ -103,21 +103,21 @@ int main() {
     }
 
     // Record results
-    const auto mp = collumn.getMesh().getMPpos(tracked_mp);
-    hist << std::fixed << std::setprecision(10) << time << '\t' << mp.first
-         << '\t' << mp.second << '\t' << collumn.getMPstress(tracked_mp) << '\t'
+    const auto mp = collumn.getMesh().getMP(tracked_mp).pos;
+    hist << std::fixed << std::setprecision(10) << time << '\t' << mp.x()
+         << '\t' << mp.y() << '\t' << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';
 
     if (step < 5 || step % 1000 == 0 || step == collumn.getNumSteps() - 1) {
       std::cout << std::fixed << std::setprecision(6);
-      std::cout << "t=" << time << " | MP[" << tracked_mp << "]: x=" << mp.first
-                << " y=" << mp.second
+      std::cout << "t=" << time << " | MP[" << tracked_mp << "]: x=" << mp.x()
+                << " y=" << mp.y()
                 << " | stress_xx=" << collumn.getMPstress(tracked_mp) << '\n';
     }
   }
 
   hist.close();
-  std::cout << "\n✓ Results saved to: mpm2Da_history.txt\n";
+  std::cout << "\n✓ Results saved to: mpm2Db_history.txt\n";
   std::cout << "✓ Computation time: " << timer.elapsed() << " s\n";
   return 0;
 }
