@@ -10,6 +10,7 @@
 // Note: In this method, we should use (n) Gauss points to approximate a
 // polynomials with degree (2n - 1),
 
+// Gauss points and weighting in [-1,1] parent domain
 namespace gaussQuadrature {
 constexpr std::array<int, 4> pointsNumber = {1, 2, 3, 4};
 

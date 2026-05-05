@@ -319,7 +319,14 @@ public:
     }
   }
 
-  void resetMesh() { m_mesh.nodeReset(); }
+  void resetMesh() {
+    for (Index i{0}; i < nNodes; ++i) {
+      auto &node = m_nodes[i];
+      node.pos = node.posInit;
+      node.m = node.v = node.a = node.P = T{};
+      node.bodyF = node.tracF = node.extF = node.intF = node.totF = T{};
+    }
+  } // Excluding MPs
 
   // void compareAnalytic(T xloc) {
   //   if (!m_analyticSolution) {
@@ -1007,7 +1014,21 @@ public:
     }
   }
 
-  void resetMesh() { m_mesh.nodeReset(); }
+  void resetMesh() {
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      auto &node = m_nodes[i];
+      node.pos = node.posInit;
+      node.mass = T{};
+      node.v.resetZero();
+      node.a.resetZero();
+      node.P.resetZero();
+      node.bodyF.resetZero();
+      node.tracF.resetZero();
+      node.extF.resetZero();
+      node.intF.resetZero();
+      node.totF.resetZero();
+    }
+  }
 
   void exportResult(const std::string &filename = "mpm2D_results.vtk") {
     const std::string vtkFile =

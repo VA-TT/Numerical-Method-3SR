@@ -214,15 +214,6 @@ public:
     activateNodesAndElements();
   }
 
-  // Reset to initial configuration
-  void nodeReset() {
-    for (Index i{0}; i < m_nNodes; ++i) {
-      auto &node = m_nodes[i];
-      node.pos = node.posInit;
-      node.m = node.v = node.a = node.P = T{};
-      node.bodyF = node.tracF = node.extF = node.intF = node.totF = T{};
-    }
-  } // Excluding MPs
 
   // MP setters
   void setMPCoord(Index p, T x) {
@@ -605,7 +596,7 @@ public:
 
   DynamicVector<Index> getAllMPsInElement(Index elemID) const {
     assert(elemID >= 0 && elemID < m_nElements && "Invalid element ID");
-    DynamicVector<Index> ids;
+    DynamicVector<Index> ids{};
     for (Index p{0}; p < m_nMPs; ++p) {
       if (m_MPs[p].eleID == elemID) {
         ids.push_back(p);
@@ -755,23 +746,6 @@ public:
     activateNodesAndElements();
   }
 
-  // Reset to initial nodal configuration
-  void nodeReset() {
-    for (Index i{0}; i < m_nNodes; ++i) {
-      auto &node = m_nodes[i];
-      node.pos = node.posInit;
-      node.mass = T{};
-      node.v.resetZero();
-      node.a.resetZero();
-      node.P.resetZero();
-      node.bodyF.resetZero();
-      node.tracF.resetZero();
-      node.extF.resetZero();
-      node.intF.resetZero();
-      node.totF.resetZero();
-    }
-  } // Excluding MPs
-
   // MP setters
   void setMPCoord(Index p, T x, T y) {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
@@ -811,11 +785,40 @@ public:
     return (xi >= -1.0 && xi <= 1.0 && eta >= -1.0 && eta <= 1.0);
   }
 
+  // Direct grid-based formula for regular rectangular mesh: O(1) instead of
+  // O(n) For uniform mesh: e = floor(xp/dx) + (nx-1) * floor(yp/dy) ;
+  // Reference: Material Point Method, NGUYEN V.P, section 6.2: Background grid
+  Index findCageID_direct(T x, T y) const {
+    // Calculate grid spacing
+    const T dx = m_length / static_cast<T>(m_nx - 1);
+    const T dy = m_height / static_cast<T>(m_ny - 1);
+
+    // Compute element indices using direct formula
+    Index i = static_cast<Index>(
+        std::floor(static_cast<double>(x) / static_cast<double>(dx)));
+    Index j = static_cast<Index>(
+        std::floor(static_cast<double>(y) / static_cast<double>(dy)));
+
+    Index eleID = i + j * (m_nx - 1);
+
+    if (eleID >= 0 && eleID < m_nElements) {
+      return eleID;
+    }
+    return idError;
+  }
+
   Index findCageID(T x, T y, Index lastElement = idError) const {
     if (!std::isfinite(static_cast<double>(x)) ||
         !std::isfinite(static_cast<double>(y))) {
       return idError;
     }
+    // Try direct formula first (O(1))
+    Index directResult = findCageID_direct(x, y);
+    if (directResult != idError) {
+      return directResult;
+    }
+
+    // Fallback: search (for edge cases or deformed elements)
     // Optimized search: start from last known element
     if (lastElement >= 0 && lastElement < m_nElements) {
       if (isPointInElement(x, y, lastElement)) {
