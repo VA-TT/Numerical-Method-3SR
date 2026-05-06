@@ -438,8 +438,7 @@ public:
     Matrix<T, nRows, nCols> inverseMatrix{};
     Matrix<T, nRows, nCols> testIdentity{};
     Matrix<T, nRows, (nCols + nCols)> augmentedMatrix{
-        concatenateMatrixHorizontal(*this,
-                                    Matrix<T, nRows, nCols>::identity())};
+        concatHorizontal(*this, Matrix<T, nRows, nCols>::identity())};
     // check det first
     if (approximatelyEqualAbsRel(det(*this), T{0})) {
       throw std::invalid_argument("Determinant of Matrix is 0, hence matrix is "
@@ -775,7 +774,7 @@ public:
 
 // Householder reflection:   A  = Q * R
 template <typename T, Index nRows, Index nCols>
-std::pair<Matrix<T, nRows, nCols>, Matrix<T, nRows, nCols>>
+StaticVector<Matrix<T, nRows, nCols>, 2>
 QRdecomposition(const Matrix<T, nRows, nCols> &A) {
   assert(A.isSquare() && "Only implemented for square matrices");
   Matrix<T, nRows, nCols> R{A};
@@ -810,9 +809,8 @@ QRdecomposition(const Matrix<T, nRows, nCols> &A) {
 // Concatenate 2 matrices horizontally (into augemented matrix)
 //  (A) + (B) = ( A B )
 template <typename T, Index R1, Index C1, Index R2, Index C2>
-Matrix<T, R1, (C1 + C2)>
-concatenateMatrixHorizontal(const Matrix<T, R1, C1> &A,
-                            const Matrix<T, R2, C2> &B) {
+Matrix<T, R1, (C1 + C2)> concatHorizontal(const Matrix<T, R1, C1> &A,
+                                          const Matrix<T, R2, C2> &B) {
   assert(R1 == R2 && "The number of rows of both matrices must match to create "
                      "an concatenated matrix.\n");
   Matrix<T, R1, (C1 + C2)> result{};
@@ -835,8 +833,8 @@ concatenateMatrixHorizontal(const Matrix<T, R1, C1> &A,
 //   |A| & |B| -> | A |
 //                | B |
 template <typename T, Index R1, Index C1, Index R2, Index C2>
-Matrix<T, (R1 + R2), C1> concatenateMatrixVertical(const Matrix<T, R1, C1> &A,
-                                                   const Matrix<T, R2, C2> &B) {
+Matrix<T, (R1 + R2), C1> concatVertical(const Matrix<T, R1, C1> &A,
+                                        const Matrix<T, R2, C2> &B) {
   assert(C1 == C2 && "The number of columns of both matrices must match for "
                      "vertical concatenation.");
   Matrix<T, (R1 + R2), C1> result{};
@@ -1062,6 +1060,29 @@ Matrix<T, nRows, nCols> hadamardProduct(const Matrix<T, nRows, nCols> &A,
     result[i] = A[i] * B[i];
   }
   return result;
+}
+// 2D: y = c + mx
+template <typename T, Index nElements>
+StaticVector<T, 2> leastSquare(const StaticVector<T, nElements> &dataX,
+                               const StaticVector<T, nElements> &dataY) {
+  Matrix<T, nElements, 2> X = concatHorizontal(Matrix<T, nElements, 1>::ones(),
+                                               Matrix<T, nElements, 1>(dataX));
+  StaticVector<T, 2> betaHat = (X.transpose() * X).inverse() * X.transpose() *
+                               Matrix<T, nElements, 1>(dataY);
+  return betaHat;
+}
+// 3D: z = a + bx + cy
+template <typename T, Index nElements>
+StaticVector<T, 3> leastSquare(const StaticVector<T, nElements> &dataX,
+                               const StaticVector<T, nElements> &dataY,
+                               const StaticVector<T, nElements> &dataZ) {
+  Matrix<T, nElements, 3> X =
+      concatHorizontal(Matrix<T, nElements, 1>::ones(),
+                       concatHorizontal(Matrix<T, nElements, 1>(dataX),
+                                        Matrix<T, nElements, 1>(dataY)));
+  StaticVector<T, 3> betaHat = (X.transpose() * X).inverse() * X.transpose() *
+                               Matrix<T, nElements, 1>(dataZ);
+  return betaHat;
 }
 
 #endif
