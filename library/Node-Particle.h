@@ -1,5 +1,5 @@
-#ifndef MY_PARTICLE_AND_NODE_H
-#define MY_PARTICLE_AND_NODE_H
+#ifndef MY_NODE_AND_PARTICLE_STRUCT_H
+#define MY_NODE_AND_PARTICLE_STRUCT_H
 
 #include "Vector.h"
 
@@ -10,7 +10,16 @@ enum class MPContact : unsigned char {
   Left = 1u << 0,   // 0001
   Right = 1u << 1,  // 0010
   Bottom = 1u << 2, // 0100
-  Top = 1u << 3     // 1000
+  Top = 1u << 3,    // 1000
+  typeCount,
+};
+
+enum class ShapeType : unsigned char {
+  boundary,
+  nearLeft,
+  nearRight,
+  middle,
+  typeCount,
 };
 
 inline MPContact operator|(MPContact a, MPContact b) {
@@ -54,8 +63,10 @@ template <typename T> struct Node1D {
   // Nodal external/internal forces
   T extF{}, intF{}, totF{};
 
-  bool isActive{false};
-  Index eleID{idError};
+  bool isActive{false}; // The node contributes in contains particles
+  Index eleID{idError}; // Element which contains the particle
+  // Declaring type of Spline function for node
+  ShapeType shapeType{ShapeType::middle};
 };
 
 template <typename T> struct Node2D {
@@ -80,6 +91,8 @@ template <typename T> struct Node2D {
 
   bool isActive{false};
   Index eleID{idError};
+  // Shape function according to X & Y axis
+  StaticVector<ShapeType, 2> shapeType{ShapeType::middle, ShapeType::middle};
 };
 
 template <typename T> struct Particle1D {

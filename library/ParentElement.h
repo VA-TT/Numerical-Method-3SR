@@ -3,7 +3,7 @@
 
 #include "DualDifferentiation.h"
 #include "Matrix.h"
-#include "Particle-Node.h"
+#include "Node-Particle.h"
 #include "Vector.h"
 #include "gaussQuadrature.h"
 #include "interpolate.h"
@@ -49,11 +49,13 @@ template <typename T> struct ElementL2 {
   T midPoint() const { return (x2() + x1()) / T{2}; }
 
   // Shape function derivatives w.r.t x
-  T dN1_dx() const { return -T{0.5} / jacobian(); }
-  T dN2_dx() const { return T{0.5} / jacobian(); }
-
   T N1_ref(T xi) const { return (T{1} - xi) / T{2}; }
   T N2_ref(T xi) const { return (T{1} + xi) / T{2}; }
+  StaticVector<T, 2> N_L2(T xi) const { return {N1_ref(xi), N2_ref(xi)}; }
+
+  T dN1_dx() const { return -T{0.5} / jacobian(); }
+  T dN2_dx() const { return T{0.5} / jacobian(); }
+  StaticVector<T, 2> gradientN() const { return {dN1_dx(), dN2_dx()}; }
 
   // Function Phi(xi) used to map and its inverse function
   //   Discretizing x = phi(xi) = x1 N1(xi) + x2 N2(xi) = J*xi + M = xi *
@@ -62,7 +64,6 @@ template <typename T> struct ElementL2 {
   T parentCoord(T x) const { return (x - midPoint()) / jacobian(); }
 
   // Interpolation: int^(x2)_(x1) f(x)dx = int^1_(-1) f(phi(xi)) J d(xi)
-
   template <typename Func>
   T integrationGauss1D_ref(Func f_xi, int n = 2) const {
     const double *xi_ptr = nullptr;

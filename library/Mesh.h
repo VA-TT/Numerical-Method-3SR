@@ -1,10 +1,11 @@
 #ifndef DISCRETIZING_RECTANGULAR_MESH_H
 #define DISCRETIZING_RECTANGULAR_MESH_H
 
+#include "Node-Particle.h"
 #include "ParentElement.h"
-#include "Particle-Node.h"
 #include "Vector.h"
 #include "comparison.h"
+#include "gaussQuadrature.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -49,6 +50,8 @@ public:
     for (Index i{0}; i < nNodes; ++i) {
       m_nodes[i].pos = lx * i;             // Coordinates of nodes
       m_nodes[i].posInit = m_nodes[i].pos; // Saving intial configuration
+      m_nodes[i].shapeType =
+          shapeType(i); // Identify node's type for shape function
     }
 
     // Node index of each element
@@ -57,18 +60,34 @@ public:
     }
 
     // Generate Material Points (MPs) if needed
-    if (m_nMPperEle > 0) {
+
+    if (nMPperEle > 0) {
       m_MPs.resize(m_nMPs);
       Index mpId{0};
-      for (Index e{0}; e < m_nElements; ++e) {
-        T x_start = m_elements[e].x1();
-        T le = getLengthEle(e);
-        for (Index p{0}; p < nMPperEle; ++p) {
-          m_MPs[mpId].pos = x_start + (p + 1) * le / (nMPperEle + 1);
-          ++mpId;
+      // Method 1: Generate MP at Gauss points position if nMPperEle < 4
+      if (nMPperEle <= 4) {
+        const double *xi_ptr = nullptr;
+        const double *w_ptr = nullptr;
+        gaussQuadrature::valueXiW(nMPperEle, xi_ptr, w_ptr);
+        for (Index e{0}; e < m_nElements; ++e) {
+          for (Index p{0}; p < nMPperEle; ++p) {
+            m_MPs[mpId].pos = m_elements[e].physicCoord(xi_ptr[p]);
+            ++mpId;
+          }
+        }
+      } else {
+        // Else fall back to Method 2: Equally divided the elements
+        for (Index e{0}; e < m_nElements; ++e) {
+          T x_start = m_elements[e].x1();
+          T le = getLengthEle(e);
+          for (Index p{0}; p < nMPperEle; ++p) {
+            m_MPs[mpId].pos = x_start + (p + 1) * le / (nMPperEle + 1);
+            ++mpId;
+          }
         }
       }
     }
+
     // Initialize cached element IDs for MPs
     activateNodesAndElements();
   }
@@ -214,7 +233,6 @@ public:
     activateNodesAndElements();
   }
 
-
   // MP setters
   void setMPCoord(Index p, T x) {
     assert(p >= 0 && p < m_nMPs && "Invalid MP index");
@@ -236,6 +254,17 @@ public:
       m_MPs[p].pos = mp_pos[p];
     }
     activateNodesAndElements();
+  }
+
+  ShapeType shapeType(Index i) const {
+    if (i == 0 || i == m_nNodes - 1)
+      return ShapeType::boundary;
+    else if (i == 1)
+      return ShapeType::nearLeft;
+    else if (i == m_nNodes - 2)
+      return ShapeType::nearRight;
+    else
+      return ShapeType::middle;
   }
 
   // Print mesh info
@@ -309,20 +338,56 @@ private:
     }
   }
 
-  void generateMPGridPerElement(Index nMPperEleSide) {
-    if (nMPperEleSide <= 0) {
-      return;
-    }
-
+  // Method 1: Generate MPs at Gauss quadrature points (optimized for FEM/MPM)
+  void generateMPGridPerElement_Gauss(Index nMPperEleSide) {
     m_nMPperEle = nMPperEleSide * nMPperEleSide;
     m_nMPs = m_nElements * m_nMPperEle;
+    m_MPs.resize(m_nMPs);
+
+    // Get Gauss points in [-1,1]
+    const double *xi_ptr = nullptr;
+    const double *w_ptr = nullptr;
+    gaussQuadrature::valueXiW(nMPperEleSide, xi_ptr, w_ptr);
+
+    // Compute uniform support radius (consistent with EqualSpaced method)
+    // Force dx = dy = radius for all MPs
+    const T radius = m_length / static_cast<T>((m_nx - 1) * nMPperEleSide);
+    const T radius2 = m_height / static_cast<T>((m_ny - 1) * nMPperEleSide);
+    assert(approximatelyEqualAbsRel(radius, radius2) &&
+           "Only implemented for square/disk material point!");
+
+    Index mpID{0};
+    for (Index ey{0}; ey < m_ny - 1; ++ey) {
+      for (Index ex{0}; ex < m_nx - 1; ++ex) {
+        const Index elemID = ex + ey * (m_nx - 1);
+        const ElementQ4<T> &elem = m_elements[elemID];
+
+        // Tensor product: place MPs at (xi_i, eta_j) for all i,j
+        for (int j = 0; j < nMPperEleSide; ++j) {
+          for (int i = 0; i < nMPperEleSide; ++i) {
+            T xi = static_cast<T>(xi_ptr[i]);
+            T eta = static_cast<T>(xi_ptr[j]);
+            m_MPs[mpID].pos = elem.physicCoord(xi, eta);
+            m_MPs[mpID].R = radius;
+            m_MPs[mpID].eleID = elemID;
+            ++mpID;
+          }
+        }
+      }
+    }
+  }
+
+  // Method 2: Generate MPs equally spaced (fallback for > 4 points)
+  void generateMPGridPerElement_EqualSpaced(Index nMPperEleSide) {
+    m_nMPperEle = nMPperEleSide * nMPperEleSide;
+    m_nMPs = m_nElements * m_nMPperEle;
+    m_MPs.resize(m_nMPs);
 
     // Force dx = dy = radius for all MPs
     const T radius = m_length / static_cast<T>((m_nx - 1) * nMPperEleSide);
     const T radius2 = m_height / static_cast<T>((m_ny - 1) * nMPperEleSide);
     assert(approximatelyEqualAbsRel(radius, radius2) &&
            "Only implemented for square/disk material point!");
-    m_MPs.resize(m_nMPs);
 
     // Element ordering follows natural ordering: i + j*(nx-1)
     Index mpID{0};
@@ -345,6 +410,24 @@ private:
           }
         }
       }
+    }
+  }
+
+  // Main dispatcher: auto-select between Gauss (optimized) and EqualSpaced
+  // (fallback)
+  void generateMPGridPerElement(Index nMPperEleSide) {
+    if (nMPperEleSide <= 0) {
+      return;
+    }
+    // Use Gauss points if 1-4 MPs per side, else equally spaced
+    if (nMPperEleSide <= 4) {
+      if (nMPperEleSide <= 2) {
+        std::cout << "WARNING: Should have at least 2 particles in each cell "
+                     "in case of MPM!\n";
+      }
+      generateMPGridPerElement_Gauss(nMPperEleSide);
+    } else {
+      generateMPGridPerElement_EqualSpaced(nMPperEleSide);
     }
   }
 
@@ -448,6 +531,8 @@ public:
         m_nodes[nodeID].pos.x() = dx * i;
         m_nodes[nodeID].pos.y() = dy * j;
         m_nodes[nodeID].posInit = m_nodes[nodeID].pos;
+        m_nodes[nodeID].shapeType.x() = shapeType(i, m_nx);
+        m_nodes[nodeID].shapeType.y() = shapeType(j, m_ny);
       }
     }
 
@@ -870,6 +955,16 @@ public:
     std::cout << "Number of nodes: " << m_nNodes << " (" << m_nx << " x "
               << m_ny << ")\n";
     std::cout << "Number of elements: " << m_nElements << '\n';
+  }
+
+  ShapeType shapeType(Index i, Index n) const {
+    if (i == 0 || i == n - 1)
+      return ShapeType::boundary;
+    if (i == 1)
+      return ShapeType::nearLeft;
+    if (i == n - 2)
+      return ShapeType::nearRight;
+    return ShapeType::middle;
   }
 };
 #endif

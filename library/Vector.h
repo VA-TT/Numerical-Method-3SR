@@ -9,6 +9,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <concepts>
 #include <initializer_list>
 #include <iomanip>
 #include <iostream>
@@ -623,6 +624,43 @@ public:
     for (Index i = 0; i < n; ++i)
       result(0, i) = (*this)[i];
     return result;
+  }
+
+  // Helper to extract value/derivative parts when scalar T behaves like Dual
+  template <typename U = double>
+  StaticVector<U, n> valuePart() const
+    requires requires(const T &x) {
+      { x.getVal() } -> std::convertible_to<U>;
+    }
+  {
+    StaticVector<U, n> out{};
+    for (Index i = 0; i < n; ++i)
+      out[i] = static_cast<U>((*this)[i].getVal());
+    return out;
+  }
+
+  template <typename U = double>
+  StaticVector<U, n> derivativePart() const
+    requires requires(const T &x) {
+      { x.getDer() } -> std::convertible_to<U>;
+    }
+  {
+    StaticVector<U, n> out{};
+    for (Index i = 0; i < n; ++i)
+      out[i] = static_cast<U>((*this)[i].getDer());
+    return out;
+  }
+
+  template <typename U = double>
+  StaticVector<U, n> secondDerivativePart() const
+    requires requires(const T &x) {
+      { x.getDer2() } -> std::convertible_to<U>;
+    }
+  {
+    StaticVector<U, n> out{};
+    for (Index i = 0; i < n; ++i)
+      out[i] = static_cast<U>((*this)[i].getDer2());
+    return out;
   }
 };
 

@@ -217,7 +217,7 @@ inline auto cubicBSpline1D = [](auto x, auto h) {
 // r = (x_p _ x_I) / h
 
 // Type 1: xI = xB (node I located at the boundary)
-template <typename T> inline T MBSpline1(T r) {
+template <typename T> inline T cubicBSpline1(T r) {
   if (T{-2} <= r && r <= T{-1})
     return T{1} / T{6} * r * r * r + r * r + T{2} * r + T{4} / T{3};
   else if (T{-1} <= r && r <= T{0})
@@ -232,7 +232,7 @@ template <typename T> inline T MBSpline1(T r) {
 
 // Type 2: xI = xB + h (node I located on the right side of the closest boundary
 // + 1 cell away)
-template <typename T> inline T MBSpline2(T r) {
+template <typename T> inline T cubicBSpline2(T r) {
   if (T{-1} <= r && r <= T{0})
     return (T{-1} / T{3}) * r * r * r - r * r + (T{2} / T{3});
   else if (T{0} <= r && r <= T{1})
@@ -245,7 +245,7 @@ template <typename T> inline T MBSpline2(T r) {
 
 // Type 3: xI >= xB + 2h (node I located at atleast 2 cells away from any
 // boundary)
-template <typename T> inline T MBSpline3(T r) {
+template <typename T> inline T cubicBSpline3(T r) {
   if (T{-2} <= r && r <= T{-1})
     return T{1} / T{6} * r * r * r + r * r + T{2} * r + T{4} / T{3};
   else if (T{-1} <= r && r <= T{0})
@@ -260,7 +260,7 @@ template <typename T> inline T MBSpline3(T r) {
 
 // Type 4: xI = xB - h (node I located on the left side of the closest
 // boundary + 1 cell away)
-template <typename T> inline T MBSpline4(T r) {
+template <typename T> inline T cubicBSpline4(T r) {
   if (T{-2} <= r && r <= T{-1})
     return T{1} / T{6} * r * r * r + r * r + T{2} * r + T{4} / T{3};
   else if (T{-1} <= r && r <= T{0})

@@ -4,7 +4,13 @@
 #include "interpolate.h"
 #include <cmath>
 
-enum class ShapeFunctionType { Hat, BSpline, typeCount };
+enum class BasisFaminly {
+  hat,
+  quadBSpline,
+  cubicBSpline,
+  bernstein,
+  typeCount,
+};
 
 // ============================================================================
 // HatShapeFunction1D<T>: Linear basis function (piecewise linear)
@@ -93,5 +99,9 @@ template <typename T> struct BSplineShapeFunction1D {
     }
   }
 };
+
+
+
+
 
 #endif

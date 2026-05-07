@@ -9,119 +9,77 @@
 #include <functional>
 #include <stdexcept>
 
-//  Homogeneous transformation.
-//  Continuum kinematics with linear motion map: x(X,t) = K(t) * X.
-//  Transformation gradient therefore is independent with X ->  K(t) is provided
-//  as a matrix-valued function of Dual time.
 template <typename T, Index n> struct MediumCon {
+  // linear-Homogeneous transformation :  K(t) such that x(X, t) = K(t) * X.
+  // Time t takes type Dual as K(t) will need to be derivated by time
   using MapMatrix = std::function<Matrix<Dual, n, n>(Dual)>;
-  using MotionMap =
+  // General motion equation - non linear: x(X,t) = Phi(X,t)
+  using MotionEquation =
       std::function<StaticVector<Dual, n>(const StaticVector<Dual, n> &, Dual)>;
 
   // Member variables
   // Reference configuration: X
   StaticVector<T, n> ref{};
   // Current configuration: x
-  StaticVector<T, n> current{};
+  StaticVector<T, n> cur{};
   // Lagrange's description:
   StaticVector<T, n> velL{}, accL{};
   // Euler's description of velocity:
   StaticVector<T, n> velE{}, accE{};
 
-  MapMatrix deformMap{};
-  MotionMap motionMap{};
+  MapMatrix linearMap{};      // homogeneous part
+  MotionEquation deformMap{}; // general part
 
   bool hasRef{false};
-  bool hasCurrent{false};
+  bool hasCur{false};
 
 private:
-  // The deformation gradient's value and its derivatives:
-  // K(t) = phi(t)
-  static Matrix<T, n, n> valuePart(const Matrix<Dual, n, n> &mDual) {
-    Matrix<T, n, n> out{};
-    for (Index i = 0; i < mDual.length(); ++i) {
-      out[i] = static_cast<T>(mDual[i].getVal());
-    }
-    return out;
-  }
-
-  // dphi(t)/dt
-  static Matrix<T, n, n> derivativePart(const Matrix<Dual, n, n> &mDual) {
-    Matrix<T, n, n> out{};
-    for (Index i = 0; i < mDual.length(); ++i) {
-      out[i] = static_cast<T>(mDual[i].getDer());
-    }
-    return out;
-  }
-
-  // d^2(phi) / (dt)^2
-  static Matrix<T, n, n> secondDerivativePart(const Matrix<Dual, n, n> &mDual) {
-    Matrix<T, n, n> out{};
-    for (Index i = 0; i < mDual.length(); ++i) {
-      out[i] = static_cast<T>(mDual[i].getDer2());
-    }
-    return out;
-  }
-
-  static StaticVector<T, n> valuePart(const StaticVector<Dual, n> &vDual) {
-    StaticVector<T, n> out{};
-    for (Index i = 0; i < n; ++i) {
-      out[i] = static_cast<T>(vDual[i].getVal());
-    }
-    return out;
-  }
+  // Note: helper extraction functions for Dual-like scalars are provided as
+  // member functions on `Matrix` and `StaticVector` (see Matrix.h / Vector.h).
 
   StaticVector<T, n> evaluateMotionMap(const StaticVector<T, n> &X, T t) const {
-    if (!motionMap)
-      throw std::logic_error("motionMap is not set.");
+    if (!deformMap)
+      throw std::logic_error("deformMap is not set.");
 
     StaticVector<Dual, n> XDual{};
     for (Index i = 0; i < n; ++i) {
       XDual[i] = Dual{static_cast<double>(X[i]), 0.0, 0.0};
     }
-    return valuePart(motionMap(XDual, Dual{static_cast<double>(t), 0.0, 0.0}));
+    const auto resDual =
+        deformMap(XDual, Dual{static_cast<double>(t), 0.0, 0.0});
+    return resDual.template val<T>();
   }
 
   StaticVector<T, n> velocityMaterialAt(const StaticVector<T, n> &X,
                                         T t) const {
-    if (deformMap) {
+    if (linearMap) {
       return dKdt(t) * X;
     }
-    if (!motionMap)
-      throw std::logic_error("motionMap is not set.");
+    if (!deformMap)
+      throw std::logic_error("deformMap is not set.");
 
     StaticVector<Dual, n> XDual{};
     for (Index i = 0; i < n; ++i) {
       XDual[i] = Dual{static_cast<double>(X[i]), 0.0, 0.0};
     }
-    const auto xDual = motionMap(XDual, Dual{static_cast<double>(t), 1.0, 0.0});
-
-    StaticVector<T, n> out{};
-    for (Index i = 0; i < n; ++i) {
-      out[i] = static_cast<T>(xDual[i].getDer());
-    }
-    return out;
+    const auto xDual = deformMap(XDual, Dual{static_cast<double>(t), 1.0, 0.0});
+    return xDual.template der1<T>();
   }
 
   StaticVector<T, n> accelerationMaterialAt(const StaticVector<T, n> &X,
                                             T t) const {
-    if (deformMap) {
+    if (linearMap) {
       return d2Kdt2(t) * X;
     }
-    if (!motionMap)
-      throw std::logic_error("motionMap is not set.");
+    if (!deformMap)
+      throw std::logic_error("deformMap is not set.");
 
     StaticVector<Dual, n> XDual{};
     for (Index i = 0; i < n; ++i) {
       XDual[i] = Dual{static_cast<double>(X[i]), 0.0, 0.0};
     }
-    const auto xDual = motionMap(XDual, Dual{static_cast<double>(t), 1.0, 0.0});
-
-    StaticVector<T, n> out{};
-    for (Index i = 0; i < n; ++i) {
-      out[i] = static_cast<T>(xDual[i].getDer2());
-    }
-    return out;
+    const auto xDual = deformMap(XDual, Dual{static_cast<double>(t), 1.0, 0.0});
+    return xDual.template der2<T>();
   }
 
 public:
@@ -129,25 +87,25 @@ public:
   // Material-description constructor
   MediumCon(const MapMatrix &motionEquation,
             const StaticVector<T, n> &refConfig)
-      : ref(refConfig), deformMap(motionEquation), hasRef(true) {}
+      : ref(refConfig), linearMap(motionEquation), hasRef(true) {}
 
   // General (possibly non-homogeneous) motion map: x = Phi(X,t)
-  MediumCon(const MotionMap &motionEquation,
+  MediumCon(const MotionEquation &motionEquation,
             const StaticVector<T, n> &refConfig)
-      : ref(refConfig), motionMap(motionEquation), hasRef(true) {}
+      : ref(refConfig), deformMap(motionEquation), hasRef(true) {}
 
   // Spatial-description constructor
   MediumCon(const MapMatrix &inverseMotionEquation,
             const StaticVector<T, n> &currentConfig, bool isInverseMap)
-      : current(currentConfig), hasCurrent(true) {
+      : cur(currentConfig), hasCur(true) {
     if (!isInverseMap)
       throw std::invalid_argument(
           "Set isInverseMap=true when passing inverse motion equation.");
 
-    deformMap = [inverseMotionEquation](Dual t) -> Matrix<Dual, n, n> {
+    linearMap = [inverseMotionEquation](Dual t) -> Matrix<Dual, n, n> {
       const Matrix<Dual, n, n> invDual = inverseMotionEquation(t);
 
-      Matrix<T, n, n> invVal{valuePart(invDual)};
+      Matrix<T, n, n> invVal = invDual.template val<T>();
 
       const Matrix<T, n, n> kVal = invVal.inverse();
 
@@ -161,50 +119,51 @@ public:
   }
 
   Matrix<T, n, n> motionFunction(T t) const {
-    if (deformMap)
-      return valuePart(deformMap(Dual{static_cast<double>(t), 0.0}));
-    if (motionMap && hasRef)
+    if (linearMap)
+      return linearMap(Dual{static_cast<double>(t), 0.0}).template val<T>();
+    if (deformMap && hasRef)
       return deformationGradient(t, ref);
-    throw std::logic_error("motionFunction is unavailable: set deformMap or "
-                           "set both motionMap and ref.");
+    throw std::logic_error("motionFunction is unavailable: set linearMap or "
+                           "set both deformMap and ref.");
   }
 
   Matrix<T, n, n> inverseMap(T t) const {
-    if (!deformMap)
+    if (!linearMap)
       throw std::logic_error(
           "inverseMap is only available for homogeneous linear map K(t). ");
-    return valuePart(deformMap(Dual{static_cast<double>(t), 0.0})).inverse();
+    return linearMap(Dual{static_cast<double>(t), 0.0})
+        .template val<T>()
+        .inverse();
   }
 
   // dK/dt from Dual derivative part.
   Matrix<T, n, n> dKdt(T t) const {
-    if (!deformMap)
+    if (!linearMap)
       throw std::logic_error("dKdt is only available for homogeneous K(t). ");
-    return derivativePart(deformMap(Dual{static_cast<double>(t), 1.0}));
+    return linearMap(Dual{static_cast<double>(t), 1.0}).template der1<T>();
   }
 
   // d2K/dt2 from Dual second derivative part.
   Matrix<T, n, n> d2Kdt2(T t) const {
-    if (!deformMap)
+    if (!linearMap)
       throw std::logic_error("d2Kdt2 is only available for homogeneous K(t). ");
-    return secondDerivativePart(
-        deformMap(Dual{static_cast<double>(t), 1.0, 0.0}));
+    return linearMap(Dual{static_cast<double>(t), 1.0, 0.0}).template der2<T>();
   }
 
   // x_P(t) = K(t) * X
   StaticVector<T, n> currentPosition(T t) const {
     if (!hasRef)
       throw std::logic_error("Reference configuration not set.");
-    if (deformMap)
+    if (linearMap)
       return motionFunction(t) * ref;
     return evaluateMotionMap(ref, t);
   }
 
   // X = K^{-1}(t) * x
   StaticVector<T, n> referencePosition(T t) const {
-    if (!hasCurrent)
+    if (!hasCur)
       throw std::logic_error("Current configuration not set.");
-    return inverseMap(t) * current;
+    return inverseMap(t) * cur;
   }
 
   // Material velocity: v(X,t) = dx/dt = dK/dt * X.
@@ -221,11 +180,11 @@ public:
     return currentPosition(t) - ref;
   }
 
-  // Spatial displacement at stored current position: u(x,t) = x - X(x,t).
+  // Spatial displacement at stored cur position: u(x,t) = x - X(x,t).
   StaticVector<T, n> displacementSpatial(T t) const {
-    if (!hasCurrent)
+    if (!hasCur)
       throw std::logic_error("Current configuration not set.");
-    return current - referencePosition(t);
+    return cur - referencePosition(t);
   }
 
   // Material acceleration: a(X,t) = d2x/dt2 = d2K/dt2 * X.
@@ -242,11 +201,11 @@ public:
     return L * xSpatial;
   }
 
-  // Euler velocity at stored current position.
+  // Euler velocity at stored cur position.
   StaticVector<T, n> velEuler(T t) const {
-    if (!hasCurrent)
+    if (!hasCur)
       throw std::logic_error("Current configuration not set.");
-    return velEulerAt(t, current);
+    return velEulerAt(t, cur);
   }
 
   // Euler acceleration at any spatial point x:
@@ -258,18 +217,18 @@ public:
     return (dLdt + L * L) * xSpatial;
   }
 
-  // Euler acceleration at stored current position.
+  // Euler acceleration at stored cur position.
   StaticVector<T, n> accEuler(T t) const {
-    if (!hasCurrent)
+    if (!hasCur)
       throw std::logic_error("Current configuration not set.");
-    return accEulerAt(t, current);
+    return accEulerAt(t, cur);
   }
 
   // Deformation gradient F for this linear map is exactly K(t).
   // Fij = dxi/dXj
 
   Matrix<T, n, n> deformationGradient(T t) const {
-    if (deformMap)
+    if (linearMap)
       return motionFunction(t);
     if (!hasRef)
       throw std::logic_error(
@@ -280,10 +239,10 @@ public:
   // General deformation gradient at arbitrary material point X:
   // F(X,t) = dPhi/dX.
   Matrix<T, n, n> deformationGradient(T t, const StaticVector<T, n> &X) const {
-    if (deformMap)
+    if (linearMap)
       return motionFunction(t);
-    if (!motionMap)
-      throw std::logic_error("motionMap is not set.");
+    if (!deformMap)
+      throw std::logic_error("deformMap is not set.");
 
     Matrix<T, n, n> F{};
     for (Index j = 0; j < n; ++j) {
@@ -293,9 +252,10 @@ public:
         XDual[k] = Dual{static_cast<double>(X[k]), seed, 0.0};
       }
       const auto xDual =
-          motionMap(XDual, Dual{static_cast<double>(t), 0.0, 0.0});
+          deformMap(XDual, Dual{static_cast<double>(t), 0.0, 0.0});
+      const auto deriv = xDual.template der1<T>();
       for (Index i = 0; i < n; ++i) {
-        F(i, j) = static_cast<T>(xDual[i].getDer());
+        F(i, j) = deriv[i];
       }
     }
     return F;

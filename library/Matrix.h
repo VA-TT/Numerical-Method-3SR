@@ -16,8 +16,9 @@
 #include "signFunction.h" //sign()
 #include <algorithm>      //max, min, swap, sort
 #include <array>
-#include <cassert>          //assert
-#include <cmath>            //power
+#include <cassert> //assert
+#include <cmath>   //power
+#include <concepts>
 #include <functional>       // std::reference_wrapper
 #include <initializer_list> //initiate list
 #include <iomanip>          //tab
@@ -118,6 +119,43 @@ public:
   constexpr Index getCols() const { return nCols; }
   constexpr Index getRows() const { return nRows; }
   constexpr Index length() const { return nRows * nCols; }
+
+  // Helper to extract value/derivative parts when scalar T behaves like Dual
+  template <typename U = double>
+  Matrix<U, nRows, nCols> val() const
+    requires requires(const T &x) {
+      { x.getVal() } -> std::convertible_to<U>;
+    }
+  {
+    Matrix<U, nRows, nCols> out{};
+    for (Index i = 0; i < this->length(); ++i)
+      out[i] = static_cast<U>((*this)[i].getVal());
+    return out;
+  }
+
+  template <typename U = double>
+  Matrix<U, nRows, nCols> der1() const
+    requires requires(const T &x) {
+      { x.getDer() } -> std::convertible_to<U>;
+    }
+  {
+    Matrix<U, nRows, nCols> out{};
+    for (Index i = 0; i < this->length(); ++i)
+      out[i] = static_cast<U>((*this)[i].getDer());
+    return out;
+  }
+
+  template <typename U = double>
+  Matrix<U, nRows, nCols> der2() const
+    requires requires(const T &x) {
+      { x.getDer2() } -> std::convertible_to<U>;
+    }
+  {
+    Matrix<U, nRows, nCols> out{};
+    for (Index i = 0; i < this->length(); ++i)
+      out[i] = static_cast<U>((*this)[i].getDer2());
+    return out;
+  }
 
   // Getters for engineering tensor
   T &xx() {
