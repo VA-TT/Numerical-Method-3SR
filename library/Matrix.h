@@ -124,7 +124,7 @@ public:
   template <typename U = double>
   Matrix<U, nRows, nCols> val() const
     requires requires(const T &x) {
-      { x.getVal() } -> std::convertible_to<U>;
+      { x.getVal() } -> std::convertible_to<U>; // check if type T is Dual
     }
   {
     Matrix<U, nRows, nCols> out{};
