@@ -60,7 +60,7 @@ public:
 
   static Matrix ones() {
     Matrix result{};
-    std::fill(result.m_elements.begin(), result.m_elements.end(), 1);
+    std::fill(result.m_elements.begin(), result.m_elements.end(), T{1});
     return result;
   }
   void resetOnes() { (*this) = Matrix::ones(); }
@@ -477,7 +477,11 @@ public:
     Matrix<T, nRows, nCols> testIdentity{};
     Matrix<T, nRows, (nCols + nCols)> augmentedMatrix{
         concatHorizontal(*this, Matrix<T, nRows, nCols>::identity())};
-    // check det first
+    // Check orthogonal first -> return traspose matrix
+    if (this->isOrthogonal()) {
+      return this->transpose();
+    }
+    // check det second
     if (approximatelyEqualAbsRel(det(*this), T{0})) {
       throw std::invalid_argument("Determinant of Matrix is 0, hence matrix is "
                                   "singular and cannot be inverted.");
@@ -672,6 +676,9 @@ public:
   }
 
   // Real Eigenvalues and their Eigen Vectors for symmetric matrices:: AX = kX
+  // Use pair to return 2 different types: a vector containing all the
+  // eigenvalues, and a matrix composes of all corresponding eigenvectors
+  // respectively
   std::pair<StaticVector<T, nRows>, Matrix>
   eigen(Index maxIterations = 1000) const {
     const bool symmetric = this->isSymmetric();
@@ -682,7 +689,7 @@ public:
     Matrix V = symmetric ? Matrix::identity() : Matrix::zero();
 
     while (iteration < maxIterations && !A_qr.isUpperTriangular()) {
-      auto [Q, R] = QRdecomposition(A_qr);
+      auto [Q, R] = decompQR(A_qr);
       A_qr = R * Q;
       if (symmetric) {
         V = V * Q; // for symmetric: columns converge to eigenvectors
@@ -813,7 +820,7 @@ public:
 // Householder reflection:   A  = Q * R
 template <typename T, Index nRows, Index nCols>
 StaticVector<Matrix<T, nRows, nCols>, 2>
-QRdecomposition(const Matrix<T, nRows, nCols> &A) {
+decompQR(const Matrix<T, nRows, nCols> &A) {
   assert(A.isSquare() && "Only implemented for square matrices");
   Matrix<T, nRows, nCols> R{A};
   Matrix<T, nRows, nCols> Q{Matrix<T, nRows, nCols>::identity()};

@@ -9,6 +9,7 @@
 #include "elasticity.h"
 #include "gaussQuadrature.h"
 #include "physicConstants.h"
+#include "shapeFunction.h"
 #include "signFunction.h"
 #include <cassert>
 #include <filesystem>
@@ -42,6 +43,9 @@ private:
   // Inner solvers:
   std::span<Node1D<T>> m_nodes;   // Use in main loops for performance & when
   std::span<Particle1D<T>> m_MPs; // index is already controlled by the group
+
+  // shape function type
+  ShapeType m_shape{ShapeType::linear};
 
   // Analytical solution (if available)
   std::function<T(T)> m_analyticSolution{};
@@ -132,6 +136,7 @@ public:
   // Setters
   void setE(T E) { m_E = E; }
   void setG(T G) { m_G = G; } // Set G if considering gravity
+  void setShape(ShapeType type) { m_type = type; }
   void setAnalyticSolution(std::function<T(T)> sol) {
     m_analyticSolution = sol;
   }

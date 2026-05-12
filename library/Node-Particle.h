@@ -14,14 +14,6 @@ enum class MPContact : unsigned char {
   typeCount,
 };
 
-enum class ShapeType : unsigned char {
-  boundary,
-  nearLeft,
-  nearRight,
-  middle,
-  typeCount,
-};
-
 inline MPContact operator|(MPContact a, MPContact b) {
   return static_cast<MPContact>(static_cast<unsigned char>(a) |
                                 static_cast<unsigned char>(b));
