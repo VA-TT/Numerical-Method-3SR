@@ -893,10 +893,6 @@ public:
   }
 
   Index findCageID(T x, T y, Index lastElement = idError) const {
-    if (!std::isfinite(static_cast<double>(x)) ||
-        !std::isfinite(static_cast<double>(y))) {
-      return idError;
-    }
     // Try direct formula first (O(1))
     Index directResult = findCageID_direct(x, y);
     if (directResult != idError) {

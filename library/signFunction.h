@@ -3,8 +3,8 @@
 
 #include "comparison.h"
 
-constexpr double sgn(double x) {
-  return approximatelyEqualAbsRel(x, 0.0) ? 0.0 : ((x < 0) ? -1.0 : 1.0);
+template <typename T> constexpr T sgn(T x) {
+  return approximatelyEqualAbsRel(x, T{0}) ? T{0} : ((x < T{0}) ? T{-1} : T{1});
 }
 
 #endif
