@@ -45,7 +45,10 @@ private:
   std::span<Particle1D<T>> m_MPs; // index is already controlled by the group
 
   // shape function type
-  ShapeType m_shape{ShapeType::linear};
+  shapePolicy m_shape{shapePolicy::linear}; // linear by default
+
+  // PIC/FLIP blending (0 = 100% FLIP, 1 = 100% PIC)
+  T m_picRatio{T{0}}; // Default: full FLIP
 
   // Analytical solution (if available)
   std::function<T(T)> m_analyticSolution{};
@@ -136,7 +139,12 @@ public:
   // Setters
   void setE(T E) { m_E = E; }
   void setG(T G) { m_G = G; } // Set G if considering gravity
-  void setShape(ShapeType type) { m_type = type; }
+  void setShape(shapePolicy type) { m_shape = type; }
+  void setPIC(T value) {
+    // value = 0: 100% FLIP, value = 1: 100% PIC, value = 0.5: 50-50
+    assert(value >= T{0} && value <= T{1} && "PIC ratio must be in [0, 1]");
+    m_picRatio = value;
+  }
   void setAnalyticSolution(std::function<T(T)> sol) {
     m_analyticSolution = sol;
   }
@@ -201,15 +209,12 @@ public:
       Index e = m_mesh.getMP(p).eleID;
       if (e != idError) {
         T x_p = m_MPs[p].pos;
-        auto conn = m_mesh.getEleConnectivity(e);
-        auto ele = m_mesh.getElement(e);
-        Index n1 = ele.n1;
-        Index n2 = ele.n2;
-        T xi = ele.parentCoord(x_p);
-        m_nodes[n1].m += ele.N1_ref(xi) * m_MPs[p].m;
-        m_nodes[n2].m += ele.N2_ref(xi) * m_MPs[p].m;
-        m_nodes[n1].P += ele.N1_ref(xi) * m_MPs[p].P;
-        m_nodes[n2].P += ele.N2_ref(xi) * m_MPs[p].P;
+        auto sf = computeSF(x_p, m_mesh, m_shape);
+        for (Index k = 0; k < sf.count; ++k) {
+          Index nid = sf.nodeIdx[k];
+          m_nodes[nid].m += sf.N[k] * m_MPs[p].m;
+          m_nodes[nid].P += sf.N[k] * m_MPs[p].P;
+        }
       }
     }
     applyNodalMomentumConstraint();
@@ -221,16 +226,13 @@ public:
       Index e = m_mesh.getMP(p).eleID;
       if (e != idError) {
         T x_p = m_MPs[p].pos;
-        auto conn = m_mesh.getEleConnectivity(e);
-        auto ele = m_mesh.getElement(e);
-        Index n1 = ele.n1;
-        Index n2 = ele.n2;
-        T xi = ele.parentCoord(x_p);
-        m_nodes[n1].bodyF += m_G * ele.N1_ref(xi) * m_MPs[p].m;
-        m_nodes[n2].bodyF += m_G * ele.N2_ref(xi) * m_MPs[p].m;
-        // Traction force t_i (to be implemented)
-        m_nodes[n1].intF -= m_MPs[p].V * ele.dN1_dx() * m_MPs[p].sig;
-        m_nodes[n2].intF -= m_MPs[p].V * ele.dN2_dx() * m_MPs[p].sig;
+        auto sf = computeSF(x_p, m_mesh, m_shape);
+        for (Index k = 0; k < sf.count; ++k) {
+          Index nid = sf.nodeIdx[k];
+          m_nodes[nid].bodyF += m_G * sf.N[k] * m_MPs[p].m;
+          // Traction force t_i (to be implemented)
+          m_nodes[nid].intF -= m_MPs[p].V * sf.dN_dx[k] * m_MPs[p].sig;
+        }
       }
     }
     for (Index i{0}; i < getNumNodes(); ++i) {
@@ -264,22 +266,28 @@ public:
       Index e = m_mesh.getMP(p).eleID;
       if (e != idError) {
         T x_p = m_MPs[p].pos;
-        ElementL2<T> ele = m_mesh.getElement(e);
-        Index n1 = ele.n1;
-        Index n2 = ele.n2;
-        T xi = ele.parentCoord(x_p);
-        // Update velocity and position using FLIP style
-        m_MPs[p].a =
-            ele.N1_ref(xi) * m_nodes[n1].a + ele.N2_ref(xi) * m_nodes[n2].a;
-        m_MPs[p].v += m_MPs[p].a * m_dt;
-        // Hybrid
-        // T v_pic = N1 * velocity_n[n1] + N2 * velocity_n[n2];
-        // T v_flip = velocity_p[p] + (N1 * a_n1 + N2 * a_n2) * dt;
-        // velocity_p[p] = alpha * v_pic + '(1-alpha)' * v_flip;
-        // position_p[p] += velocity_p[p] * m_dt;
-        m_MPs[p].pos += (ele.N1_ref(xi) * m_nodes[n1].P / m_nodes[n1].m +
-                         ele.N2_ref(xi) * m_nodes[n2].P / m_nodes[n2].m) *
-                        m_dt;
+        auto sf = computeSF(x_p, m_mesh, m_shape);
+        T a_p = T{};
+        T pos_inc = T{};
+        for (Index k = 0; k < sf.count; ++k) {
+          Index nid = sf.nodeIdx[k];
+          a_p += sf.N[k] * m_nodes[nid].a;
+          pos_inc += sf.N[k] * (m_nodes[nid].P / m_nodes[nid].m);
+        }
+        m_MPs[p].a = a_p;
+
+        // PIC/FLIP blending
+        T v_flip =
+            m_MPs[p].v + m_MPs[p].a * m_dt; // FLIP: particle velocity + change
+        T v_pic = T{};                      // PIC: interpolated node velocity
+        for (Index k = 0; k < sf.count; ++k) {
+          Index nid = sf.nodeIdx[k];
+          v_pic += sf.N[k] * (m_nodes[nid].P / m_nodes[nid].m);
+        }
+        // Blend: m_picRatio=0 -> FLIP, m_picRatio=1 -> PIC
+        m_MPs[p].v = m_picRatio * v_pic + (T{1} - m_picRatio) * v_flip;
+
+        m_MPs[p].pos += pos_inc * m_dt;
         m_MPs[p].P = m_MPs[p].m * m_MPs[p].v;
       }
     }
@@ -288,12 +296,11 @@ public:
       Index e = m_mesh.getMP(p).eleID;
       if (e != idError) {
         T x_p = m_MPs[p].pos;
-        ElementL2<T> ele = m_mesh.getElement(e);
-        Index n1 = ele.n1;
-        Index n2 = ele.n2;
-        T xi = ele.parentCoord(x_p);
-        m_nodes[n1].v += m_MPs[p].P * ele.N1_ref(xi) / m_nodes[n1].m;
-        m_nodes[n2].v += m_MPs[p].P * ele.N2_ref(xi) / m_nodes[n2].m;
+        auto sf = computeSF(x_p, m_mesh, m_shape);
+        for (Index k = 0; k < sf.count; ++k) {
+          Index nid = sf.nodeIdx[k];
+          m_nodes[nid].v += m_MPs[p].P * sf.N[k] / m_nodes[nid].m;
+        }
       }
     }
     applyNodalVeloConstraint();
@@ -302,14 +309,15 @@ public:
       Index e = m_mesh.getMP(p).eleID;
       if (e != idError) {
         T x_p = m_MPs[p].pos;
-        ElementL2<T> ele = m_mesh.getElement(e);
-        Index n1 = ele.n1;
-        Index n2 = ele.n2;
-        T xi = ele.parentCoord(x_p);
         // Attention: x1-x2 belong to nodes (their positions don't get
         // updated), while the velocity is measured at MPs (updated at t+dt)
-        m_MPs[p].epsDot =
-            ele.dN1_dx() * m_nodes[n1].v + ele.dN2_dx() * m_nodes[n2].v;
+        auto sf = computeSF(x_p, m_mesh, m_shape);
+        T epsDot = T{};
+        for (Index k = 0; k < sf.count; ++k) {
+          Index nid = sf.nodeIdx[k];
+          epsDot += sf.dN_dx[k] * m_nodes[nid].v;
+        }
+        m_MPs[p].epsDot = epsDot;
         m_MPs[p].dEps = m_MPs[p].epsDot * m_dt;
         m_MPs[p].eps += m_MPs[p].dEps;
       }
@@ -543,6 +551,9 @@ private:
 
   T m_G{}; // Gravity Acceleration
 
+  // PIC/FLIP blending (0 = 100% FLIP, 1 = 100% PIC)
+  T m_picRatio{T{0}}; // Default: full FLIP
+
   // Time advancement
   Index m_nSteps{};
   T m_dt{}, m_duration{}, m_currentTime{};
@@ -770,7 +781,11 @@ public:
   // Setters
   void setE(T E) { m_E = E; }
   void setG(T G) { m_G = G; }
-
+  void setPIC(T value) {
+    // value = 0: 100% FLIP, value = 1: 100% PIC, value = 0.5: 50-50
+    assert(value >= T{0} && value <= T{1} && "PIC ratio must be in [0, 1]");
+    m_picRatio = value;
+  }
   void setComportmentLaw(
       const std::function<Matrix<T, 2, 2>(const Matrix<T, 2, 2> &)> &law) {
     m_law = law;
@@ -955,7 +970,14 @@ public:
 
       // Foward Euler
       mp.a = aNext;
-      mp.v += aNext * m_dt;
+
+      // PIC/FLIP blending
+      StaticVector<T, 2> v_flip =
+          mp.v + aNext * m_dt;          // FLIP: particle velocity + change
+      StaticVector<T, 2> v_pic = vNext; // PIC: interpolated node velocity
+      // Blend: m_picRatio=0 -> FLIP, m_picRatio=1 -> PIC
+      mp.v = m_picRatio * v_pic + (T{1} - m_picRatio) * v_flip;
+
       mp.pos += vNext * m_dt;
       mp.P = mp.m * mp.v;
 

@@ -88,8 +88,9 @@ template <typename T> struct ElementL2 {
 template <typename T> struct ElementQ4 {
 
   // Variables
-  Index n1{}, n2{}, n3{}, n4{};       // nodes' ID in Mesh
-  std::span<const Node2D<T>> nodes{}; // reference to particle array
+  StaticVector<Index, 2> idx{idError, idError}; // element index in x/y-axis
+  Index n1{}, n2{}, n3{}, n4{};                 // nodes' ID in Mesh
+  std::span<const Node2D<T>> nodes{};           // reference to particle array
   bool isActive{false};
 
   ElementQ4(Index id1, Index id2, Index id3, Index id4,

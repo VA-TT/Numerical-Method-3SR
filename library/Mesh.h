@@ -551,6 +551,8 @@ public:
         Index n3 = (i + 1) + (j + 1) * nx;
         Index n4 = i + (j + 1) * nx;
         m_elements[elemID] = ElementQ4<T>(n1, n2, n3, n4, m_nodes);
+        m_elements[elemID].idx.x() = i;
+        m_elements[elemID].idx.y() = j;
         ++elemID;
       }
     }

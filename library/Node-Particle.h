@@ -35,6 +35,14 @@ inline bool hasFlag(MPContact mask, MPContact flag) {
 
 static constexpr Index idError = -1; // default id error
 
+enum class ShapeType : unsigned char {
+  boundary,
+  nearLeft,
+  nearRight,
+  middle,
+  typeCount,
+};
+
 template <typename T> struct Node1D {
   T m{};
   T pos{}, posInit{};

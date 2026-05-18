@@ -32,6 +32,8 @@ int main() {
   beam.setG(0.0); // G = -constants::gravity if gravity is considered
   beam.setE(E);   // Module Young
   beam.setComportmentLaw({}); // Tangential Operator
+  // beam.setShape(shapePolicy::cubicBSpline);  // Requires 4+ nodes, mesh has 2
+  beam.setShape(shapePolicy::linear);
 
   // Output files
   std::ofstream hist("mpm1Da_history.txt");

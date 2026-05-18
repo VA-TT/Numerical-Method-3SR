@@ -1,6 +1,7 @@
 #ifndef SHAPE_FUNCTION_MPM_H
 #define SHAPE_FUNCTION_MPM_H
 
+#include "Mesh.h"
 #include "Vector.h"
 #include "interpolate.h" // cubicBSpline1..4, cubicBSpline1D
 #include "signFunction.h"
@@ -9,7 +10,7 @@
 
 // max nodes is the number of biggest possibly number of affected nodes
 // e.g : hat function 1D: MaxNodes = 2, cubicBSpline 2D: MaxNodes = 16;
-template <typename T, int MaxNodes> struct SFResult {
+template <typename T, int MaxNodes> struct shapeFunction {
   StaticVector<T, MaxNodes> N{};
   StaticVector<T, MaxNodes> dN_dx{};
   StaticVector<T, MaxNodes> dN_dy{}; // only use in 2D
@@ -17,25 +18,15 @@ template <typename T, int MaxNodes> struct SFResult {
   Index count{0}; // real number of influenced nodes
 };
 
-enum class ShapeType : unsigned char {
-  boundary,
-  nearLeft,
-  nearRight,
-  middle,
-  typeCount,
+enum class shapePolicy : unsigned char {
+  linear,
+  quadraticBSpline,
+  cubicBSpline,
+  Bezier,
+  policyCount,
 };
 
-enum class shapePolicy: unsigned char 
-{
-    linear,
-    quadraticBSpline,
-    cubicBSpline,
-    Bezier,
-    policyCount,
-}
-
-
-namespace bspline {
+namespace bspline_detail {
 
 // Modified B-Splines 3rd order polynomial (k=3 and C^2 continuous)
 //  => 4 types of shape functions
@@ -46,11 +37,14 @@ namespace bspline {
 template <typename T> T cubicBSpline1(T r) {
   if (T{-2} <= r && r <= T{-1})
     return T{1} / T{6} * r * r * r + r * r + T{2} * r + T{4} / T{3};
-else if (T{-1} <= r && r <= T{0}) return T{-1} / T{6} * r * r * r + r + T{1};
-else if (T{0} <= r && r <= T{1}) return T{1} / T{6} * r * r * r - r + T{1};
-else if (T{1} <= r && r <= T{2}) return T{-1} / T{6} * r * r * r + r * r -
-    T{2} * r + T{4} / T{3};
-else return T{0};
+  else if (T{-1} <= r && r <= T{0})
+    return T{-1} / T{6} * r * r * r + r + T{1};
+  else if (T{0} <= r && r <= T{1})
+    return T{1} / T{6} * r * r * r - r + T{1};
+  else if (T{1} <= r && r <= T{2})
+    return T{-1} / T{6} * r * r * r + r * r - T{2} * r + T{4} / T{3};
+  else
+    return T{0};
 }
 template <typename T> T dCubicBSpline1_dr(T r) {
   if (T{-2} <= r && r < T{-1})
@@ -141,22 +135,22 @@ template <typename T> T dCubicBSpline4_dr(T r) {
 }
 
 // Dispatch by ShapeType
-template <typename T> T evalN(T r, ShapeType type) {
+template <typename T> T evalN(ShapeType type, T r) {
   switch (type) {
   case ShapeType::boundary:
-    return cubicBSpline1(r); // node 0 hoặc n-1
+    return cubicBSpline1(r);
   case ShapeType::nearLeft:
-    return cubicBSpline2(r); // node 1
+    return cubicBSpline2(r);
   case ShapeType::nearRight:
-    return cubicBSpline4(r); // node n-2
+    return cubicBSpline4(r);
   case ShapeType::middle:
-    return cubicBSpline3(r); // interior
+    return cubicBSpline3(r);
   default:
     return T{0};
   }
 }
 
-template <typename T> T evaldN(T r, ShapeType type) {
+template <typename T> T evaldN(ShapeType type, T r) {
   switch (type) {
   case ShapeType::boundary:
     return dCubicBSpline1_dr(r);
@@ -170,32 +164,35 @@ template <typename T> T evaldN(T r, ShapeType type) {
     return T{0};
   }
 }
-}
-; // namespace bspline_detail
+}; // namespace bspline_detail
 
 // -------------------------------------------------------
 // computeSF — 1D
+// Returns shapeFunction<T, 4> (max: cubic spline = 4 nodes)
+// Actual used nodes stored in result.count
 // -------------------------------------------------------
-template <typename T, typename SFPolicy>
-auto computeSF(T xp, const Mesh1D<T> &mesh) {
-  const int nNodes = static_cast<int>(mesh.getNumNodes());
+template <typename T>
+shapeFunction<T, 4> computeSF(T xp, const Mesh1D<T> &mesh,
+                              shapePolicy sfPolicy) {
   const T h = mesh.getLengthEle(0); // uniform
-  const T x0 = mesh.getNode(0).pos; // grid origin
+  const Index nNodes = mesh.getNumNodes();
+  shapeFunction<T, 4> result{}; // Initialize once, reuse for all paths
+  result.count = 0;
 
-  if constexpr (std::is_same_v<SFPolicy, shapePolicy::linear>) {
+  if (sfPolicy == shapePolicy::linear) {
     // ---- Linear hat: 2 nodes affected
-    SFResult<T, 2> result;
+    assert(nNodes >= 2 && "Mesh must be discretized with more nodes!");
 
     Index e = mesh.findCageID(xp);
-    if (e != idError) {
+    if (e == idError) {
       std::cout << "Particle at " << xp << " move out of domain!\n";
       return result;
     }
 
     for (Index k = 0; k < 2; ++k) {
       T xI = mesh.getNode(e + k).pos;
-      result.nodeIdx[k] = i0 + k;
-      T dist = std::abs(xp - xI));
+      result.nodeIdx[k] = e + k;
+      T dist = std::abs(xp - xI);
       if (dist / h <= T{1}) {
         result.N[k] = T{1} - dist / h;
         result.dN_dx[k] = -sgn(xp - xI) / h;
@@ -205,19 +202,23 @@ auto computeSF(T xp, const Mesh1D<T> &mesh) {
         result.dN_dx[k] = T{0};
       }
     }
-    result.count = 2; // always
+    result.count = 2; // always = 2
     return result;
-
-  } else if constexpr (std::is_same_v<SFPolicy, shapePolicy::cubicBSpline>) {
-    SFResult<T, 4> result;
+  } else if (sfPolicy == shapePolicy::cubicBSpline) {
+    // ---- Cubic Spline: 4 nodes affected
+    assert(nNodes >= 4 && "Mesh must be discretized with more nodes!");
 
     Index e = mesh.findCageID(xp);
+    if (e == idError) {
+      std::cout << "Particle at " << xp << " move out of domain!\n";
+      return result;
+    }
     Index start = e - 1; // index start of supports
     Index count = 0;
 
     for (Index k = start; k <= start + 3; ++k) {
       // Skip the node that gone out of domain
-      if (k < 0 || k >= nNodes)
+      if (k < 0 || k >= mesh.getNumNodes())
         continue;
 
       T xI = mesh.getNode(k).pos;
@@ -225,44 +226,50 @@ auto computeSF(T xp, const Mesh1D<T> &mesh) {
 
       ShapeType type = mesh.getNode(k).shapeType;
 
-      result.N[count] = bspline_detail::evalN(r, type);
-      result.dN_dx[count] = bspline_detail::evalDN(r, type) / h;
+      result.N[count] = bspline_detail::evalN(type, r);
+      // dN_dx = dN_dr * dr_dx = dN_dr * 1/h
+      result.dN_dx[count] = bspline_detail::evaldN(type, r) / h;
       result.nodeIdx[count] = k;
       ++count;
     }
-    result.count = count;
+    result.count = count; //<=4
     return result;
-
   } else {
-    static_assert(!std::is_same_v<SFPolicy, SFPolicy>,
-                  "computeSF1D: Unknown SFPolicy");
+    return result; // fallback: empty
   }
 }
 
 // -------------------------------------------------------
 // computeSF — 2D (tensor product)
 // N_IJ(x,y)   = N_I(x) * N_J(y)
-// dN_IJ/dx    = dN_I/dx * N_J(y)
-// dN_IJ/dy    = N_I(x)  * dN_J/dy
+// dN_IJ/dx    = dN_I/dx * N_J(y) + 0
+// dN_IJ/dy    = N_I(x)  * dN_J/dy + 0
+// Returns shapeFunction<T, 16> (max possible nodes: 4x4 for cubic)
+// Actual used nodes stored in result.count
 // -------------------------------------------------------
-template <typename T, typename SFPolicy>
-auto computeSF(T xp, T yp, const Mesh2D<T> &mesh) {
-  const T hx = mesh.getGridLength() / static_cast<T>(mesh.nx() - 1);
-  const T hy = mesh.getGridHeight() / static_cast<T>(mesh.ny() - 1);
+template <typename T>
+shapeFunction<T, 16> computeSF(T xp, T yp, const Mesh2D<T> &mesh,
+                               shapePolicy sfPolicy) {
+  const Index nx = mesh.nx();
+  const Index ny = mesh.ny();
+  const T hx = mesh.getGridLength() / static_cast<T>(nx - 1);
+  const T hy = mesh.getGridHeight() / static_cast<T>(ny - 1);
+  shapeFunction<T, 16> result{}; // Initialize once
+  result.count = 0;
 
-  if constexpr (std::is_same_v<SFPolicy, LinearSF>) {
-    // ---- Linear: 2x2 = 4 nodes
-    SFResult<T, 4> result;
+  if (sfPolicy == shapePolicy::linear) {
+    // Linear: 2x2 = 4 nodes
+    assert(nx >= 2 && ny >= 2 && "Mesh must be discretized with more nodes!");
+
     const Index elemID = mesh.findCageID(xp, yp);
     if (elemID == idError) {
       std::cout << "Particle at " << xp << " move out of domain!\n";
       return result;
     }
 
-    // Từ elemID flatten → ix, iy của cell
-    const int ix = static_cast<int>(elemID % (nx - 1));
-    const int iy = static_cast<int>(elemID / (nx - 1));
-    int cnt = 0;
+    const Index ix = mesh.getElement(elemID).idx.x();
+    const Index iy = mesh.getElement(elemID).idx.y();
+    int count = 0;
 
     for (int j = iy; j <= iy + 1; ++j) {
       T yJ = mesh.getNode(j * nx).pos.y();
@@ -276,39 +283,37 @@ auto computeSF(T xp, T yp, const Mesh2D<T> &mesh) {
         T Nx = T{1} - std::abs(rx);
         T dNx = (rx >= T{0}) ? -T{1} / hx : T{1} / hx;
 
-        result.N[cnt] = Nx * Ny;
-        result.dN_dx[cnt] = dNx * Ny;
-        result.dN_dy[cnt] = Nx * dNy;
-        // flatten (i,j) → global node index
-        result.nodeIdx[cnt] = j * nx + i;
-        ++cnt;
+        result.N[count] = Nx * Ny;
+        result.dN_dx[count] = dNx * Ny;
+        result.dN_dy[count] = Nx * dNy;
+        result.nodeIdx[count] = j * nx + i;
+        ++count;
       }
     }
-    result.count = cnt; // = 4
+    result.count = count; // <= 4
     return result;
 
-  } else if constexpr (std::is_same_v<SFPolicy, CubicBSplineSF>) {
+  } else if (sfPolicy == shapePolicy::cubicBSpline) {
     // ---- Cubic B-Spline:  4x4 = 16 nodes ----
-    SFResult<T, 16> result;
+    assert(nx >= 4 && ny >= 4 && "Mesh must be discretized with more nodes!");
 
     const Index elemID = mesh.findCageID(xp, yp);
     if (elemID == idError)
       return result;
 
-    const int ix = static_cast<int>(elemID % (nx - 1));
-    const int iy = static_cast<int>(elemID / (nx - 1));
-    int cnt = 0;
+    const Index ix = mesh.getElement(elemID).idx.x();
+    const Index iy = mesh.getElement(elemID).idx.y();
+    Index count = 0;
 
-    for (int j = iy - 1; j <= iy + 2; ++j) {
+    for (Index j = iy - 1; j <= iy + 2; ++j) {
       if (j < 0 || j >= ny)
         continue;
 
       T yJ = mesh.getNode(j * nx).pos.y();
       T ry = (yp - yJ) / hy;
-      // shapeType[1] = y-direction type của node tại cột 0, hàng j
       ShapeType typeY = mesh.getNode(j * nx).shapeType.y();
-      T Ny = bspline_detail::evalN(ry, typeY);
-      T dNy = bspline_detail::evalDN(ry, typeY) / hy;
+      T Ny = bspline_detail::evalN(typeY, ry);
+      T dNy = bspline_detail::evaldN(typeY, ry) / hy;
 
       for (int i = ix - 1; i <= ix + 2; ++i) {
         if (i < 0 || i >= nx)
@@ -316,23 +321,23 @@ auto computeSF(T xp, T yp, const Mesh2D<T> &mesh) {
 
         T xI = mesh.getNode(i).pos.x();
         T rx = (xp - xI) / hx;
-        // shapeType[0] = x-direction type của node tại hàng 0, cột i
         ShapeType typeX = mesh.getNode(i).shapeType.x();
-        T Nx = bspline_detail::evalN(rx, typeX);
-        T dNx = bspline_detail::evalDN(rx, typeX) / hx;
+        T Nx = bspline_detail::evalN(typeX, rx);
+        T dNx = bspline_detail::evaldN(typeX, rx) / hx;
 
-        result.N[cnt] = Nx * Ny;
-        result.dN_dx[cnt] = dNx * Ny;
-        result.dN_dy[cnt] = Nx * dNy;
-        result.nodeIdx[cnt] = j * nx + i;
-        ++cnt;
+        result.N[count] = Nx * Ny;
+        result.dN_dx[count] = dNx * Ny;
+        result.dN_dy[count] = Nx * dNy;
+        result.nodeIdx[count] = j * nx + i;
+        ++count;
       }
     }
-    result.count = cnt; // <= 16
+    result.count = count; // <= 16
     return result;
 
   } else {
-    static_assert(!std::is_same_v<SFPolicy, SFPolicy>,
-                  "computeSF2D: Unknown SFPolicy");
+    return result; // fallback: empty
   }
 }
+
+#endif
