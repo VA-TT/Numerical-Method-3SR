@@ -551,6 +551,9 @@ private:
 
   T m_G{}; // Gravity Acceleration
 
+  // shape function type (linear by default)
+  shapePolicy m_shape{shapePolicy::linear};
+
   // PIC/FLIP blending (0 = 100% FLIP, 1 = 100% PIC)
   T m_picRatio{T{0}}; // Default: full FLIP
 
@@ -781,6 +784,8 @@ public:
   // Setters
   void setE(T E) { m_E = E; }
   void setG(T G) { m_G = G; }
+  void setShape(shapePolicy type) { m_shape = type; }
+
   void setPIC(T value) {
     // value = 0: 100% FLIP, value = 1: 100% PIC, value = 0.5: 50-50
     assert(value >= T{0} && value <= T{1} && "PIC ratio must be in [0, 1]");
@@ -850,14 +855,12 @@ public:
       if (e == idError)
         continue;
 
-      const auto &ele = m_mesh.getElement(e);
-      const auto conn = ele.getConnectivity();
-      const auto parent = ele.parentCoord(mp.pos.x(), mp.pos.y());
-      const auto N = ele.N_Q4(parent.x(), parent.y());
-      for (Index q{0}; q < 4; ++q) {
-        const Index nodeID = conn[q];
-        m_nodes[nodeID].mass += N[q] * mp.m;
-        m_nodes[nodeID].P += N[q] * mp.P;
+      // Use computeSF for 2D (tensor product) to get N and node indices
+      auto sf = computeSF(mp.pos.x(), mp.pos.y(), m_mesh, m_shape);
+      for (Index k = 0; k < sf.count; ++k) {
+        const Index nodeID = sf.nodeIdx[k];
+        m_nodes[nodeID].mass += sf.N[k] * mp.m;
+        m_nodes[nodeID].P += sf.N[k] * mp.P;
       }
     }
     applyNodalMomentumConstraint();
@@ -893,19 +896,13 @@ public:
       if (e == idError)
         continue;
 
-      const auto &ele = m_mesh.getElement(e);
-      const auto conn = ele.getConnectivity();
-      const auto parent = ele.parentCoord(mp.pos.x(), mp.pos.y());
-      const auto N = ele.N_Q4(parent.x(), parent.y());
-      const auto grad = ele.gradientN(parent.x(), parent.y());
-      const auto &dNdx = grad[0];
-      const auto &dNdy = grad[1];
-
-      for (Index q{0}; q < 4; ++q) {
-        const Index nodeID = conn[q];
-        m_nodes[nodeID].bodyF.y() += N[q] * m_G * mp.m;
+      // Use computeSF to get shape values and derivatives
+      auto sf = computeSF(mp.pos.x(), mp.pos.y(), m_mesh, m_shape);
+      for (Index k{0}; k < sf.count; ++k) {
+        const Index nodeID = sf.nodeIdx[k];
+        m_nodes[nodeID].bodyF.y() += sf.N[k] * m_G * mp.m;
         // Traction force t_i (to be implemented)
-        const StaticVector<T, 2> gradNq{dNdx[q], dNdy[q]};
+        const StaticVector<T, 2> gradNq{sf.dN_dx[k], sf.dN_dy[k]};
         m_nodes[nodeID].intF -= mp.V * (mp.sig * gradNq);
       }
     }
@@ -954,41 +951,33 @@ public:
       const Index e = mp.eleID;
       if (e == idError)
         continue;
-
-      const auto &ele = m_mesh.getElement(e);
-      const auto conn = ele.getConnectivity();
-      const auto parent = ele.parentCoord(mp.pos.x(), mp.pos.y());
-      const auto N = ele.N_Q4(parent.x(), parent.y());
+      // Use computeSF to interpolate acceleration/velocity and gradients
+      auto sf = computeSF(mp.pos.x(), mp.pos.y(), m_mesh, m_shape);
 
       StaticVector<T, 2> aNext{};
       StaticVector<T, 2> vNext{};
-      for (Index q{0}; q < 4; ++q) {
-        const Index nodeID = conn[q];
-        aNext += N[q] * m_nodes[nodeID].a;
-        vNext += N[q] * m_nodes[nodeID].v;
+      for (Index k{0}; k < sf.count; ++k) {
+        const Index nodeID = sf.nodeIdx[k];
+        aNext += sf.N[k] * m_nodes[nodeID].a;
+        vNext += sf.N[k] * m_nodes[nodeID].v;
       }
 
       // Foward Euler
       mp.a = aNext;
 
       // PIC/FLIP blending
-      StaticVector<T, 2> v_flip =
-          mp.v + aNext * m_dt;          // FLIP: particle velocity + change
-      StaticVector<T, 2> v_pic = vNext; // PIC: interpolated node velocity
-      // Blend: m_picRatio=0 -> FLIP, m_picRatio=1 -> PIC
+      StaticVector<T, 2> v_flip = mp.v + aNext * m_dt; // FLIP
+      StaticVector<T, 2> v_pic = vNext;                // PIC
       mp.v = m_picRatio * v_pic + (T{1} - m_picRatio) * v_flip;
 
       mp.pos += vNext * m_dt;
       mp.P = mp.m * mp.v;
 
-      // Update stress and strain
-      const auto grad = ele.gradientN(parent.x(), parent.y());
-      const auto &dNdx = grad[0];
-      const auto &dNdy = grad[1];
+      // Update stress and strain using sf derivatives
       Matrix<T, 2, 2> L = Matrix<T, 2, 2>::zero();
-      for (Index q{0}; q < 4; ++q) {
-        const Index nodeID = conn[q];
-        const StaticVector<T, 2> gradNq{dNdx[q], dNdy[q]};
+      for (Index k{0}; k < sf.count; ++k) {
+        const Index nodeID = sf.nodeIdx[k];
+        const StaticVector<T, 2> gradNq{sf.dN_dx[k], sf.dN_dy[k]};
         L += tensorProduct<T, 2, 2>(m_nodes[nodeID].v, gradNq);
       }
 

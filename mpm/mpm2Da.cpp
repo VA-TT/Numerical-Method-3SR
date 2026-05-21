@@ -51,6 +51,7 @@ int main() {
   collumn.setG(-9.81); // G=-9.81
   collumn.setE(E);
   collumn.setComportmentLaw(std::function<double(double)>{});
+  collumn.setShape(shapePolicy::cubicBSpline);
 
   // Output files
   std::ofstream hist("mpm2Da_history.txt");
