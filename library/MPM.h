@@ -902,6 +902,7 @@ public:
         const Index nodeID = sf.nodeIdx[k];
         m_nodes[nodeID].bodyF.y() += sf.N[k] * m_G * mp.m;
         // Traction force t_i (to be implemented)
+        // t = m N(xp) t(xp) h^-1
         const StaticVector<T, 2> gradNq{sf.dN_dx[k], sf.dN_dy[k]};
         m_nodes[nodeID].intF -= mp.V * (mp.sig * gradNq);
       }
