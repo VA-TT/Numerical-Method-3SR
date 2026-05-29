@@ -42,7 +42,7 @@ int main() {
   const double dt_crit = std::min(dx, dy) / c_wave;
   const double dt = 0.1 * dt_crit;
 
-  const double v0 = 0.0;
+  const StaticVector<double, 2> v0{0.0, 0.0};
 
   // Set up MPM2D grid: 14 nodes, 13 elements, 2 MPs per element
   using collapse2D = MPM2D<double, L, H, nx, ny, MP_size>;
@@ -68,9 +68,13 @@ int main() {
   std::cout << "=== C++ MPM2D (mpm2Db) ===\n";
   std::cout << "L=" << L << ", H=" << H << ", E=" << E << ", rho=" << rho
             << ", mu=" << mu << "\n";
-  std::cout << "dt=" << dt << ", nsteps=" << collumn.getNumSteps() << "\n";
+  std::cout << "dt0=" << dt << " (adaptive)\n";
   std::cout << "Total particles: " << collumn.getNumMPs() << "\n";
   std::cout << "Tracking MP[" << tracked_mp << "]\n\n";
+
+  // Adaptive time step (CFL-like)
+  const double alpha_dt = 0.1;
+  collumn.enableAdaptiveTimeStep(alpha_dt);
 
   // VTK output (ParaView): mpm/data2D/particles_000000.vtk and mesh_000000.vtk
   // (relative to where the executable is).
@@ -87,9 +91,10 @@ int main() {
     collumn.exportVTKFrame(vtkDir, 0);
   }
 
-  // Time integration loop
-  for (Index step = 0; step < collumn.getNumSteps(); ++step) {
-    double time = (step + 1) * collumn.getTimeStep();
+  // Time integration loop (adaptive dt)
+  for (Index step = 0; collumn.getCurrentTime() < collumn.getDuration();
+       ++step) {
+    const double time = collumn.getCurrentTime() + collumn.getTimeStep();
 
     // MPM algorithm
     collumn.setupMP();
@@ -97,6 +102,7 @@ int main() {
     collumn.nodalEquilibrium();
     collumn.n2p();
     collumn.resetMesh();
+    collumn.advanceTime();
 
     if (vtkInterval > 0 && ((step + 1) % vtkInterval == 0)) {
       collumn.exportVTKFrame(vtkDir, step + 1);

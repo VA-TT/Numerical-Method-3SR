@@ -17,12 +17,18 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <span>
 #include <sstream>
 #include <string>
 #include <system_error>
 #include <vector>
 
+// Modified update stress last (MUSL) scheme : double mapping
+//  Update Lagrangian + BSPline
+//  const dt
+//  Lumped mass matrix
+// Assume that particle's mass doesn't change, only their density(volume) does
 template <typename T, T length, Index nNodes, Index nMPperEle> class MPM1D {
 private:
   // Physical properties
@@ -561,6 +567,13 @@ private:
   Index m_nSteps{};
   T m_dt{}, m_duration{}, m_currentTime{};
 
+  // Adaptive time step (explicit CFL-like)
+  bool m_useAdaptiveDt{false};
+  T m_dtAlpha{T{0.1}}; // safety factor
+  T m_dtMin{T{0}};
+  T m_dtMax{std::numeric_limits<T>::infinity()};
+  T m_dtGrowFactor{T{1.1}}; // limit dt increase per step
+
   // Constitutive law
   std::function<Matrix<T, 2, 2>(const Matrix<T, 2, 2> &)> m_law{};
 
@@ -624,6 +637,87 @@ private:
         }
       }
     }
+  }
+
+  static T lameMu(T E, T nu) { return E / (T{2} * (T{1} + nu)); }
+
+  static T lameLambda(T E, T nu) {
+    // 3D Lame parameter (used for wave-speed estimate)
+    return (E * nu) / ((T{1} + nu) * (T{1} - T{2} * nu));
+  }
+
+  void updateAdaptiveTimeStepIfEnabled() {
+    if (!m_useAdaptiveDt)
+      return;
+    if (!(m_dtAlpha > T{}))
+      return;
+
+    const Index nxGrid = m_mesh.nx();
+    const Index nyGrid = m_mesh.ny();
+    if (nxGrid < 2 || nyGrid < 2)
+      return;
+
+    const T hx = m_mesh.getGridLength() / static_cast<T>(nxGrid - 1);
+    const T hy = m_mesh.getGridHeight() / static_cast<T>(nyGrid - 1);
+    if (!(hx > T{}) || !(hy > T{}))
+      return;
+
+    const T mu = lameMu(m_E, m_nu);
+    const T lambda = lameLambda(m_E, m_nu);
+    const T K = lambda + T{2} * mu;
+    if (!(K > T{}))
+      return;
+
+    // cx = max_p(cdil + |v_xp|), cy = max_p(cdil + |v_yp|)
+    T maxCx{};
+    T maxCy{};
+    for (Index p{0}; p < getNumMPs(); ++p) {
+      const auto &mp = m_MPs[p];
+      if (mp.eleID == idError)
+        continue;
+      if (!(mp.V > T{}))
+        continue;
+
+      const T rho_p = mp.m / mp.V;
+      if (!(rho_p > T{}))
+        continue;
+
+      const T cdil = std::sqrt(K / rho_p);
+      const T cx = cdil + std::abs(mp.v.x());
+      const T cy = cdil + std::abs(mp.v.y());
+      if (cx > maxCx)
+        maxCx = cx;
+      if (cy > maxCy)
+        maxCy = cy;
+    }
+    if (!(maxCx > T{}) || !(maxCy > T{}))
+      return;
+
+    const T dtX = hx / maxCx;
+    const T dtY = hy / maxCy;
+    T dtCandidate = m_dtAlpha * (dtX < dtY ? dtX : dtY);
+
+    if (dtCandidate < m_dtMin)
+      dtCandidate = m_dtMin;
+    if (dtCandidate > m_dtMax)
+      dtCandidate = m_dtMax;
+    if (!(dtCandidate > T{}))
+      return;
+
+    // Prevent aggressive dt growth (but allow immediate shrinking)
+    if (m_dt > T{} && dtCandidate > m_dt) {
+      const T dtGrowLimited = m_dt * m_dtGrowFactor;
+      if (dtCandidate > dtGrowLimited)
+        dtCandidate = dtGrowLimited;
+    }
+
+    // Don't step past the final time
+    const T remaining = m_duration - m_currentTime;
+    if (remaining > T{} && dtCandidate > remaining)
+      dtCandidate = remaining;
+
+    if (dtCandidate > T{})
+      m_dt = dtCandidate;
   }
 
   // Source: https://www.geoelements.org/LearnMPM/mpm2d-column-collapse.html
@@ -709,7 +803,8 @@ private:
 
 public:
   MPM2D(T rho, T E, T nu, T phi, T c, T mu, const StaticVector<T, 2> &minCorner,
-        const StaticVector<T, 2> &maxCorner, T dt, T duration, T v0 = T{})
+        const StaticVector<T, 2> &maxCorner, T dt, T duration,
+        StaticVector<T, 2> v0 = StaticVector<T, 2>{})
       : m_E{E}, m_nu{nu}, m_rho{rho}, m_mu{mu}, m_phi{phi}, m_c{c},
         m_K0{nu / (T{1} - nu)}, m_pLength{maxCorner.x() - minCorner.x()},
         m_pHeight{maxCorner.y() - minCorner.y()},
@@ -735,11 +830,12 @@ public:
 
     const Index nMPs = m_mesh.getNumMPs();
     for (Index p{0}; p < nMPs; ++p) {
+      // Distributed equally
       m_MPs[p].V = m_volume / static_cast<T>(nMPs);
       m_MPs[p].V0 = m_MPs[p].V;
       m_MPs[p].m = m_mass / static_cast<T>(nMPs);
-      m_MPs[p].v.x() = v0;
-      m_MPs[p].v.y() = T{};
+      m_MPs[p].v.x() = v0.x();
+      m_MPs[p].v.y() = v0.y();
       m_MPs[p].F = Matrix<T, 2, 2>::identity();
     }
 
@@ -764,7 +860,22 @@ public:
   T getVolume() const { return m_volume; }
   T getTimeStep() const { return m_dt; }
   T getDuration() const { return m_duration; }
+  T getCurrentTime() const { return m_currentTime; }
   Index getNumSteps() const { return m_nSteps; }
+
+  void advanceTime() { m_currentTime += m_dt; }
+
+  void enableAdaptiveTimeStep(T alpha, T dtMin = T{0},
+                              T dtMax = std::numeric_limits<T>::infinity(),
+                              T growFactor = T{1.1}) {
+    m_useAdaptiveDt = true;
+    m_dtAlpha = alpha;
+    m_dtMin = dtMin;
+    m_dtMax = dtMax;
+    m_dtGrowFactor = growFactor;
+  }
+
+  void disableAdaptiveTimeStep() { m_useAdaptiveDt = false; }
 
   const Mesh2D<T> &getMesh() const { return m_mesh; }
   Mesh2D<T> &getMesh() { return m_mesh; }
@@ -841,6 +952,7 @@ public:
   }
 
   void setupMP() {
+    updateAdaptiveTimeStepIfEnabled();
     m_mesh.activateNodesAndElements();
     m_mesh.updateAllMasks();
     initializeStress();
@@ -903,8 +1015,8 @@ public:
         m_nodes[nodeID].bodyF.y() += sf.N[k] * m_G * mp.m;
         // Traction force t_i (to be implemented)
         // t = m N(xp) t(xp) h^-1
-        const StaticVector<T, 2> gradNq{sf.dN_dx[k], sf.dN_dy[k]};
-        m_nodes[nodeID].intF -= mp.V * (mp.sig * gradNq);
+        const StaticVector<T, 2> gradN{sf.dN_dx[k], sf.dN_dy[k]};
+        m_nodes[nodeID].intF -= mp.V * (mp.sig * gradN);
       }
     }
 
@@ -946,14 +1058,19 @@ public:
   }
 
   void n2p() {
-    // Map back to MPs
+    // --- MUSL (double mapping):
+    // 1) Update particle kinematics from current nodal fields
+    // 2) Remap updated particle momenta back to nodes (once)
+    // 3) Use corrected nodal velocities to update stress/strain
+
+    // (1) Update particles
     for (Index p{0}; p < getNumMPs(); ++p) {
       auto &mp = m_MPs[p];
       const Index e = mp.eleID;
       if (e == idError)
         continue;
-      // Use computeSF to interpolate acceleration/velocity and gradients
-      auto sf = computeSF(mp.pos.x(), mp.pos.y(), m_mesh, m_shape);
+
+      const auto sf = computeSF(mp.pos.x(), mp.pos.y(), m_mesh, m_shape);
 
       StaticVector<T, 2> aNext{};
       StaticVector<T, 2> vNext{};
@@ -963,34 +1080,70 @@ public:
         vNext += sf.N[k] * m_nodes[nodeID].v;
       }
 
-      // Foward Euler
+      // Update particle position (using nodal velocity)
+      mp.pos += vNext * m_dt;
+
+      // Forward Euler
       mp.a = aNext;
 
-      // PIC/FLIP blending
-      StaticVector<T, 2> v_flip = mp.v + aNext * m_dt; // FLIP
-      StaticVector<T, 2> v_pic = vNext;                // PIC
+      // PIC/FLIP blending to update particle velocity
+      const StaticVector<T, 2> v_flip = mp.v + aNext * m_dt; // FLIP
+      const StaticVector<T, 2> v_pic = vNext;                // PIC
       mp.v = m_picRatio * v_pic + (T{1} - m_picRatio) * v_flip;
-
-      mp.pos += vNext * m_dt;
       mp.P = mp.m * mp.v;
+    }
 
-      // Update stress and strain using sf derivatives
+    // (2) Remap updated particle momentum back to nodes (reset nodal P first)
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if (m_nodes[i].isActive) {
+        m_nodes[i].P.resetZero();
+      }
+    }
+
+    for (Index p{0}; p < getNumMPs(); ++p) {
+      const auto &mp = m_MPs[p];
+      const Index e = mp.eleID;
+      if (e == idError)
+        continue;
+
+      const auto sf = computeSF(mp.pos.x(), mp.pos.y(), m_mesh, m_shape);
+      for (Index k{0}; k < sf.count; ++k) {
+        const Index nodeID = sf.nodeIdx[k];
+        m_nodes[nodeID].P += sf.N[k] * mp.P;
+      }
+    }
+    applyNodalMomentumConstraint();
+
+    for (Index i{0}; i < getNumNodes(); ++i) {
+      if ((m_nodes[i].isActive) &&
+          (!approximatelyEqualAbsRel(m_nodes[i].mass, T{}))) {
+        m_nodes[i].v = m_nodes[i].P / m_nodes[i].mass;
+      }
+    }
+    applyNodalVeloConstraint();
+
+    // (3) Update stress/strain using corrected nodal velocities
+    for (Index p{0}; p < getNumMPs(); ++p) {
+      auto &mp = m_MPs[p];
+      const Index e = mp.eleID;
+      if (e == idError)
+        continue;
+
+      const auto sf = computeSF(mp.pos.x(), mp.pos.y(), m_mesh, m_shape);
+
       Matrix<T, 2, 2> L = Matrix<T, 2, 2>::zero();
       for (Index k{0}; k < sf.count; ++k) {
         const Index nodeID = sf.nodeIdx[k];
-        const StaticVector<T, 2> gradNq{sf.dN_dx[k], sf.dN_dy[k]};
-        L += tensorProduct<T, 2, 2>(m_nodes[nodeID].v, gradNq);
+        const StaticVector<T, 2> gradN{sf.dN_dx[k], sf.dN_dy[k]};
+        L += tensorProduct<T, 2, 2>(m_nodes[nodeID].v, gradN);
       }
 
       mp.F = mp.F * (Matrix<T, 2, 2>::identity() + L * m_dt);
       mp.V = det(mp.F) * mp.V0; // J = det(F)
 
-      mp.epsDot = Matrix<T, 2, 2>::zero();
-      mp.epsDot.xx() = L.xx();
-      mp.epsDot.yy() = L.yy();
-      const T shear = T{0.5} * (L.xy() + L.yx());
-      mp.epsDot.xy() = shear;
-      mp.epsDot.yx() = shear;
+      // Strain-rate tensor D = sym(L) (spin W = skew(L) not used here)
+      const auto DW = L.symDecomp();
+      mp.epsDot = DW[0];
       mp.dEps = mp.epsDot * m_dt;
 
       if (m_law) {
