@@ -83,7 +83,8 @@ std::pair<T, T> invariants(const Matrix<T, nRows, nCols> &stress_tensor,
     const T s_yy = sigma_yy - I1 / T{2};
     const T s_xy = tau_xy;
 
-    const T J2 = T{0.5} * (s_xx * s_xx + s_yy * s_yy + s_xy * s_xy);
+    const T J2 =
+        T{0.5} * (s_xx * s_xx + s_yy * s_yy + T{2} * s_xy * s_xy);
     return {I1, J2};
   }
 
@@ -95,7 +96,9 @@ std::pair<T, T> invariants(const Matrix<T, nRows, nCols> &stress_tensor,
   const T s_zz = sigma_zz - I1 / T{3};
   const T s_xy = tau_xy;
 
-  const T J2 = T{0.5} * (s_xx * s_xx + s_yy * s_yy + s_zz * s_zz + s_xy * s_xy);
+  const T J2 = T{0.5} *
+               (s_xx * s_xx + s_yy * s_yy + s_zz * s_zz +
+                T{2} * s_xy * s_xy);
   return {I1, J2};
 }
 
@@ -115,7 +118,8 @@ std::pair<T, T> invariants(const DynamicVector<T> &stress,
     const T s_yy = sigma_yy - I1 / T{2};
     const T s_xy = tau_xy;
 
-    const T J2 = T{0.5} * (s_xx * s_xx + s_yy * s_yy + s_xy * s_xy);
+    const T J2 =
+        T{0.5} * (s_xx * s_xx + s_yy * s_yy + T{2} * s_xy * s_xy);
     return {I1, J2};
   }
 
@@ -127,7 +131,9 @@ std::pair<T, T> invariants(const DynamicVector<T> &stress,
   const T s_zz = sigma_zz - I1 / T{3};
   const T s_xy = tau_xy;
 
-  const T J2 = T{0.5} * (s_xx * s_xx + s_yy * s_yy + s_zz * s_zz + s_xy * s_xy);
+  const T J2 = T{0.5} *
+               (s_xx * s_xx + s_yy * s_yy + s_zz * s_zz +
+                T{2} * s_xy * s_xy);
   return {I1, J2};
 }
 
@@ -155,12 +161,36 @@ druckerPragerGradient(const DynamicVector<T> &stress, T alpha,
 
   const T denom = std::sqrt(J2);
   if (approximatelyEqualAbsRel(static_cast<double>(denom), 0.0)) {
-    return DynamicVector<T>{alpha, alpha, T{0}};
+    const T pressureFactor =
+        stressCondition == "planeStrain" ? alpha * (T{1} + nu) : alpha;
+    return DynamicVector<T>{pressureFactor, pressureFactor, T{0}};
   }
 
-  const T dfdx = alpha + (sigma_x - sigma_y) / denom;
-  const T dfdy = alpha - (sigma_x - sigma_y) / denom;
-  const T dftau = (T{2} * tau_xy) / denom;
+  T dfdx{};
+  T dfdy{};
+  if (stressCondition == "planeStrain") {
+    const T sigma_z = nu * (sigma_x + sigma_y);
+    const T mean = (sigma_x + sigma_y + sigma_z) / T{3};
+    const T s_x = sigma_x - mean;
+    const T s_y = sigma_y - mean;
+    const T s_z = sigma_z - mean;
+    const T onePlusNu = T{1} + nu;
+    const T dJ2dx =
+        s_x * (T{1} - onePlusNu / T{3}) -
+        s_y * onePlusNu / T{3} +
+        s_z * (nu - onePlusNu / T{3});
+    const T dJ2dy =
+        -s_x * onePlusNu / T{3} +
+        s_y * (T{1} - onePlusNu / T{3}) +
+        s_z * (nu - onePlusNu / T{3});
+    dfdx = alpha * onePlusNu + dJ2dx / (T{2} * denom);
+    dfdy = alpha * onePlusNu + dJ2dy / (T{2} * denom);
+  } else {
+    const T difference = sigma_x - sigma_y;
+    dfdx = alpha + difference / (T{4} * denom);
+    dfdy = alpha - difference / (T{4} * denom);
+  }
+  const T dftau = tau_xy / denom;
   return DynamicVector<T>{dfdx, dfdy, dftau};
 }
 
@@ -194,23 +224,31 @@ updateStressStrainDruckerPrager(
     return {stress_trial, strain_updated, T{0}};
   }
 
-  const DynamicVector<T> df_sigma =
-      druckerPragerGradient(stress_trial, alpha, stressCondition, nu);
-  const DynamicVector<T> D_df = applyD(df_sigma);
-  const T H = dotProduct(df_sigma, D_df);
-
-  if (approximatelyEqualAbsRel(static_cast<double>(H), 0.0)) {
-    return {stress_trial,
-            DynamicVector<T>{strain_n[0], strain_n[1], strain_n[2]}, T{0}};
+  DynamicVector<T> stress_updated = stress_trial;
+  T delta_lambda{};
+  constexpr Index maxReturnIterations = 25;
+  const T yieldTolerance =
+      T{1e-10} * (T{1} + std::abs(k) + std::sqrt(dotProduct(stress_trial, stress_trial)));
+  for (Index iteration{0}; iteration < maxReturnIterations; ++iteration) {
+    const T f =
+        druckerPragerYield(stress_updated, alpha, k, stressCondition, nu);
+    if (f <= yieldTolerance)
+      break;
+    const DynamicVector<T> gradient =
+        druckerPragerGradient(stress_updated, alpha, stressCondition, nu);
+    const DynamicVector<T> D_gradient = applyD(gradient);
+    const T H = dotProduct(gradient, D_gradient);
+    if (approximatelyEqualAbsRel(static_cast<double>(H), 0.0))
+      break;
+    const T increment = f / H;
+    stress_updated -= increment * D_gradient;
+    delta_lambda += increment;
   }
 
-  const T delta_lambda = f_trial / H;
-  const DynamicVector<T> stress_updated = stress_trial - delta_lambda * D_df;
-
-  const DynamicVector<T> plastic_strain_increment = delta_lambda * df_sigma;
   const DynamicVector<T> strain_updated =
       DynamicVector<T>{strain_n[0], strain_n[1], strain_n[2]} +
-      plastic_strain_increment;
+      DynamicVector<T>{strain_increment[0], strain_increment[1],
+                       strain_increment[2]};
   return {stress_updated, strain_updated, delta_lambda};
 }
 #endif // HOOKE_ELASTIC_H

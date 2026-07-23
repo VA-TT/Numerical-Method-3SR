@@ -49,13 +49,15 @@ int main() {
   collapse2D collumn(rho, E, nu, phi, cohesion, mu, minCorner, maxCorner, dt,
                      duration, v0);
   collumn.setG(-9.81); // G=-9.81
+  collumn.setK0(K0);
   collumn.setE(E);
   collumn.setComportmentLaw(std::function<double(double)>{});
   collumn.setShape(shapePolicy::cubicBSpline);
+  collumn.setPIC(1.0); // Stable, kinematically consistent collapse simulation.
 
   // Output files
   std::ofstream hist("mpm2Da_history.txt");
-  hist << "# time\tx\ty\tstress_xx\tstrain_xx\n";
+  hist << "# time\tx\ty\tvx\tvy\tstress_xx\tstrain_xx\n";
 
   // Simple boundary condition: clamp bottom active nodes
   for (const Index nodeID : collumn.getMesh().bottomActiveNodes()) {
@@ -76,6 +78,7 @@ int main() {
   // Adaptive time step (CFL-like)
   const double alpha_dt = 0.1;
   collumn.enableAdaptiveTimeStep(alpha_dt);
+  collumn.setupMP(); // Initialize geostatic stress before writing t=0.
 
   // VTK output (ParaView): mpm/data2D/particles_000000.vtk and mesh_000000.vtk
   // (relative to where the executable is).
@@ -85,8 +88,10 @@ int main() {
   // Initial state (t=0)
   {
     const auto mp = collumn.getMesh().getMP(tracked_mp).pos;
+    const auto velocity = collumn.getMPvelocity(tracked_mp);
     hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << mp.x() << '\t'
-         << mp.y() << '\t' << collumn.getMPstress(tracked_mp) << '\t'
+         << mp.y() << '\t' << velocity.x() << '\t' << velocity.y() << '\t'
+         << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';
 
     collumn.exportVTKFrame(vtkDir, 0);
@@ -95,10 +100,9 @@ int main() {
   // Time integration loop (adaptive dt)
   for (Index step = 0; collumn.getCurrentTime() < collumn.getDuration();
        ++step) {
-    const double time = collumn.getCurrentTime() + collumn.getTimeStep();
-
     // MPM algorithm
-    collumn.setupMP();
+    collumn.setupMP(); // May update dt.
+    const double time = collumn.getCurrentTime() + collumn.getTimeStep();
     collumn.p2n();
     collumn.nodalEquilibrium();
     collumn.n2p();
@@ -111,8 +115,10 @@ int main() {
 
     // Record results
     const auto mp = collumn.getMesh().getMP(tracked_mp).pos;
+    const auto velocity = collumn.getMPvelocity(tracked_mp);
     hist << std::fixed << std::setprecision(10) << time << '\t' << mp.x()
-         << '\t' << mp.y() << '\t' << collumn.getMPstress(tracked_mp) << '\t'
+         << '\t' << mp.y() << '\t' << velocity.x() << '\t' << velocity.y()
+         << '\t' << collumn.getMPstress(tracked_mp) << '\t'
          << collumn.getMPstrain(tracked_mp) << '\n';
 
     if (step < 5 || step % 1000 == 0 || step == collumn.getNumSteps() - 1) {

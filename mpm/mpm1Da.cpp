@@ -37,7 +37,7 @@ int main() {
 
   // Output files
   std::ofstream hist("mpm1Da_history.txt");
-  hist << "# time\tx_num\tv_num\tx_ana\tv_ana\n";
+  hist << "# time\tx_num\tv_num\tte_num\tx_ana\tv_ana\tte_ana\n";
 
   std::ofstream stress_strain("mpm1D_stress_strain.txt");
   stress_strain << "# time\tstress\tstrain\n";
@@ -72,10 +72,20 @@ int main() {
   {
     const double x_num = beam.getMPposition(tracked_mp);
     const double v_num = beam.getMPvelocity(tracked_mp);
+    const double mass = beam.getMPmass(tracked_mp);
+    const double volume0 = beam.getMPvolume(tracked_mp);
+    const double strain_num = beam.getMPstrain(tracked_mp);
+    const double stress_num = beam.getMPstress(tracked_mp);
+    const double ke_num = 0.5 * mass * v_num * v_num;
+    const double se_num = 0.5 * stress_num * strain_num * volume0;
     const double x_ana = analytic_x(0.0);
     const double v_ana = analytic_v(0.0);
+    const double strain_ana = std::log(x_ana / xloc);
+    const double ke_ana = 0.5 * mass * v_ana * v_ana;
+    const double se_ana = 0.5 * E * strain_ana * strain_ana * volume0;
     hist << std::fixed << std::setprecision(10) << 0.0 << '\t' << x_num << '\t'
-         << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
+         << v_num << '\t' << ke_num + se_num << '\t' << x_ana << '\t'
+         << v_ana << '\t' << ke_ana + se_ana << '\n';
 
     stress_strain << std::fixed << std::setprecision(10) << 0.0 << '\t'
                   << beam.getMPstress(tracked_mp) << '\t'
@@ -102,11 +112,22 @@ int main() {
     // Record results
     const double x_num = beam.getMPposition(tracked_mp);
     const double v_num = beam.getMPvelocity(tracked_mp);
+    const double mass = beam.getMPmass(tracked_mp);
+    // Use the initial/reference volume for small-strain elastic energy.
+    const double volume0 = beam.getVolume() / beam.getNumMPs();
+    const double strain_num = beam.getMPstrain(tracked_mp);
+    const double stress_num = beam.getMPstress(tracked_mp);
+    const double ke_num = 0.5 * mass * v_num * v_num;
+    const double se_num = 0.5 * stress_num * strain_num * volume0;
     const double x_ana = analytic_x(time);
     const double v_ana = analytic_v(time);
+    const double strain_ana = std::log(x_ana / xloc);
+    const double ke_ana = 0.5 * mass * v_ana * v_ana;
+    const double se_ana = 0.5 * E * strain_ana * strain_ana * volume0;
 
     hist << std::fixed << std::setprecision(10) << time << '\t' << x_num << '\t'
-         << v_num << '\t' << x_ana << '\t' << v_ana << '\n';
+         << v_num << '\t' << ke_num + se_num << '\t' << x_ana << '\t'
+         << v_ana << '\t' << ke_ana + se_ana << '\n';
 
     stress_strain << std::fixed << std::setprecision(10) << time << '\t'
                   << beam.getMPstress(tracked_mp) << '\t'
@@ -123,7 +144,7 @@ int main() {
 
   hist.close();
   stress_strain.close();
-  std::cout << "\n✓ Results saved to: mpm1D_history.txt\n";
+  std::cout << "\n✓ Results saved to: mpm1Da_history.txt\n";
   std::cout << "✓ Stress-strain data saved to: mpm1D_stress_strain.txt\n";
   std::cout << "✓ Computation time: " << t.elapsed() << " s\n";
   return 0;

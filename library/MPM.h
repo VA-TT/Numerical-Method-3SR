@@ -556,6 +556,7 @@ private:
   T m_kinEnergy{}, m_potentEnergy{}, m_totalEnergy0{}, m_dissiEnergy{};
 
   T m_G{}; // Gravity Acceleration
+  bool m_stressInitialized{false};
 
   // shape function type (linear by default)
   shapePolicy m_shape{shapePolicy::linear};
@@ -786,7 +787,8 @@ private:
   void initializeStress() {
     const T ymax = m_pHeight - MP_size / T{2};
     for (Index p{0}; p < getNumMPs(); ++p) {
-      m_MPs[p].sig.yy() = -m_G * m_rho * (ymax - m_MPs[p].pos.y());
+      // Tension-positive convention: geostatic compression is negative.
+      m_MPs[p].sig.yy() = m_G * m_rho * (ymax - m_MPs[p].pos.y());
       m_MPs[p].sig.xx() = m_K0 * m_MPs[p].sig.yy();
     }
   }
@@ -795,7 +797,7 @@ private:
     m_potentEnergy = T{};
     m_kinEnergy = T{};
     for (Index p{0}; p < getNumMPs(); ++p) {
-      m_potentEnergy += m_G * m_MPs[p].m * m_MPs[p].pos.y();
+      m_potentEnergy += -m_G * m_MPs[p].m * m_MPs[p].pos.y();
       m_kinEnergy += T{0.5} * m_MPs[p].m * dotProduct(m_MPs[p].v, m_MPs[p].v);
     }
     m_dissiEnergy = m_totalEnergy0 - m_potentEnergy - m_kinEnergy;
@@ -840,7 +842,7 @@ public:
     }
 
     for (Index p{0}; p < nMPs; ++p) {
-      m_totalEnergy0 += m_G * m_MPs[p].m * m_MPs[p].pos.y();
+      m_totalEnergy0 += -m_G * m_MPs[p].m * m_MPs[p].pos.y();
     }
   }
 
@@ -894,7 +896,17 @@ public:
 
   // Setters
   void setE(T E) { m_E = E; }
-  void setG(T G) { m_G = G; }
+  void setG(T G) {
+    m_G = G;
+    m_totalEnergy0 = T{};
+    for (Index p{0}; p < getNumMPs(); ++p)
+      m_totalEnergy0 += -m_G * m_MPs[p].m * m_MPs[p].pos.y();
+    m_stressInitialized = false;
+  }
+  void setK0(T K0) {
+    m_K0 = K0;
+    m_stressInitialized = false;
+  }
   void setShape(shapePolicy type) { m_shape = type; }
 
   void setPIC(T value) {
@@ -955,7 +967,10 @@ public:
     updateAdaptiveTimeStepIfEnabled();
     m_mesh.activateNodesAndElements();
     m_mesh.updateAllMasks();
-    initializeStress();
+    if (!m_stressInitialized) {
+      initializeStress();
+      m_stressInitialized = true;
+    }
     computeEnergy();
   }
 
@@ -1093,9 +1108,10 @@ public:
       mp.P = mp.m * mp.v;
     }
 
-    // (2) Remap updated particle momentum back to nodes (reset nodal P first)
+    // (2) Remap updated particle mass and momentum at the new positions.
     for (Index i{0}; i < getNumNodes(); ++i) {
       if (m_nodes[i].isActive) {
+        m_nodes[i].mass = T{};
         m_nodes[i].P.resetZero();
       }
     }
@@ -1109,6 +1125,7 @@ public:
       const auto sf = computeSF(mp.pos.x(), mp.pos.y(), m_mesh, m_shape);
       for (Index k{0}; k < sf.count; ++k) {
         const Index nodeID = sf.nodeIdx[k];
+        m_nodes[nodeID].mass += sf.N[k] * mp.m;
         m_nodes[nodeID].P += sf.N[k] * mp.P;
       }
     }
@@ -1153,9 +1170,11 @@ public:
         const Matrix<T, 3, 3> D = elasticityMatrix(m_E, m_nu, "planeStrain");
         const auto [alpha, k] = druckerPrager(m_phi, m_c);
         const DynamicVector<T> stressN{mp.sig.xx(), mp.sig.yy(), mp.sig.xy()};
-        const DynamicVector<T> strainN{mp.eps.xx(), mp.eps.yy(), mp.eps.xy()};
+        // The plane-strain matrix uses engineering shear gamma_xy=2*eps_xy.
+        const DynamicVector<T> strainN{mp.eps.xx(), mp.eps.yy(),
+                                       T{2} * mp.eps.xy()};
         const DynamicVector<T> strainInc{mp.dEps.xx(), mp.dEps.yy(),
-                                         mp.dEps.xy()};
+                                         T{2} * mp.dEps.xy()};
         const auto [stressUpdated, strainUpdated, deltaLambda] =
             updateStressStrainDruckerPrager(stressN, strainN, strainInc, D,
                                             alpha, k, "planeStrain", m_nu);
@@ -1166,8 +1185,8 @@ public:
         mp.sig.yx() = stressUpdated[2];
         mp.eps.xx() = strainUpdated[0];
         mp.eps.yy() = strainUpdated[1];
-        mp.eps.xy() = strainUpdated[2];
-        mp.eps.yx() = strainUpdated[2];
+        mp.eps.xy() = T{0.5} * strainUpdated[2];
+        mp.eps.yx() = T{0.5} * strainUpdated[2];
       }
 
       if (!std::isfinite(static_cast<double>(mp.sig.xx())) ||
